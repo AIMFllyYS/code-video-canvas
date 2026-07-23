@@ -235,7 +235,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
 
 ### F0.6 — 引入渲染管线依赖（playwright + ffmpeg-static）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：无（可并行）
 - 允许改动范围：`package.json`、`.gitignore`（若需排除 playwright 浏览器缓存目录）
 - 禁止改动：`src/features/render/**`（本卡只装依赖，不写实现，实现是 Track R）
