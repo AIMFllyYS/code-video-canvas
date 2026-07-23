@@ -567,7 +567,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D0.2 — `prompts/`：移植 video-director 方法论为原生 prompt 模板
 
-- 状态：☐
+- 状态：☑
 - 前置任务：D0.1
 - 允许改动范围：`src/features/director/prompts/**`（新建目录及文件）
 - 禁止改动：`docs/video-director/**`
