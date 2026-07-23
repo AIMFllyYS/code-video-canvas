@@ -94,7 +94,7 @@
     - 对应 task-breakdown：D1.4
     - _Requirements: F2、F3、F4_
 
-  - [ ] 3.7 API 路由：`api/director/stage`
+  - [x] 3.7 API 路由：`api/director/stage`
     - 对应 task-breakdown：D1.5
     - _Requirements: F2、F3_
 

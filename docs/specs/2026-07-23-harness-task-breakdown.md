@@ -795,7 +795,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.5 — API 路由：`api/director/stage`
 
-- 状态：☐
+- 状态：☑
 - 前置任务：D1.4
 - 允许改动范围：`src/app/api/director/stage/route.ts`（新建）
 - 禁止改动：`src/features/director/**`（路由层只调用，不新增业务逻辑）
@@ -809,6 +809,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
   允许改动范围：
   - src/app/api/director/stage/route.ts
+  - src/app/api/director/stage/route.test.ts
 
   禁止改动：
   - src/features/director/**
