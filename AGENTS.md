@@ -2,7 +2,7 @@
 
 本文件是 AI 编码代理的操作策略。与 `docs/conventions/` 中面向人的完整规范保持一致；冲突时以本文件为操作准绳。
 
-**本项目采用 Spec 驱动 + Codex Goal 模式施工**：所有实施任务已在 [AI 开发 Harness 总纲](./docs/specs/2026-07-23-ai-development-harness.md) 与 [任务拆解清单](./docs/specs/2026-07-23-harness-task-breakdown.md) 中拆解为可独立执行的任务卡。**开始任何实现工作前，先确认该工作是否已有对应任务卡；若有，严格按该卡的「允许改动范围」「禁止改动」「完成条件」执行，不要绕开 harness 文档凭感觉施工。**
+**本项目采用 Spec 驱动 + Codex Goal 模式施工**：所有实施任务已在 [AI 开发 Harness 总纲](./docs/specs/2026-07-23-ai-development-harness.md)、[任务拆解清单](./docs/specs/2026-07-23-harness-task-breakdown.md) 与 [Implementation Plan](./docs/designs/tasks.md)（Kiro Spec 格式，按 PRD 功能编号追溯）中拆解为可执行的 Task。**一次 Codex `/goal` 会话对应一个 Track，Track 内的 Task 由 Codex 自主顺序执行**（不是一张任务卡对应一次 `/goal`）。**开始任何实现工作前，先确认该工作是否已有对应 Task；若有，严格按该 Task 的「允许改动范围」「禁止改动」「完成条件」执行，不要绕开 harness 文档凭感觉施工。**
 
 ## Project Overview
 
@@ -174,7 +174,8 @@ docs/  scripts/  public/
 - `AGENTS.md` — 本文件（AI 操作策略）
 - `docs/specs/2026-07-23-prd-code-video-canvas.md` — 产品需求
 - `docs/specs/2026-07-23-ai-development-harness.md` — **AI 开发 Harness 总纲**：三层节点体系、Pi Agent 落地方案、模块职责地图、DB 演进方案、验收框架
-- `docs/specs/2026-07-23-harness-task-breakdown.md` — **任务拆解清单**：32 张 Codex Goal 模式任务卡，施工前先查此文件
+- `docs/specs/2026-07-23-harness-task-breakdown.md` — **任务拆解清单**：按 Track 分组的 Task 规格 + 每个 Track 的 Goal 启动提示词，施工前先查此文件
+- `docs/designs/tasks.md` — Kiro Spec 格式的 Implementation Plan，按 PRD 功能编号（F1~F14）追溯任务覆盖情况与依赖图
 - `docs/designs/2026-07-23-platform-architecture-design.md` — 平台架构
 - `docs/designs/2026-07-23-ui-design-handoff.md` — UI 设计交接（逐页规格 + 文案复用库）
 - `docs/conventions/` — 编码 / 架构 / Git 完整规范
