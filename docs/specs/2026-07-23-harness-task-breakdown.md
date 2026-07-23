@@ -322,7 +322,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 ### C1.1 — `fan-out.ts`：分镜通道物化
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.4, F0.5
 - 允许改动范围：`src/features/canvas/fan-out.ts`（新建）、`src/features/canvas/fan-out.test.ts`
 - 禁止改动：`src/features/canvas/actions.ts`、`queries.ts`（不要把物化逻辑塞进这两个文件）
