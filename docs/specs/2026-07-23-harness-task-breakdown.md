@@ -1572,9 +1572,10 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
 ### U1.6 — S6 设置页（StepFun Key 等）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.3
-- 允许改动范围：`src/app/settings/**`
+- 允许改动范围：`src/app/settings/**`、`src/app/api/settings/**`
+  （修正为先 validate、成功后 save，并补测试）
 - Task 规格：
   ```
   目标：按设计交接文档 S6 章节实装设置页：StepFun API Key 输入与保存（对接
@@ -1585,6 +1586,7 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
   允许改动范围：
   - src/app/settings/**
+  - src/app/api/settings/**（仅 validate-before-save 合同与测试）
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
@@ -1592,6 +1594,7 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
         password 类型 + 显示/隐藏切换）
   - [ ] 校验失败/成功的提示文案取自设计交接文档 §8
   - [ ] 页面不将 Key 值打印到浏览器 console 或写入客户端可见的任何日志
+  - [ ] 服务端校验失败时绝不覆盖已有已验证 Key
 
   不在本任务范围内：
   - 不实现暗色主题切换开关本身的全局状态管理（若设计稿要求全局主题切换，

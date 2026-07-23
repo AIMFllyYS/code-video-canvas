@@ -181,7 +181,7 @@
     - 对应 task-breakdown：U1.5
     - _Requirements: F9_
 
-  - [ ] 7.6 S6 设置页（StepFun Key 等）
+  - [x] 7.6 S6 设置页（StepFun Key 等）
     - 对应 task-breakdown：U1.6
     - _Requirements: F8_
 

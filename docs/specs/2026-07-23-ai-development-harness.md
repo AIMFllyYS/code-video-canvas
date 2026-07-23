@@ -494,3 +494,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十五） | **可执行节点 stage 持久化**：分镜通道在 fan-out 时写入唯一 stage 映射，画布读模型返回 stage，Inspector 禁止自行推断。 |
 | 2026-07-24（修订十六） | **作业与产物只读边界**：UI 通过 project-scoped job snapshot 轮询；HTML/MP4 仅由 artifact id 受控读取，浏览器不接触 StorageAdapter key 或本机路径。 |
 | 2026-07-24（修订十七） | **导出 readiness 与结果收口**：导出页先查询服务端完整性计划，未完成时禁用并列出节点；成功响应只返回 artifact URL，不泄露 outputKey。 |
+| 2026-07-24（修订十八） | **StepFun Key 写入顺序**：设置 API 必须先远端 validate，成功后才覆盖 SQLite；失败响应不落盘且客户端只显示规范化错误。 |

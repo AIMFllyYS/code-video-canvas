@@ -114,6 +114,7 @@ docs/  scripts/  public/
 - **生产路径**：用户在「设置」页填 Key → 写本地 SQLite `settings` 表 → 服务端读取。
 - **开发/测试路径**：`.env`/`.env.local` 提供开发期种子 Key（`STEPFUN_API_KEY` 等，见 [Harness 总纲 §7](./docs/specs/2026-07-23-ai-development-harness.md#7-环境变量契约)），读取优先级为 SQLite 设置 > 环境变量。**用户已明确授权 AI 代理查看 `.env`/`.env.local` 内容用于本地开发验证与真实 API 端到端测试**；引用时只写变量名，任何情况下不将密钥原文写入代码、commit、日志或对话输出。
 - Key 仅存服务端本地配置；**永不**进客户端 bundle，**永不**用 `NEXT_PUBLIC_` 前缀。
+- 设置 API 必须先 `validateKey`，成功后才 `saveApiKey`；校验失败不得覆盖已保存 Key。
 
 ### 存储
 

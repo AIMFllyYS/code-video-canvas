@@ -22,7 +22,17 @@ export async function POST(request: Request) {
     )
   }
   const { apiKey } = parsed.data
-  saveApiKey(apiKey)
   const valid = await validateKey(apiKey)
-  return NextResponse.json({ ok: true, valid })
+  if (!valid) {
+    return NextResponse.json(
+      {
+        ok: false,
+        valid: false,
+        error: 'StepFun Key 校验失败 · 请检查 Key 是否正确',
+      },
+      { status: 422 }
+    )
+  }
+  saveApiKey(apiKey)
+  return NextResponse.json({ ok: true, valid: true })
 }
