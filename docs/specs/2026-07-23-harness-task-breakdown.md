@@ -56,7 +56,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
 
 ### F0.1 — Spike：Pi Agent + StepFun 自定义 Provider 可行性验证
 
-- 状态：☐
+- 状态：☑
 - 前置任务：无
 - 允许改动范围：
   - 新建 `scripts/spikes/pi-stepfun-probe.ts`（一次性验证脚本，不进生产路径）
