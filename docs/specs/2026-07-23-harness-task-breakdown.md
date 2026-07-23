@@ -432,11 +432,11 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 ### C1.4 — React Flow 画布组件骨架 + 分镜通道分组折叠
 
-- 状态：☐
+- 状态：☑
 - 前置任务：C1.1, C1.2, C1.3
 - 允许改动范围：`src/app/canvas/**`、`src/features/canvas/queries.ts`、
-  `src/features/canvas/queries.test.ts`、`src/components/ui/**`（若需新增纯展示原语，
-  需先确认 `/playbook` 无同类组件）
+  `src/features/canvas/queries.test.ts`、`src/features/canvas/index.ts`、
+  `src/components/ui/**`（若需新增纯展示原语，需先确认 `/playbook` 无同类组件）
 - 禁止改动：`src/features/canvas/fan-out.ts`、`layout.ts`、`status.ts`
 - Task 规格：
   ```
@@ -452,6 +452,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
   - src/app/canvas/**
   - src/features/canvas/queries.ts
   - src/features/canvas/queries.test.ts
+  - src/features/canvas/index.ts（只补充受控 re-export）
   - src/components/ui/**（仅新增缺失的纯展示原语，且必须登记 playbook）
 
   禁止改动：
