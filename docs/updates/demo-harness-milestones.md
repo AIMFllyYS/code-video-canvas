@@ -89,3 +89,29 @@
   结构化结果和 barrel export。
 - 遗留/跳过：真实 TTS/ASR/SFX/BGM 生成按任务定义属于 P1，Demo 有意使用
   明确占位结果，不计为跳过。
+
+## Track P — Pencil 组件港口
+
+- 完成范围：P0.1–P1.5，全部状态与实际代码一致。
+- Pencil 证据：通过 Pencil MCP 读取 `canvas.pen` 当前 30 个
+  `reusable:true` symbols 的真实结构、变量、截图；四个 Button symbols
+  由一个 `variant` 组件承载，故 `/playbook` 登记 27 个 Pencil UI 组件族，
+  并另列 1 个 Lucide 白名单目录。
+- 静态门禁：`pnpm lint`、`pnpm tsc --noEmit`、`pnpm build` 全部通过。
+- 测试：项目全量 40 个测试文件、113 条测试通过；登记表测试固定 30→27 的
+  完整映射，九种 `CanvasNodeType` 的视觉阶段色均有显式测试。
+- 浏览器验收：生产构建的 `/playbook`、`/playbook/ui`、`/playbook/icons`
+  在 1440px 视口真实加载；27 个组件标题、37 个白名单图标、30/27 数量说明
+  均可见，浅色背景与暗色 `#0F0F0F` 正确，控制台零错误。
+- 交互验收：Dialog 可打开/关闭，Toggle 可从开切到关，SegmentedControl
+  可切换选中项；节点组件至少覆盖 pending/running/success/stale 等多种状态。
+- 视觉核对：B1–B4 逐组导出 Pencil PNG，并对 Button、Dialog、Sidebar、
+  StageNode、ShotNode 等代表组件做生产页面像素核对；ShotNode 的预览、状态、
+  时长、菜单、重渲和缓存标记均与底稿结构一致。
+- 图标与 token：源码零旧 Lucide 名、零 emoji 图标；Pencil Sidebar 实际使用的
+  `waypoints` 已补入白名单，UI 交接文档中的旧图标名、`$indigo`、硬编码
+  overlay/grid 色已改为当前标准名与 token。
+- 发现并修正：Node UI 曾复制旧四态状态并把 Agent stage 当节点类型；现统一
+  复用 canvas 域的九种节点类型与六态状态，并同步 AGENTS、Harness 与平台架构。
+- 遗留/跳过：无。旧 Card/LogoMark 文件暂由尚未进入 Track U 重写的占位页面
+  使用，但已从 Track P registry 移除，不能被后续页面视为 Pencil 登记组件。
