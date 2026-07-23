@@ -15,6 +15,7 @@ export async function GET(
         'content-type': artifactContentType(descriptor.kind),
         'content-length': String(bytes.length),
         'cache-control': 'private, no-store',
+        'x-content-type-options': 'nosniff',
       },
     })
   } catch (error) {

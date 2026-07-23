@@ -5,11 +5,7 @@ import { getStoredApiKey, saveApiKey, validateKey } from '@/features/ai/stepfun-
 export const dynamic = 'force-dynamic'
 
 export function GET() {
-  const key = getStoredApiKey()
-  return NextResponse.json({
-    configured: Boolean(key),
-    masked: key ? `${key.slice(0, 3)}***${key.slice(-2)}` : null,
-  })
+  return NextResponse.json({ configured: Boolean(getStoredApiKey()) })
 }
 
 export async function POST(request: Request) {
