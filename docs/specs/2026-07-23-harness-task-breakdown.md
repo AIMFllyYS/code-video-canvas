@@ -1411,6 +1411,13 @@ Goal 2：完成 Track U 的 U1.5~U1.8（含 U1.6a 全局主题补充卡；导出
 
 **强制约束（每张 U 任务卡都适用）**：页面只能 `import` Track P 已登记的组件，**禁止在页面文件或页面私有子组件内重新实现任何视觉原语**（Button/Card/StatusPill/NavItem 等）。若发现某页面需要一个 Track P 尚未覆盖的组件，必须先停下补一张 Track P 任务卡完成移植，再回来 `import` 使用，不允许"页面里先临时糊一个"。
 
+**2026-07-24 最新 Pencil 架构校正**：S1–S6、S2 背景及暗色镜像必须统一
+使用 `features/navigation/AppShell` 组合 Track P 已登记的 Sidebar/NavItem；
+固定结构为 `Sidebar(240) | Main(1200)`，页面只传激活区与可信
+projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原语。该校正
+扩展 U1.1/U1.3/U1.4/U1.5/U1.6/U1.7 的允许范围至
+`src/features/navigation/**` 及其测试；禁止任何页面继续保留独立 TopNav。
+
 ### U1.1 — S1 首页 / 项目列表
 
 - 状态：☑
@@ -1713,3 +1720,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（含 U1.6a 全局主题补充卡；导出
 | 2026-07-24（修订十三） | **U1.8 暴露的阶段提交断点**：补充类型化阶段结果协议；INGEST 成功必须事务性物化分镜通道，FABRICATE renderSpec 必须由可信 allocation 与上下文派生，禁止“模型返回即 success”。 |
 | 2026-07-24（修订十四） | **U1.8 暴露的 Windows 编码断点**：`ffmpeg-static` 必须保持 Next server external，避免生产 bundle 将真实二进制路径改写为 `/ROOT` 后导致 `spawn ENOENT`。 |
 | 2026-07-24（修订十五） | **U1.8 暴露的哈希语义冲突**：输入派生 renderKey 只负责缓存寻址；`artifacts.contentHash` 与 RenderResult 必须保存最终 MP4 实体 SHA-256。 |
+| 2026-07-24（修订十六） | **最新 Pencil 应用壳纠偏**：S1–S6、S2 背景与暗色镜像统一为常驻 Sidebar；补充唯一 `features/navigation/AppShell` 边界，S4 恢复预览/代码/合同三栏，S5 禁止示例常量冒充真实项目投影。 |

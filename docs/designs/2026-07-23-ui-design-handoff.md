@@ -249,9 +249,9 @@ y≈5803   ├──────────────────────
 **⑰ NavItem** — 高 32，padding [6,10]，radius `$radius-sm`，水平 gap 8 alignItems center，宽 fill_container。
 - icon 16 + Label Subhead 13。默认：icon/文字 `$label-secondary`。选中：fill `$fill-strong`，icon `$accent`，文字 `$label` `600`。
 
-**⑱ Sidebar** — 宽 240，高 fill_container，毛玻璃（`$glass-sidebar` + background_blur 20），右侧 1px `$separator` 边，垂直 padding 16 gap 4。
+**⑱ Sidebar** — 宽 240，高 fill_container，毛玻璃（`$glass-sidebar` + background_blur 20），右侧 1px `$separator` 边，垂直 padding 16 gap 4。**最新 `canvas.pen` 中 S1–S6（含 S2 背景与暗色镜像）均复用同一个 Sidebar symbol；它是常驻应用壳，不是画布页私有组件。**
 - 顶部：产品标识行（lucide `clapperboard` 20 `$accent` + 「CodeVideoCanvas」Headline 17）。
-- 中部：SearchField + 导航组（小标题 Caption `$label-tertiary` padding [4,10]，如「项目」）+ NavItem×n（工作台/项目列表/画布编辑器）。
+- 中部：SearchField + 导航组（小标题 Caption `$label-tertiary` padding [4,10]，如「项目」）+ NavItem×5（工作台/项目列表/画布编辑器/分镜渲染器/合成与导出）。
 - 底部：分隔线 + NavItem（设置 `settings`）+ 本地状态行（Caption `$label-tertiary`：「本地模式 · 数据不出本机」+ `$success` 圆点 6×6）。
 
 **⑲ TopBar** — 高 56，宽 fill_container，fill `$surface`，底部 1px `$separator`，水平 padding 16 alignItems center justifyContent space_between。
@@ -305,18 +305,21 @@ y≈5803   ├──────────────────────
 
 ## 7. Zone C · 六个页面（1440×900，clip:true，浅色）
 
-> 每屏根 frame：`width:1440, height:900, fill:"$bg", layout:"vertical", clip:true`。所有组件用 ref 实例化 + descendants 覆盖。文案必须取自第 8 章文案库。
+> 2026-07-24 以最新 `canvas.pen` 实例树复核：每屏根 frame 为
+> `width:1440, height:900, fill:"$bg", layout:"horizontal", clip:true`，
+> 第一列固定为 Sidebar ref（240），第二列为页面主区（1200）；S3 的主区再拆
+> Center(880)+Inspector(320)。S2 在含 Sidebar 的 S1 背景上叠加 scrim/Dialog。
+> 文本版若与 `.pen` 冲突，以 `.pen` 为准。所有组件用 ref 实例化 +
+> descendants 覆盖，文案必须取自第 8 章文案库。
 
 ### S1 工作台首页（路由 `/`）
 ```
-TopNav(h64): 左 [clapperboard 20 $accent + CodeVideoCanvas Headline17]
-             右 [NavItem文本: 工作台(选中$accent) / 项目 / 画布 / 设置($label-secondary, gap24)]
-             底部分隔线 $separator
-Hero区(padding [64,80], 垂直 gap16, alignItems center):
+整体: Sidebar(240, 选中「工作台」) | Main(1200)
+Hero区(高179, 垂直 gap16, alignItems center):
   Title Display34 「把一段稿子，变成一支专业视频」
   Sub  Body15 $label-secondary 「语义分镜 · 节点画布 · 逐镜代码视频 · 本机一键导出」(fixed-width, 居中)
   Button/Primary md [plus 16]「新建项目」
-新建项目大卡(宽 fill_container, margin [16,80,0,80] → 用 padding 包裹, 高 140):
+新建项目大卡区(高96, 水平 padding80；卡片填满该区):
   radius $radius-lg, stroke $separator dash感→用实线, fill $surface
   居中: lucide [circle-plus] 28 $accent + 「粘贴一段文字稿，开始创作」Headline17 $label-secondary
      + Caption12 $label-tertiary「支持导入 .txt / .md，可选上传配音作为时间地基」
@@ -380,6 +383,8 @@ QueueStatusBar 实例(贴底部)
 
 ### S4 分镜详情（单镜审查页）
 ```
+整体: Sidebar(240, 选中「分镜渲染器」) | Main(1200)
+Main: TopBar(56) + 主区
 TopBar 实例: 左 [arrow-left 16 IconButton] + 「分镜 02 · 核心概念」Headline17 + StatusPill已渲染
              右 Button/Gray sm「上一镜」+ Button/Gray sm「下一镜」+ Button/Tinted sm [refresh-cw 14]「重渲此镜」
 主区(水平, padding 24, gap 24):
@@ -390,6 +395,10 @@ TopBar 实例: 左 [arrow-left 16 IconButton] + 「分镜 02 · 核心概念」H
       时间码 Caption12 mono $label-secondary「00:03:12 / 00:08:00」
       进度条(fill_container 高4 轨道 $fill, 进度 40% $accent) 音量 icon [volume-2 16 $label-tertiary]
     帧时间线(高 72, 水平 gap 4): 8 个等宽小帧(fill $fill radius 4), 第3帧 stroke $accent 1.5(播放头)
+  中栏(宽 380, 垂直 gap 16):
+    头行「分镜画布代码」+「已同步」
+    代码编辑区(fill_container, `$bg-secondary`, radius `$radius-md`, mono 11)
+    底部 Button/Tinted「重渲此镜」
   右栏(宽 320, 垂直 gap 16):
     「分镜合同」Subhead13 600 $label-secondary
     参数组同 S3 Inspector(文案/视觉增幅/构图模式 kinetic-type 等行)
@@ -400,13 +409,14 @@ TopBar 实例: 左 [arrow-left 16 IconButton] + 「分镜 02 · 核心概念」H
 
 ### S5 合成导出页
 ```
+整体: Sidebar(240, 选中「合成与导出」) | Main(1200)
 TopBar 实例: 左「合成与导出」Headline17; 右 Button/Primary sm [download 14]「导出 MP4」
-预览区(padding 24, 水平居中小预览 480×270 fill #000 radius $radius-lg + 下方视频名 Caption)
+预览区(高257, 水平居中小预览 480×200 fill #000 radius $radius-lg + 下方「{项目名} · 成片预览」Caption)
 时间线区(padding [0,24], 垂直 gap 8):
   标尺行(高 20, Caption11 mono $label-tertiary: 00:00 / 00:20 / 00:40 / 01:00 / 01:20 均布, 下 1px $separator)
   TimelineTrack ×4:
-    分镜轨 [film]: 6 个 clip 均分(标签 开场/概念/图解/代码/案例/总结)
-    字幕轨 [captions]: 4 个窄 clip
+    分镜轨 [film]: 按真实 laneKey 数量与顺序生成 clip（设计示例为 6 个）
+    字幕轨 [captions]: 按真实 laneKey 数量生成 clip
     配音轨 [audio-lines]: 1 个通长 clip + 波形纹理(竖条组)
     BGM 轨 [music]: 1 个通长 clip(透明度 60%)
 导出与 QA 区(水平 padding 24 gap 24, alignItems start):
@@ -419,13 +429,13 @@ TopBar 实例: 左「合成与导出」Headline17; 右 Button/Primary sm [downlo
     ProgressBar 实例: label「导出队列」0%(待开始)
   QA 区(fill_container, 垂直 gap 12):
     「Final QA · 抽帧审查」Subhead13 600 + Caption12 $label-tertiary「25% / 60% / 95% 三态联系表」
-    ContactSheetThumb ×4 一行(镜头 01✓ / 02✓ / 03⚠ / 04✓)
+    ContactSheetThumb 按真实 laneKey 数量生成（设计示例为 4 个）
     提示行: lucide [triangle-alert 14 $warning] + Caption12 $label-secondary「镜头 03 存在 1 条视觉 WARNING：主视觉偏小」
 ```
 
 ### S6 设置页（路由 `settings/`）
 ```
-TopNav 同 S1(选中「设置」)
+整体: Sidebar(240, 选中「设置」) | Main(1200)
 内容列(宽 720, 居中, padding [40,0], 垂直 gap 24):
   「设置」Title1 28 bold
   组1标题 Caption $label-tertiary「STEPFUN 模型服务」

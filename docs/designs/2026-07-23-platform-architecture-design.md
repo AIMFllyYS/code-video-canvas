@@ -1,7 +1,7 @@
 # CodeVideoCanvas 平台架构设计
 
 > Created: 2026-07-23
-> Updated: 2026-07-23
+> Updated: 2026-07-24
 > Status: accepted（demo 基线，已批准）
 
 ## 问题陈述
@@ -48,6 +48,7 @@ src/
     layout.tsx / globals.css
   features/
     canvas/              React Flow 节点图 + 节点类型
+    navigation/          Pencil 应用壳组合（常驻 Sidebar + 项目上下文路由）
     director/            六阶段原生 prompt/schema/tool + DirectorSession（服务端）
     render/              HyperFrames 截帧循环 + ffmpeg 封装 + 作业运行器
     ai/                  StepFun LlmAdapter（服务端）
@@ -64,6 +65,12 @@ src/
 
 - `src/app/` 只放路由与 API 入口；业务逻辑下沉 `src/features/`。
 - 领域逻辑集中在 `features/*` 与 `lib/*`，未来抽包/上云是"搬运 + 加壳"，非重写。
+- **应用壳边界**：最新 `canvas.pen` 的 S1–S6 全部采用
+  `Sidebar(240) | Main(1200)`，S3 的 Main 再拆为 Center(880) 与
+  Inspector(320)。`features/navigation/AppShell` 是唯一侧栏组合入口，只组合
+  `/playbook` 已登记的 Track P 原语；各页面不得再实现 TopNav/Sidebar 变体。
+  `projectId` 与首个可渲染 `nodeId` 由服务端页面投影传入，保证画布、分镜、
+  导出、设置之间的导航不丢上下文，也不产生无 projectId 的必然 404。
 
 ### 数据流（运行时动态物化的三层 DAG）
 

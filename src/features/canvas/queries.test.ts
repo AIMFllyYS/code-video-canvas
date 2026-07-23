@@ -33,6 +33,29 @@ describe('getCanvasGraph', () => {
     expect(graph.nodes.map(({ id }) => id)).toEqual(['requested-node'])
     expect(graph.edges.map(({ id }) => id)).toEqual(['requested-edge'])
   })
+
+  it('returns the trusted node data needed by page projections', () => {
+    const projectId = seedProject(database.db, '分镜项目')
+    database.db
+      .insert(canvasNodes)
+      .values({
+        id: 'shot-node',
+        projectId,
+        type: 'shot-codegen',
+        stage: 'FABRICATE',
+        laneKey: 'S001',
+        laneRole: 'shot-codegen',
+        position: { x: 0, y: 0 },
+        data: {
+          sourceUnit: { unitId: 'U001', text: '第一段真实脚本', order: 0 },
+        },
+      })
+      .run()
+
+    expect(getCanvasGraph(projectId).nodes[0]?.data).toEqual({
+      sourceUnit: { unitId: 'U001', text: '第一段真实脚本', order: 0 },
+    })
+  })
 })
 
 function seedProject(db: Db, title: string): string {

@@ -1,21 +1,26 @@
 'use client'
 
-import { Clapperboard, Folder, LayoutDashboard, Settings, ShieldCheck, Waypoints } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { NavItem } from '@/components/ui/nav-item'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
 import { SettingsRow } from '@/components/ui/settings-row'
 import { StatusPill } from '@/components/ui/status-pill'
 import { TextField } from '@/components/ui/text-field'
 import { Toggle } from '@/components/ui/toggle'
 import { Toast } from '@/components/ui/toast'
+import { AppShell } from '@/features/navigation/app-shell'
 import { ThemeControl } from './theme-control'
 
 type ValidationState = 'unconfigured' | 'validating' | 'valid' | 'invalid'
 
-export function SettingsForm() {
+export function SettingsForm({
+  projectId,
+  rendererNodeId,
+}: {
+  projectId?: string
+  rendererNodeId?: string
+}) {
   const [apiKey, setApiKey] = useState('')
   const [reveal, setReveal] = useState(false)
   const [state, setState] = useState<ValidationState>('unconfigured')
@@ -57,20 +62,13 @@ export function SettingsForm() {
   }
 
   return (
-    <main className="min-h-screen bg-bg text-label">
-      <header className="flex h-16 items-center justify-between border-b border-separator bg-surface px-8">
-        <Link href="/" className="flex items-center gap-2">
-          <Clapperboard className="h-5 w-5 text-accent" />
-          <span className="text-[17px] font-semibold">CodeVideoCanvas</span>
-        </Link>
-        <nav className="flex items-center gap-1" aria-label="主导航">
-          <NavItem icon={LayoutDashboard} href="/">工作台</NavItem>
-          <NavItem icon={Folder} href="/projects">项目</NavItem>
-          <NavItem icon={Waypoints} href="/canvas">画布</NavItem>
-          <NavItem icon={Settings} href="/settings" active>设置</NavItem>
-        </nav>
-      </header>
-      <div className="mx-auto flex w-[720px] flex-col gap-6 py-10">
+    <AppShell
+      active="settings"
+      projectId={projectId}
+      rendererNodeId={rendererNodeId}
+      contentClassName="overflow-y-auto"
+    >
+      <main className="mx-auto flex min-h-full w-[720px] flex-col gap-6 py-10">
         <h1 className="text-[28px] font-bold">设置</h1>
         <SettingsSection title="STEPFUN 模型服务">
           <SettingsRow label="API Key">
@@ -117,8 +115,8 @@ export function SettingsForm() {
         </SettingsSection>
         {error && <Toast variant="error" title="StepFun Key 校验失败" body="请检查 Key 是否正确" />}
         <p className="text-center text-xs text-label-tertiary">CodeVideoCanvas · 本地优先的 AIGC 视频创作引擎</p>
-      </div>
-    </main>
+      </main>
+    </AppShell>
   )
 }
 

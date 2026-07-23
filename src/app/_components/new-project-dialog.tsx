@@ -52,7 +52,7 @@ export function NewProjectDialog({ featured = false }: NewProjectDialogProps) {
       {featured ? (
         <Button
           variant="gray"
-          className="h-35 w-full flex-col gap-2 rounded-lg border border-separator bg-surface"
+          className="h-24 w-full flex-col gap-2 rounded-lg border border-separator bg-surface"
           onClick={() => setOpen(true)}
         >
           <Plus className="h-7 w-7 text-accent" />

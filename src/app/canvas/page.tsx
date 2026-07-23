@@ -1,6 +1,7 @@
 import { Clapperboard } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { computeLayout, getCanvasGraph, listProjects } from '@/features/canvas'
+import { AppShell } from '@/features/navigation/app-shell'
 import { CanvasLoader } from './canvas-loader'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,7 @@ export default async function CanvasPage({ searchParams }: CanvasPageProps) {
 
   const graph = getCanvasGraph(projectId)
   if (graph.nodes.length === 0) {
-    return <CanvasEmptyState description="当前项目还没有节点，请先导入并拆分脚本。" />
+    return <CanvasEmptyState projectId={projectId} description="当前项目还没有节点，请先导入并拆分脚本。" />
   }
 
   const positions = computeLayout(graph.nodes, graph.edges)
@@ -37,10 +38,12 @@ export default async function CanvasPage({ searchParams }: CanvasPageProps) {
   )
 }
 
-function CanvasEmptyState({ description }: { description: string }) {
+function CanvasEmptyState({ description, projectId }: { description: string; projectId?: string }) {
   return (
-    <main className="flex h-full items-center justify-center">
-      <EmptyState icon={Clapperboard} title="画布尚未生成" description={description} />
-    </main>
+    <AppShell active="canvas" projectId={projectId}>
+      <main className="flex h-full items-center justify-center">
+        <EmptyState icon={Clapperboard} title="画布尚未生成" description={description} />
+      </main>
+    </AppShell>
   )
 }

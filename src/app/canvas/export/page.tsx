@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { getCanvasGraph, listProjects } from '@/features/canvas'
 import { ExportWorkspace } from './export-workspace'
 
 export default async function ExportPage({
@@ -8,5 +9,17 @@ export default async function ExportPage({
 }) {
   const { projectId } = await searchParams
   if (!projectId) notFound()
-  return <ExportWorkspace projectId={projectId} />
+  const project = listProjects().find((candidate) => candidate.id === projectId)
+  if (!project) notFound()
+  const renderNodes = getCanvasGraph(projectId).nodes
+    .filter((node) => node.type === 'shot-codegen' && node.laneKey)
+    .sort((left, right) => left.laneKey!.localeCompare(right.laneKey!))
+  return (
+    <ExportWorkspace
+      projectId={projectId}
+      projectTitle={project.title}
+      laneKeys={renderNodes.map((node) => node.laneKey!)}
+      rendererNodeId={renderNodes[0]?.id}
+    />
+  )
 }

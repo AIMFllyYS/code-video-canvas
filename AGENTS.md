@@ -13,6 +13,12 @@
 - 画布是**运行时动态生成拓扑的 DAG**，交互对标 Dify/Coze 一类工作流平台（可平移/缩放/多页面导航），不是人工手动拖拽连线的静态工作流：语义拆分节点跑完后，程序化物化出 N 条并行"分镜通道"（每通道 5 个节点：脚本/代码/音效/字幕/验收），最终收敛到配乐 + 合并导出。详见 [Harness 总纲 §4](./docs/specs/2026-07-23-ai-development-harness.md#4-三层节点体系核心心智模型)。
 - `docs/video-director/` 是**参考语料库，不是运行时依赖**：其方法论已/正被移植为本项目原生代码（`features/director/prompts/`+`schemas/`），应用运行时不读取该目录。**不使用 Pi 的 Skills 机制**挂载它。
 - 所有 UI 视觉组件的唯一来源是 `docs/designs/canvas.pen`（通过 Pencil MCP 一比一移植），唯一登记处是 `/playbook`（`src/app/playbook/registry.ts`）；页面代码只允许 `import` 已登记组件，禁止重复实现视觉原语。
+- 最新 `canvas.pen` 中 S1–S6（含 S2 背景和暗色镜像）统一采用常驻
+  `Sidebar(240) | Main(1200)`。唯一组合入口为
+  `src/features/navigation/app-shell.tsx`；页面只提供 active section 与可信
+  project/node 上下文，禁止各页再建 TopNav、复制 Sidebar 或生成会 404 的
+  无 projectId 导出链接。AppShell 只是已登记视觉原语的业务组合，不作为新的
+  `/playbook` 组件登记。
 - 完整需求见 [PRD](./docs/specs/2026-07-23-prd-code-video-canvas.md)，架构见 [平台架构设计](./docs/designs/2026-07-23-platform-architecture-design.md)，施工方法见 [Harness 总纲](./docs/specs/2026-07-23-ai-development-harness.md) 与 [任务拆解清单](./docs/specs/2026-07-23-harness-task-breakdown.md)。
 
 ## Tech Stack
@@ -68,6 +74,7 @@ src/
     render/            HyperFrames 截帧循环 + ffmpeg 封装 + 作业运行器
     ai/                StepFun LlmAdapter（服务端）
     audio/             配音 / SFX / BGM / 字幕（Demo 阶段占位，P1 补齐真实实现）
+    navigation/        常驻 Pencil Sidebar 应用壳 + 项目上下文导航
   lib/
     db/                Drizzle + SQLite
     storage/           StorageAdapter（本地 FS）

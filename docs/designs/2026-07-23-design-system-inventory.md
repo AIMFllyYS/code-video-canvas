@@ -170,8 +170,8 @@ y≈5803    Zone D · 暗色页面（对齐 S1–S6 正下方）
 
 | 组件 | 场景 |
 |---|---|
-| NavItem | 侧栏 / 顶栏导航项 |
-| Sidebar | S3 左栏 |
+| NavItem | 常驻侧栏导航项 |
+| Sidebar | S1–S6 共同应用壳第一列（240px） |
 | TopBar | 页面顶栏操作区 |
 | ProjectCard | S1 项目网格 |
 | ArtifactChip | 工件文件名芯片 |
@@ -197,12 +197,12 @@ y≈5803    Zone D · 暗色页面（对齐 S1–S6 正下方）
 
 | 屏 | 路由意向 | 布局骨架 | 关键组件 |
 |---|---|---|---|
-| S1 Home | `/` | TopNav(64) → Hero → 新建卡 → ProjectCard 网格 → 最近渲染 | ProjectCard, SearchField, Button/Primary |
-| S2 New Project | Dialog on S1 | Scrim + Dialog(560) 表单 | Dialog, TextField, TextArea, Button |
+| S1 Home | `/` | Sidebar(240) \| Hero → 新建卡 → ProjectCard 网格 → 最近渲染 | Sidebar, ProjectCard, SearchField, Button/Primary |
+| S2 New Project | Dialog on S1 | 含 Sidebar 的 S1 背景 + Scrim + Dialog(560) 表单 | Sidebar, Dialog, TextField, TextArea, Button |
 | S3 Canvas | `(canvas)/` | Sidebar(240) \| Center(TopBar+DAG+Queue) \| Inspector(320) | Sidebar, Nodes, QueueStatusBar, ProgressBar |
-| S4 Shot Detail | 单镜审查 | TopBar → 播放器+控制 \| 右栏合同/字幕 | IconButton, StatusPill, ArtifactChip |
-| S5 Export | 合成导出 | TopBar → 预览 → Timeline×4 → 导出面板 + QA | TimelineTrack, SettingsGroup, ContactSheetThumb |
-| S6 Settings | `settings/` | TopNav → 居中 720 列 SettingsGroup×4 | SettingsGroup, Toggle, SegmentedControl |
+| S4 Shot Detail | 单镜审查 | Sidebar(240) \| TopBar → 播放器 + Code(380) + 合同(320) | Sidebar, IconButton, StatusPill, SettingsGroup |
+| S5 Export | 合成导出 | Sidebar(240) \| TopBar → 480×200 预览 → Timeline×4 → 导出面板 + QA | Sidebar, TimelineTrack, SettingsGroup, ContactSheetThumb |
+| S6 Settings | `settings/` | Sidebar(240) \| 居中 720 列 SettingsGroup×4 | Sidebar, SettingsGroup, Toggle, SegmentedControl |
 
 Zone D 与 Zone C 一一对应；根节点强制 `theme.mode = dark`，文案与结构相同。S6 Dark 主题分段选中「深色」。
 

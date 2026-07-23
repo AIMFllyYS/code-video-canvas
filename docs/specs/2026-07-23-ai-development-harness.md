@@ -258,6 +258,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
   `src/app/playbook/registry.ts` 登记并配 `*.demo.tsx`。非 Pencil 视觉原语
   不得冒充 Track P 登记项；Lucide 白名单单独作为图标目录展示。
 - **所有页面（S1~S6 及暗色镜像）实现时只能 `import` 这些已登记组件，禁止在页面文件内重复实现同类视觉原语**（比如 S3 画布页需要 StatusPill，就必须 `import` 已登记的 `StatusPill`，不能在画布组件文件内再手写一个视觉相同的 div 结构）。任务卡执行中若发现所需组件尚未移植，必须先补移植该组件到 `components/*` + 登记 `/playbook`，再在页面中 `import` 使用，不允许"页面里先临时糊一个、以后再抽取"。
+- **S1~S6 共用唯一应用壳**：最新 `canvas.pen` 的六个浅色页面、六个暗色镜像及 S2 背景都以同一 `Sidebar` symbol 为第一列（固定 240px）。代码中由 `features/navigation/AppShell` 统一组合已登记的 `Sidebar/NavItem`，页面只传 active section、projectId 与 rendererNodeId；禁止页面私建 TopNav、复制侧栏或丢失项目上下文。`AppShell` 是业务布局组合，不是新的视觉原语，不登记 `/playbook`。
 - 这一约束新增独立 Track（见 task-breakdown 的 **Track P — Pencil 组件港口**），且**排在 Track U（页面实装）之前**，因为 U 的每张任务卡都依赖 P 已完成的组件。
 
 ### 5.7 依赖补全（新增第三方库）
