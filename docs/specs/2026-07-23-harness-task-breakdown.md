@@ -322,7 +322,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 ### C1.1 — `fan-out.ts`：分镜通道物化
 
-- 状态：☑
+- 状态：◐（e2e 发现 shot 节点未写入 directorInput，下游 SHOT_SPEC/FABRICATE 阶段缺少输入）
 - 前置任务：F0.4, F0.5
 - 允许改动范围：`src/features/canvas/fan-out.ts`（新建）、`src/features/canvas/fan-out.test.ts`
 - 禁止改动：`src/features/canvas/actions.ts`、`queries.ts`（不要把物化逻辑塞进这两个文件）
@@ -703,7 +703,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.3 — `stage-runner.ts`：单阶段运行编排
 
-- 状态：☑
+- 状态：◐（stage-runner 从 canvas_nodes.data.directorInput 取输入，但未与上游 artifact 或 fan-out 打通，真实运行时报 undefined）
 - 前置任务：D0.1, D0.2, D1.1, D1.2
 - 允许改动范围：`src/features/director/stage-runner.ts`、`stage-prompt.ts`、`runtime-repository.ts`（均新建）、对应测试及 `pipeline.ts`（仅移除空接口）
 - 禁止改动：`src/lib/queue/**`（本卡只消费队列接口，不改队列实现）
@@ -1656,7 +1656,7 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 
 ### U1.8 — 端到端 UI 走查（Tier B 里程碑收口）
 
-- 状态：☑
+- 状态：◐（2026-07-23 e2e：新建项目/画布 fan-out/暗色主题可通，真实 AI Director、单镜渲染、导出合并未跑通，见 docs/updates/2026-07-23-cloud-e2e-review-report.md）
 - 前置任务：U1.1~U1.7 全部完成
 - Task 规格：
   ```
