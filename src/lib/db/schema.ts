@@ -22,6 +22,14 @@ export const canvasNodes = sqliteTable('canvas_nodes', {
   stage: text('stage'),
   position: text('position', { mode: 'json' }).$type<{ x: number; y: number }>().notNull(),
   data: text('data', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default(sql`'{}'`),
+  status: text('status', {
+    enum: ['idle', 'pending', 'running', 'success', 'failed', 'stale'],
+  })
+    .notNull()
+    .default('idle'),
+  contentHash: text('content_hash'),
+  laneKey: text('lane_key'),
+  laneRole: text('lane_role'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(now),
 })
 

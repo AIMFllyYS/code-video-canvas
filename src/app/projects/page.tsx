@@ -1,36 +1,48 @@
 import Link from 'next/link'
 import { Card, CardBody, CardTitle } from '@/components/ui/card'
-import { listProjects } from '@/features/canvas'
+import { getCanvasGraph, listProjects } from '@/features/canvas'
+import { AppShell } from '@/features/navigation/app-shell'
 
 export const dynamic = 'force-dynamic'
 
 export default function ProjectsPage() {
   const projects = listProjects()
+  const activeProject = projects[0]
+  const rendererNodeId = activeProject
+    ? getCanvasGraph(activeProject.id).nodes.find((node) => node.type === 'shot-codegen')?.id
+    : undefined
   return (
-    <main className="mx-auto max-w-4xl p-8">
-      <h1 className="text-2xl font-bold">项目</h1>
-      <p className="mt-2 text-sm text-label-secondary">共 {projects.length} 个项目（本地 SQLite）。</p>
+    <AppShell
+      active="projects"
+      projectId={activeProject?.id}
+      rendererNodeId={rendererNodeId}
+      contentClassName="overflow-y-auto"
+    >
+      <main className="mx-auto max-w-4xl p-8">
+        <h1 className="text-2xl font-bold">项目列表</h1>
+        <p className="mt-2 text-sm text-label-secondary">共 {projects.length} 个项目（本地 SQLite）。</p>
 
-      {projects.length === 0 ? (
-        <p className="mt-6 text-sm text-label-tertiary">
-          暂无项目。可通过 <code className="rounded bg-fill px-1">POST /api/projects</code> 创建。
-        </p>
-      ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {projects.map((project) => (
-            <Card key={project.id}>
-              <CardTitle>{project.title}</CardTitle>
-              <CardBody>{new Date(project.updatedAt).toLocaleString('zh-CN')}</CardBody>
-            </Card>
-          ))}
+        {projects.length === 0 ? (
+          <p className="mt-6 text-sm text-label-tertiary">还没有项目</p>
+        ) : (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {projects.map((project) => (
+              <Link key={project.id} href={`/canvas?projectId=${project.id}`}>
+                <Card>
+                  <CardTitle>{project.title}</CardTitle>
+                  <CardBody>{new Date(project.updatedAt).toLocaleString('zh-CN')}</CardBody>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6">
+          <Link href="/" className="text-sm text-label-secondary underline">
+            返回工作台
+          </Link>
         </div>
-      )}
-
-      <div className="mt-6">
-        <Link href="/" className="text-sm text-label-secondary underline">
-          返回首页
-        </Link>
-      </div>
-    </main>
+      </main>
+    </AppShell>
   )
 }

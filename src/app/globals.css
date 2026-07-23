@@ -64,6 +64,7 @@
 
   /* 字体 */
   --font-sans: 'Inter', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
+  --font-sc: 'Noto Sans SC', 'Microsoft YaHei', ui-sans-serif, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* 圆角 */
@@ -136,6 +137,7 @@
 @theme inline {
   /* 字体 */
   --font-sans: var(--font-sans);
+  --font-sc: var(--font-sc);
   --font-mono: var(--font-mono);
 
   /* 品牌与语义色 */

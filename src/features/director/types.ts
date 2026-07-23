@@ -1,4 +1,4 @@
-/** video-director 八阶段。 */
+/** 应用层收敛后的 video-director 六阶段。 */
 export const PIPELINE_STAGES = [
   'INGEST',
   'DIRECT',

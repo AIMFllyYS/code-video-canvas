@@ -6,3 +6,4 @@ export const queue = new InProcessQueue()
 
 export { InProcessQueue } from './in-process-queue'
 export type { JobHandler, JobStatus, QueueAdapter, QueueJob } from './types'
+export { getJobSnapshot, type JobSnapshot } from './query'

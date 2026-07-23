@@ -1,15 +1,49 @@
-import Link from 'next/link'
+import { Clapperboard } from 'lucide-react'
+import { EmptyState } from '@/components/ui/empty-state'
+import { computeLayout, getCanvasGraph, listProjects } from '@/features/canvas'
+import { AppShell } from '@/features/navigation/app-shell'
+import { CanvasLoader } from './canvas-loader'
 
-export default function CanvasPage() {
+export const dynamic = 'force-dynamic'
+
+interface CanvasPageProps {
+  searchParams: Promise<{ projectId?: string }>
+}
+
+export default async function CanvasPage({ searchParams }: CanvasPageProps) {
+  const requestedProjectId = (await searchParams).projectId
+  const projects = listProjects()
+  const projectId = requestedProjectId ?? projects[0]?.id
+  if (!projectId) return <CanvasEmptyState description="请先创建一个项目，再进入节点画布。" />
+
+  const graph = getCanvasGraph(projectId)
+  if (graph.nodes.length === 0) {
+    return <CanvasEmptyState projectId={projectId} description="当前项目还没有节点，请先导入并拆分脚本。" />
+  }
+
+  const positions = computeLayout(graph.nodes, graph.edges)
+  const nodes = graph.nodes.map((node) => ({
+    ...node,
+    position: positions.get(node.id) ?? node.position,
+  }))
+
+  const projectTitle = projects.find(({ id }) => id === projectId)?.title ?? 'RAG 十分钟入门'
   return (
-    <main className="flex h-full flex-col items-center justify-center p-8 text-center">
-      <h1 className="text-2xl font-bold">画布</h1>
-      <p className="mt-2 max-w-md text-sm text-gray-600">
-        节点式分镜画布（React Flow）将在后续步骤通过 next/dynamic 挂载。此处为占位壳。
-      </p>
-      <Link href="/" className="mt-6 text-sm text-gray-600 underline">
-        返回首页
-      </Link>
-    </main>
+    <CanvasLoader
+      projectId={projectId}
+      projectTitle={projectTitle}
+      nodes={nodes}
+      edges={graph.edges}
+    />
+  )
+}
+
+function CanvasEmptyState({ description, projectId }: { description: string; projectId?: string }) {
+  return (
+    <AppShell active="canvas" projectId={projectId}>
+      <main className="flex h-full items-center justify-center">
+        <EmptyState icon={Clapperboard} title="画布尚未生成" description={description} />
+      </main>
+    </AppShell>
   )
 }

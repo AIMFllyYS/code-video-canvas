@@ -4,18 +4,18 @@ import { entriesByCategory } from '../registry'
 export default function PlaybookIconsPage() {
   const entries = entriesByCategory('icons')
   return (
-    <main className="mx-auto max-w-4xl p-8">
-      <Link href="/playbook" className="text-sm text-gray-600 underline">
+    <main className="mx-auto max-w-4xl p-8 text-label">
+      <Link href="/playbook" className="text-sm text-label-secondary underline">
         ← 组件手册
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Icons</h1>
       <div className="mt-6 space-y-8">
         {entries.map(({ id, name, Demo }) => (
           <section key={id}>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-label-tertiary">
               {name}
             </h2>
-            <div className="rounded-lg border border-gray-200 p-6">
+            <div className="rounded-lg border border-separator bg-surface p-6">
               <Demo />
             </div>
           </section>

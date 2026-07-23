@@ -184,6 +184,16 @@ temp/
 *.3g2
 
 # ========================
+# Playwright CLI artifacts
+# ========================
+.playwright-cli/
+
+# ========================
+# Local render output
+# ========================
+output/
+
+# ========================
 # Video Director Skill
 # ========================
 docs/video-director/

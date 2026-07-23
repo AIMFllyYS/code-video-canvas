@@ -6,8 +6,10 @@ export interface FrameSpec {
 }
 
 export interface RenderJob {
+  projectId: string
+  nodeId: string
   shotId: string
-  html: string
+  htmlKey: string
   frames: FrameSpec
   seed?: number
 }

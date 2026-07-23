@@ -26,7 +26,7 @@
 ## 1. 背景
 
 - PRD（[`2026-07-23-prd-code-video-canvas.md`](./2026-07-23-prd-code-video-canvas.md)）与架构设计（[`2026-07-23-platform-architecture-design.md`](../designs/2026-07-23-platform-architecture-design.md)）已确定产品范围与技术选型，但两者都停在"设计"层面，没有回答"施工顺序"和"每一步怎么判定做对了"。
-- 项目引入 Codex 的 Goal 模式作为主力施工方式。Goal 模式的真实机制是：**一个 thread 一次只能挂一个目标，模型自己判断"完成"并调用 `update_goal(complete)`，续接是一次性的**（没有工具调用就不会再触发）。这意味着任务粒度必须卡在"一次 Goal 生命周期内能够被模型自主判定完成"的颗粒度——太粗会导致模型中途瞎猜完成条件、越界改动；太细则浪费 Goal 机制的持久化价值。
+- 项目引入 Codex 的 Goal 模式作为主力施工方式。Goal 模式的真实机制是：**一个 thread 一次只能挂一个持久目标（objective），Codex 在该目标下可以长时间自主运行、自己把工作拆解成一系列 Task 并逐一执行，全部完成后自己判断"目标达成"并调用 `update_goal(complete)`**；续接是一次性的（某轮没有工具调用就不会再自动触发）。这意味着：**Goal 的颗粒度应该对应一个 Track（一批相关 Task 的集合）**，而不是单个 Task；单个 Task 的颗粒度则要卡在"边界清晰、允许改动范围明确、完成条件可机器判定"，方便 Codex 在会话内部自主排序执行、不越界。详见 §9。
 - 项目采用 **Pi Agent 架构**（`@earendil-works/pi-agent-core` + `pi-ai`）作为 `features/director` 的运行时底座，而不是自造一套 Agent 编排框架。这是本次规划中最大的架构决定，详见 §3。
 - 产品的画布本质是一个**运行时动态生成拓扑的 DAG**，不是 Dify/Coze 那种人工手动拖拽连线的静态工作流。这个特性直接决定了 `features/canvas` 的数据模型和模块拆分方式，详见 §4。
 
@@ -68,31 +68,49 @@
 
 ### 3.2 依赖选型（修正：仅作裸 tool-calling 循环引擎）
 
-仍使用 **`@earendil-works/pi-agent-core`**（Agent runtime，tool calling + state management）+ **`pi-ai`**（底层多 Provider LLM 客户端），**但用途收窄**：只借用它的会话生命周期管理与工具调用循环机制，**不使用其 Skills/Extensions 加载体系**。`createAgentSession()` 拿到的会话只挂载 §3.1 表格中列出的、我们自己实现的 Tool（对应 Track D 的 `tools/` 目录），不传入任何 `--skill`/`skills` 相关配置。
+仍使用 **`@earendil-works/pi-agent-core`**（Agent runtime，tool calling + state management）+ **`pi-ai`**（底层多 Provider LLM 客户端），**但用途收窄**：只借用它的 `Agent`、会话存储与工具调用循环机制，**不使用其 Skills/Extensions 加载体系**。经 F0.1 核查，`createAgentSession()` 只由 `@earendil-works/pi-coding-agent` 导出，`pi-agent-core` 的正确入口是 `new Agent(...)`；因此本项目用 `Agent + JsonlSessionRepo` 组合，并在 `features/director/pi-session.ts` 内封装项目原生的 `createDirectorSession()`。该工厂只挂载项目原生的只读/诊断 Tool，不加载任何 Skill/Extension；业务归属与写入路径由可信应用层决定，不交给模型。
 
 仍不用 `@earendil-works/pi-coding-agent`（面向人类终端编码场景，默认工具集 `read/write/edit/bash` 与本项目场景不符）。
 
-### 3.3 StepFun 接入方式（含未验证项）
+### 3.3 StepFun 接入方式（Foundation Spike 已验证）
 
-`pi-ai` 支持注册自定义 OpenAI 兼容 Provider。StepFun 是 OpenAI 兼容端点，**理论上**可以直接注册为 `pi-ai` 的自定义 Provider，从而让 `pi-agent-core` 的 Agent runtime 直接调用 StepFun，不需要我们再写一层 `LlmAdapter` 转发。真实的密钥/Base URL/模型 ID 见根目录 `.env` 文件（AI 代理有权限查看，且在端到端测试期间被授权直接写入该文件的真实测试值，见 §7.4）。
+`pi-ai` 支持注册自定义 OpenAI 兼容 Provider。F0.1 已用 `step-3.5-flash` 对 `https://api.stepfun.com/v1` 完成一次真实单轮调用并收到 `OK`，同时验证 `JsonlSessionRepo` 能创建、读取元数据并清理 JSONL 会话。因此 Director 采用 `pi-ai` 原生 StepFun Provider，不再保留“包装 `StepfunAdapter` 才能调用模型”的默认路径；`StepfunAdapter` 继续服务非 Agent 的普通 LLM 调用与 Key 校验。真实密钥仍只来自 SQLite 设置或 `.env`（见 §7.4）。
 
-**这一点尚未实测**，必须作为 Foundation Track 的第一张任务卡（Spike）验证。若验证失败（比如 `pi-ai` 的自定义 Provider 接口对接不上 StepFun 的某些非标准字段），退回方案是：保留现有 `features/ai/stepfun-adapter.ts` 作为独立的 `LlmAdapter`，`features/director` 内的非 Pi 部分（比如触发渲染、写产物）继续用现有适配器，只把"需要多轮工具调用的生成类任务"（分镜拆分、详细脚本撰写、HTML 代码生成）交给 Pi Agent 的 tool-calling 循环。
+F0.1 还确认 Pi 包是 ESM-only，而当前仓库根脚本语境为 CommonJS；一次性 `.ts` Spike 使用原生动态 `import()` 桥接。生产代码由 Next.js/Turbopack 处理 ESM，不复制该桥接写法。若未来 Provider 升级后真实烟测失败，才启用退回方案：保留 `StepfunAdapter` 作为独立 `LlmAdapter`，并在里程碑报告中记录退回原因，不在运行时静默切换。
 
 ### 3.4 确定性红线的强制位置（不依赖模型自觉遵守）
 
 `lib/determinism` 的 lint 守卫必须挂在"HTML 生成 Tool 返回结果之后、进入渲染队列之前"这个必经关卡上——这是我们自己的 Tool 实现内部的强制调用，不是靠 Skill 里的一句"不可绕过"文字指令约束模型。任何违规直接判定该次生成失败，Tool 返回结构化错误，让 Pi Agent 的 tool-calling 循环收到失败反馈后自行重试或升级为人工介入。
 
-### 3.5 会话状态归属（已决策，不变）
+`validate-shot-plan` / `check-determinism` 是给 Agent 的只读诊断 Tool，不构成可伪造的“已校验”声明。`write-artifact.ts` **不是 Pi Tool**，而是只由可信 stage runner 调用的应用服务：项目/节点/路径来自持久执行上下文，不接受模型决定业务归属；它对**即将写入的同一份内容**再次调用原生 schema/确定性守卫。写入顺序固定为“校验 → StorageAdapter → artifacts 索引”，若索引失败则删除刚写入的文件作补偿，避免产生无法查询的孤儿产物。`pi-session` 属于已由 SessionStore 创建的既有文件，只登记相对指针，不重复写内容。
+
+### 3.5 会话状态归属与适配边界（已决策）
 
 Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构化数据唯一权威源"的原则不冲突，划分如下：
 
-- Pi 会话 JSONL 文件 → 视为**二进制产物**，走 `StorageAdapter` 存本地文件系统（与 mp4/frames/audio 同等对待）。
+- Pi 会话 JSONL 文件 → 视为**追加式文件产物**。`StorageAdapter.localPath('pi-sessions')` 只负责分配受控根目录；`DirectorSessionStore` 在该目录内封装 `JsonlSessionRepo + NodeExecutionEnv` 所需的 append/list/read-lines 文件语义。业务代码不得直接访问裸路径。
 - SQLite 只存**指向会话文件的指针 + 阶段/节点的状态枚举**（`artifacts` 表新增一种 `kind: 'pi-session'`，`canvas_nodes` 表记录该节点当前状态），不解析、不镜像会话内容到关系表。
 - 任何"业务真相"（分镜内容、渲染产物路径、节点状态）必须落在 SQLite / StorageAdapter，Pi 会话文件只是可追溯的执行留痕，重放/调试用，绝不作为业务查询的数据源。
+- `DirectorSession` 是运行层与持久层的唯一桥：新会话先创建 JSONL 并返回相对 `storageKey`；恢复会话时先由 `Session.buildContext()` 重建消息，再作为 `Agent.initialState.messages` 注入。
+- 会话写入由 `Agent` 的 `message_end` 生命周期事件驱动，按事件顺序 append 用户、助手与 ToolResult 消息；不得在 stage runner 与 Tool 内重复写同一条消息。
+- `createDirectorSession()` 必须接收 `{ projectId, nodeId, stage, resumeSessionKey? }`，以便会话元数据与画布节点一一追溯。对外最小接口只暴露 `id`、`storageKey`、`run({ prompt, tools })` 与 `close()`；`tools` 使用项目自有 `DirectorTool` 契约，由 `pi-session.ts` 内部适配为 Pi `AgentTool`，不暴露 Pi `Agent`/`Session` 实例或 Pi 类型。
+- `stage-runner.ts` 在第一次模型调用前把 `storageKey` 登记为 `artifacts.kind='pi-session'`；失败路径也保留该指针用于复盘。
+- Director 节点的可恢复输入统一存放在 `canvas_nodes.data.directorInput`；`stage-prompt.ts` 按 `stage` 调用 D0.2 的类型化 prompt builder。`INGEST` 可从项目 `script` 补齐 `rawScript`，其余阶段缺少或不符合对应 schema 时直接失败，不允许临时拼接无类型 prompt。
+- `runStage()` 只接受状态已经为 `pending` 的节点并执行 `pending → running → success|failed`；`enqueueDirectorStage()` 必须先验证 project/node 归属、stage 一致且状态属于 `idle|failed|stale`，再把节点置为 `pending`，不得绕过 C1.3 状态机直接 `idle → running`。Demo 的队列入库与节点状态暂非同一事务：若置 pending 后 enqueue 失败，入口必须补偿为 `pending → running → failed` 并记录错误，使节点可重试而不永久悬挂；未来可在不改领域 API 的前提下换成事务 outbox。
+- `runtime-repository.ts` 是 Director 的持久化端口：负责读取项目/节点执行上下文、登记既有 artifact 指针及记录结构化错误；`stage-runner.ts` 负责跨模块编排但不直接操作 Drizzle。阶段输出仍必须经过 D1.2 的写入门禁后才可登记。
+
+#### 3.5.1 阶段结果提交协议（U1.8 前置架构纠正）
+
+模型回复不是业务状态，必须依次经过“**类型化归一 → 产物门禁 → 应用副作用提交 → 节点 success**”：
+
+- Demo `INGEST` 只允许返回严格的 `{scriptUnits}` JSON。音频 manifest/allocation 必须由音频领域依据实测媒体产生，禁止模型虚构时长。归一化后由可信应用层生成稳定的 `S001...` 分镜 ID，并调用 Canvas fan-out 在事务内物化 `N×5` 通道；源 unit 同步写入通道节点作为可追溯输入。
+- `FABRICATE` 只提供经确定性守卫验证的 HTML。`renderSpec` 不接受模型自由输出：应用层从已校验的 `audioAllocation` 派生 fps/帧数，以固定 Demo 画幅和 project/node/shot 派生 seed，随后写入 `canvas_nodes.data.renderSpec`。
+- 任一归一化、产物写入或副作用提交失败，节点都必须进入 failed，不得先标 success。副作用提交后才能关闭会话并推进 success。
+- `stage-result.ts` 只做纯归一化与可信元数据派生；`stage-result-committer.ts` 通过 Canvas 公开入口和 Director repository 提交业务状态。stage runner 继续不直接操作 Drizzle。
 
 ### 3.6 与 `features/director` 现有骨架的关系
 
-现有 `pipeline.ts` 的 `AgentRunner` 接口需要替换为基于 Pi `AgentSession` 的具体实现（不是删除整个文件，是把接口签名对齐 Pi SDK 的 `createAgentSession()` 返回类型）。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
+`pipeline.ts` 只保留阶段元数据，不再声明一套平行的 `AgentRunner` 抽象；运行契约以 `pi-session.ts` 的项目原生 `DirectorSession` 为唯一来源。具体实现由 `pi-session.ts` 组合 Pi `Agent` 与 `JsonlSessionRepo`，但不把 Pi 内部类型泄漏到 `features/director` 外部。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
 
 ---
 
@@ -103,7 +121,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 | 层级 | 节点是什么 | 数量级 | 消费者 | 对应代码位置 |
 |---|---|---|---|---|
 | **L1 画布节点** | 用户在 React Flow 画布上看到的实体：脚本提交、语义拆分、每个分镜的脚本/代码/音效/字幕/验收、配乐、合并导出 | 每项目：4 个全局节点 + N×5 个分镜通道节点（N=分镜数，可达数十） | 最终用户 | `features/canvas`、`src/lib/db/schema.ts` 的 `canvas_nodes`/`canvas_edges` 表 |
-| **L2 技能内部节点** | video-director 8 阶段内部的子步骤（语义解读→recipe 选型→……→QA 抽样） | 每阶段 3~8 个子步骤 | Pi AgentSession 内部的 tool calls | `docs/video-director/` 内部（不在 `src/` 中体现） |
+| **L2 Agent 内部节点** | video-director 8 阶段内部的子步骤（语义解读→recipe 选型→……→QA 抽样） | 每阶段 3~8 个子步骤 | `DirectorSession` 封装的 Pi `Agent` 内部 tool calls | `docs/video-director/` 内部（不在 `src/` 中体现） |
 | **L3 开发任务节点** | 本 Harness 拆出来的、给 Codex 执行的任务卡 | 预计 40~60 张 | Codex（施工方） | `docs/specs/2026-07-23-harness-task-breakdown.md` |
 
 三层是**同构但独立**的：L3 任务卡的边界应当**对齐** L1 节点边界（比如"实现分镜代码生成节点的渲染联动"天然是一张任务卡），但 L3 本身不产出视频，是在造"产出视频的机器"。
@@ -182,10 +200,10 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 | 文件 | 职责 | 备注 |
 |---|---|---|
-| `types.ts` | 节点类型taxonomy：全局单例类型（`script-import`/`shot-split`/`score`/`export`）+ 分镜通道类型（`shot-script`/`shot-codegen`/`shot-sfx`/`shot-subtitle`/`shot-qa`） | 替换现有的 `ingest/direct/shot-spec/shot/assemble/finalize`（那是"阶段"不是"节点类型"，命名需要重新设计，见 §6.2） |
+| `types.ts` | 客户端安全的 canonical 节点合同：全局单例类型（`script-import`/`shot-split`/`score`/`export`）+ 分镜通道类型（`shot-script`/`shot-codegen`/`shot-sfx`/`shot-subtitle`/`shot-qa`）+ 六态 `NodeStatus` | UI/React Flow 直接 import type；禁止复制状态枚举，禁止用 `PipelineStage` 冒充节点类型 |
 | `schemas.ts` | 每种节点 `data` payload 的 Zod schema | 现有仅有 `createProjectSchema`，需要按节点类型逐一补 |
 | `queries.ts` | 读：按项目取节点/边、按 `laneKey` 分组取通道 | 现有骨架已存在，扩展查询方法 |
-| `actions.ts` | 写：单节点 CRUD、节点状态转移 | 不放 fan-out 批量物化逻辑（那是独立职责） |
+| `actions.ts` | 写：项目与初始全局 DAG 原子创建、单节点 CRUD、节点状态转移 | 创建项目必须同事务建立 script-import/shot-split/score/export；不放 fan-out 批量物化逻辑 |
 | `fan-out.ts`（新增） | 给定语义拆分节点的输出（N 个分镜），批量物化 N×5 个通道节点 + 通道内部串行边 + 与全局收敛节点的边 | 单一职责：只做"拓扑生成"，不做渲染触发 |
 | `layout.ts`（新增） | 自动布局：给定节点/边集合，计算默认坐标（dagre 或等价算法） | 独立文件，方便未来替换布局算法而不影响其余模块 |
 | `status.ts`（新增） | 节点状态机转移 + 内容哈希比对（判断是否 stale，驱动 F5 定向重渲染） | 依赖 §6 新增的 `contentHash`/`status` 字段 |
@@ -195,22 +213,28 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 | 文件 | 职责 | 备注 |
 |---|---|---|
-| `pipeline.ts` | 阶段元数据（已存在，阶段命名对齐 §6.3 决策） | 移除现有空 `AgentRunner` 接口定义，改为从 `pi-session.ts` 导入 |
+| `pipeline.ts` | 阶段元数据（已存在，阶段命名对齐 §6.3 决策） | 只定义元数据，不重复声明运行器接口 |
 | `prompts/`（新增子目录） | §3.1 移植映射表中每个阶段的原生 prompt 模板（TS 字符串模板 + 类型化插槽参数），移植自 video-director 的方法论文本 | **不是**运行时读取 `docs/video-director/*.md`；这些文本被移植进代码后独立维护 |
 | `schemas/`（新增子目录） | §3.1 移植映射表中每个阶段的输出 Zod schema（`shot-plan.ts`/`ingest.ts` 等），手写对照 `docs/video-director/schemas/*.json` 移植 | 移植完成后与原 JSON Schema 解耦独立演进，不再同步追更 |
-| `pi-session.ts`（新增） | Pi `AgentSession` 工厂：接入 `pi-ai` Provider（StepFun）、注册 §3.1 移植出的自定义 Tool 列表 | 单一职责：只管"怎么起一个会话"；**不传入任何 Skills/Extensions 配置** |
-| `tools/`（新增子目录） | 每个自定义 Tool 一个文件（`validate-shot-plan.ts`、`write-artifact.ts`、`trigger-render.ts` 等），内部调用 `schemas/` 做校验 | 每个 Tool 文件只做一件事：校验 + 落库/落盘，不做跨阶段编排 |
-| `stage-runner.ts`（新增） | 编排一次"阶段运行"：起会话 → 跑到该阶段产出 → 落 SQLite/StorageAdapter → 更新画布节点状态 | 被 queue handler 调用；本文件是 `features/director` 唯一允许"跨模块编排"的地方 |
+| `pi-session.ts`（新增） | `DirectorSession` 工厂：组合 Pi `Agent` + `JsonlSessionRepo`，接入 `pi-ai` StepFun Provider，注册 §3.1 移植出的自定义 Tool | 单一职责：只管"怎么起一个会话"；**不依赖 `pi-coding-agent`，不加载任何 Skills/Extensions** |
+| `tools/`（新增子目录） | Agent 只读诊断 Tool（`validate-shot-plan.ts`、`check-determinism.ts`）+ 可信应用写服务（`write-artifact.ts`） | 模型不决定 project/node/path；写服务由 stage runner 调用并复验同一内容 |
+| `stage-prompt.ts`（新增） | 从项目/节点持久输入构建六阶段类型化 prompt | 只路由 D0.2 builder，不读数据库 |
+| `runtime-repository.ts`（新增） | Director 执行上下文、artifact 指针与错误记录的持久化端口 | 封装 Drizzle；不做阶段编排 |
+| `stage-runner.ts`（新增） | 编排一次"阶段运行"：读取持久输入 → 起会话 → 登记会话指针 → 跑到产出 → 经 Tool 门禁落盘 → 更新节点状态 | 被 queue handler 调用；本文件是 `features/director` 唯一允许"跨模块编排"的地方 |
+| `queue-handler.ts`（新增） | `enqueueDirectorStage()` 负责节点置 pending + 入队，处理器负责调用 `runStage()` | 应用启动由根 `instrumentation.ts` 在 Node runtime 幂等注册并启动 |
 
 ### 5.4 `features/render/`（渲染管线）
 
 | 文件 | 职责 | 备注 |
 |---|---|---|
-| `renderer.ts` | 顶层接口（已存在，当前是 throw NotImplemented） | 改为编排 `frame-capture.ts`+`encode.ts`+`cache.ts`，本身不直接操作 Playwright/ffmpeg |
-| `frame-capture.ts`（新增） | 单帧截图：加载 shot HTML → GSAP `seek(frame/fps)` → CDP 截图 | 最小可测试单元，Tier A 验收锚点 |
-| `encode.ts`（新增） | 帧序列 → ffmpeg 编码 mp4 | 独立于截图逻辑，方便未来替换编码参数 |
-| `cache.ts`（新增） | 内容哈希 → 渲染缓存查找/写入 | 依赖 §6 的 `contentHash` 字段，是 F5 的核心 |
-| `concat.ts`（新增） | 终局合并导出：多个已渲染 mp4 按序 + 全局音乐/转场 → 终片 | 只做拼接，不重新逐帧渲染（对齐 §4.1 性能设计） |
+| `frame-capture.ts`（新增） | 实现 `window.__CVC_RENDER__@v1` 合同：从 StorageAdapter 本地路径加载可搬运、自包含的 shot HTML，页面加载一次，多次 frame/fps seek + CDP 截图 | shot 不得依赖工作区相对路径或运行时读取 `docs/`/`node_modules/`；session 显式 close；同一 page 禁止并发 seek |
+| `frame-sequence.ts`（新增） | 用有限 capture session 池把 PNG 写入隔离临时目录，返回可 cleanup 的磁盘句柄 | 禁止整段 1080p 帧序列常驻 Buffer[] |
+| `encode.ts`（新增） | 从磁盘 pattern 流式读取帧，以固定/bitexact 参数编码 mp4 | 临时输出 + 原子 rename；`ffmpeg-static` 必须保持 Next server external，由 Node 解析真实平台二进制路径 |
+| `cache.ts`（新增） | 版本化 renderKey → render-mp4 artifact，命中时复核 StorageAdapter.exists | renderKey 由 HTML + 帧规格 + seed 派生并进入路径；artifact.contentHash 始终保存 MP4 实体 SHA-256 |
+| `repository.ts`（新增） | Render context、节点/产物顺序与 artifact 指针的持久化端口 | 封装 Drizzle，不做渲染编排 |
+| `renderer.ts` | 可信顶层编排：HTML 守卫 → cache → frame sequence → encode → Storage/索引 | finally 清理临时资源，不直接暴露给路由 |
+| `queue-handler.ts`（新增） | render-shot 入队/状态机/失败补偿与 handler | 与 Director 共用单例队列和 instrumentation 启动；模块导入不得打开 SQLite，默认 repository 延迟到 enqueue/handler 执行时创建 |
+| `concat.ts` + `export-service.ts`（新增） | 已渲染 mp4 稳定排序后流拷贝拼接，可选混入配乐并提交终片 | 不重新逐帧渲染；未完成节点结构化返回 |
 
 ### 5.5 `features/audio/`（字幕/配音/音效/配乐）
 
@@ -228,8 +252,13 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 这是本次修正新增的**强制约束**，直接回应"不要重复撰写冗余代码"的要求：
 
 - **`docs/designs/canvas.pen` 是唯一的视觉真源**。该设计稿共 52 个顶层节点、其中 **30 个标记为 `reusable:true` 的可复用组件**（Button 系列/IconButton/SegmentedControl/TextField/TextArea/SearchField/Toggle/ProgressBar/StatusPill/Tooltip/Toast/Dialog/EmptyState/NavItem/TopBar/ProjectCard/ArtifactChip/Node 系列四种/QueueStatusBar/TimelineTrack/ContactSheetThumb/SettingsRow/SettingsGroup/Sidebar）。这 30 个组件**必须逐一通过 Pencil MCP 工具链（`mcp_pencil_*`）读取其结构与样式，一比一还原为 `src/components/ui/*.tsx` 或 `src/components/icons/*.tsx` 下的真实 React 组件**，禁止凭记忆/凭空实现替代读取。
-- **`/playbook` 是唯一的组件登记处**。这 30 个组件港口完成后必须**逐一**在 `src/app/playbook/registry.ts` 登记 + 配 `*.demo.tsx`，作为"活文档"。
+- **`/playbook` 是唯一的组件登记处**。30 个 Pencil reusable symbols 必须全部
+  可追溯；其中 Button/Primary、Tinted、Gray、Destructive 由一个带 `variant`
+  的 Button 组件承载，因此登记口径为 **27 个 Pencil UI 组件族**，每族在
+  `src/app/playbook/registry.ts` 登记并配 `*.demo.tsx`。非 Pencil 视觉原语
+  不得冒充 Track P 登记项；Lucide 白名单单独作为图标目录展示。
 - **所有页面（S1~S6 及暗色镜像）实现时只能 `import` 这些已登记组件，禁止在页面文件内重复实现同类视觉原语**（比如 S3 画布页需要 StatusPill，就必须 `import` 已登记的 `StatusPill`，不能在画布组件文件内再手写一个视觉相同的 div 结构）。任务卡执行中若发现所需组件尚未移植，必须先补移植该组件到 `components/*` + 登记 `/playbook`，再在页面中 `import` 使用，不允许"页面里先临时糊一个、以后再抽取"。
+- **S1~S6 共用唯一应用壳**：最新 `canvas.pen` 的六个浅色页面、六个暗色镜像及 S2 背景都以同一 `Sidebar` symbol 为第一列（固定 240px）。代码中由 `features/navigation/AppShell` 统一组合已登记的 `Sidebar/NavItem`，页面只传 active section、projectId 与 rendererNodeId；禁止页面私建 TopNav、复制侧栏或丢失项目上下文。`AppShell` 是业务布局组合，不是新的视觉原语，不登记 `/playbook`。
 - 这一约束新增独立 Track（见 task-breakdown 的 **Track P — Pencil 组件港口**），且**排在 Track U（页面实装）之前**，因为 U 的每张任务卡都依赖 P 已完成的组件。
 
 ### 5.7 依赖补全（新增第三方库）
@@ -253,9 +282,9 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 |---|---|---|
 | `api/canvas/fan-out` | 物化分镜通道 | `features/canvas/fan-out.ts` |
 | `api/canvas/nodes/[id]/status` | 查询/推进节点状态 | `features/canvas/status.ts` |
-| `api/director/stage` | 触发一次阶段运行 | `features/director/stage-runner.ts` |
-| `api/render` | 触发单镜渲染 | `features/render/renderer.ts` |
-| `api/render/export` | 触发合并导出 | `features/render/concat.ts` |
+| `api/director/stage` | 触发一次阶段运行 | `features/director/queue-handler.ts` 的 `enqueueDirectorStage()` |
+| `api/render` | 触发单镜渲染 | `features/render/queue-handler.ts` 的 `enqueueRenderShot()` |
+| `api/render/export` | 触发合并导出 | `features/render/export-service.ts` |
 | `api/projects` | 项目 CRUD（已存在） | `features/canvas/actions.ts`/`queries.ts` |
 | `api/settings` | StepFun Key 等设置（已存在） | `features/ai/stepfun-adapter.ts` |
 
@@ -281,6 +310,16 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 现有 `CanvasNodeType`（`ingest/direct/shot-spec/shot/assemble/finalize`）把"阶段"和"节点类型"混为一谈，需替换为 §5.2 定义的类型集合。这是一次破坏性变更，需要同步更新 `types.ts`/`schemas.ts` 及所有引用点，作为单独任务卡执行，不能和字段新增混在一次迁移里（保持每次 migration 单一职责，方便回滚定位）。
 
+`NodeStatus` 同样属于跨服务端/客户端共享的领域合同，固定为
+`idle|pending|running|success|failed|stale` 并定义在客户端安全的
+`features/canvas/types.ts`。`status.ts` 只实现服务端状态机；Node UI 根据
+`CanvasNodeType` 显式映射视觉阶段色，不重新引入旧阶段型 taxonomy。
+
+节点类型与 Director stage 是两个正交字段，但每个可执行节点必须在创建时持久化
+stage：`shot-script→SHOT_SPEC`、`shot-codegen→FABRICATE`、
+`shot-sfx/shot-subtitle→ASSEMBLE`、`shot-qa→FINALIZE`。Inspector 只使用
+服务端读模型返回的 stage，禁止在客户端按类型猜测。
+
 ### 6.5 阶段命名统一（PRD vs video-director SKILL.md 的不一致）
 
 - PRD §8：6 阶段（INGEST→DIRECT→SHOT-SPEC→FABRICATE→ASSEMBLE→FINALIZE）
@@ -302,15 +341,16 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 - **生产行为**（面向最终用户）：用户在「设置」页填入自己的 StepFun Key → 写入本地 SQLite `settings` 表 → 服务端读取。这是产品既定设计，不变。
 - **开发/测试行为**（面向本项目开发期）：`.env.local` 提供一份种子 Key，`LlmAdapter`（以及未来 Pi Provider 配置）读取优先级为 **SQLite `settings` 表 > 环境变量**，即用户一旦在 UI 里配置过 Key，环境变量种子值自动失效。这样开发时不必每次都走 UI 填key，Tier B 里程碑验收时也可以直接做真实 AI 调用的端到端烟测。
 
-### 7.3 变量清单（草案，Foundation Track 验证后定稿）
+### 7.3 变量清单（已通过 Foundation Spike 验证）
 
 ```
+DATA_DIR=./.data            # 本地 SQLite 数据库与渲染产物根目录
 STEPFUN_API_KEY=            # 开发期种子 Key；生产路径走设置页写 SQLite，不用此变量
-STEPFUN_BASE_URL=           # 默认 https://api.stepfun.com/v1；需验证是否应为 step_plan 变体
-STEPFUN_CHAT_MODEL=         # 文本生成（分镜拆分/脚本撰写/HTML生成）；候选 step-3.5-flash / step-3.7-flash，需验证选型
-STEPFUN_TTS_MODEL=          # 配音/声音克隆；候选 stepaudio-2.5-tts
-STEPFUN_ASR_MODEL=          # 语音转写（若用于字幕时间轴对齐）；候选 stepaudio-2.5-asr
-STEPFUN_VISION_MODEL=       # 视觉模型验收节点（P1 可选增强）；具体选型需验证，列表中未见明确 vision-only 型号
+STEPFUN_BASE_URL=https://api.stepfun.com/v1 # 默认 API 基础端点（已验证，非 step_plan 变体）
+STEPFUN_CHAT_MODEL=step-3.5-flash # 文本生成模型（已验证，可选择 step-3.5-flash / step-3.7-flash）
+STEPFUN_TTS_MODEL=stepaudio-2.5-tts # 配音/声音克隆模型
+STEPFUN_ASR_MODEL=stepaudio-2.5-asr # 语音转写模型
+STEPFUN_VISION_MODEL=step-1.5v    # 视觉模型验收节点（多模态，P1 可选增强）
 ```
 
 ### 7.4 授权与安全边界
@@ -353,22 +393,34 @@ STEPFUN_VISION_MODEL=       # 视觉模型验收节点（P1 可选增强）；�
 
 ### 9.1 任务卡与 Goal 生命周期的对应关系
 
-- **一张 L3 任务卡 = 一次 Goal 生命周期**。任务卡的"目标"字段即 Goal 的 objective；"完成条件"整段作为模型判定 `update_goal(complete)` 前必须满足的说明，随 objective 一并交给 Codex。
-- Goal 机制是单 thread 单目标、续接一次性（没有工具调用即停）。因此任务卡颗粒度必须卡在**一次会话内可完成**的范围：约 1~3 个新文件或对既有文件的一处聚焦改动，有明确输入契约（依赖哪些已完成任务的产出）和输出契约（自己产出什么、供后续任务消费什么）。
-- 任务卡之间的依赖关系必须是**单向 DAG**，不能有循环依赖，这样大部分任务可以并行分配给不同 Codex 会话执行，不必排成一条长链死等。
+### 9.0 核心纠正：Goal 是长时会话的持久目标，Task 是会话内部的施工单元
+
+**上一版本把"一张任务卡"等同于"一次 Goal 生命周期"，这是对 Goal 机制粒度的误解，此处纠正**：
+
+- Codex Goal 的真实运作方式是**一个 Goal 对应一段可以长时间自主运行的会话**（可以是几十分钟到数小时，跨越很多次工具调用）。Codex 拿到 Goal 的 objective 后，**自己在会话内部把工作拆解成一系列 Task 并顺序/按需执行**，自己判断每个 Task 是否完成，全部完成、objective 达成后才调用 `update_goal(complete)`。
+- 因此**本 Harness 里 Track（或 Track 内的一组任务卡）对应一次 Goal**；Track 内逐张列出的任务卡是**Task**——即 Codex 在这一次 Goal 会话内部要按序处理的施工单元清单，不是分别启动多次 `/goal` 的对象。
+- 之前 task-breakdown 文档中每张任务卡下"Goal 提示词"这一标签是**误用**，已更正为「**Task 规格**」：它描述的是一个 Task 的目标、允许改动范围、完成条件，供 Codex 在 Goal 会话内部执行到该 Task 时参照，不是独立的 `/goal` 调用参数。
+- 单个 Track 内的 Task 依赖关系仍必须是**单向 DAG**，理由不变：即便同属一个 Goal 会话，Codex 仍需要清楚的执行顺序与边界，防止在会话内部越界或前后矛盾地修改同一文件。
+
+### 9.1 Goal 与 Track 的对应关系
+
+- **一次 Goal = 一个 Track（或一个 Track 内经人工分割的一段）**。启动 Goal 时给 Codex 的 objective 是"完成 Track X 的全部/某几个 Task"，而不是单个 Task 的目标。
+- Track 内的**每张任务卡是一个 Task**：Task 之间的顺序、允许改动范围、完成条件仍按原有卡片格式逐一列出（task-breakdown 文档保持现有卡片结构，只是标签从"Goal 提示词"改为"Task 规格"）。
+- Codex 在 Goal 会话执行期间，应当依次处理该 Track 下的 Task 列表，每完成一个 Task 就在 task-breakdown 文档中就地勾选状态（`☐→☑`），全部 Task 完成后再判定该 Goal 是否达成 objective、是否可以 `update_goal(complete)`。
+- 若某个 Track 的 Task 数量过多、预计单次会话跨度过长（比如 Track U 的 8 个 Task），允许人工把该 Track 拆成多个 Goal 顺序启动（如"Goal 1：完成 U1.1~U1.4"、"Goal 2：完成 U1.5~U1.8"），拆分方式记录在该 Track 的 Goal 启动提示词中（§9.3）。
 
 ### 9.2 严格范围限制（防止越界施工）
 
-每张任务卡必须显式声明：
+每张任务卡（Task）必须显式声明：
 
-- **前置任务**：本卡执行前必须已完成的任务卡 ID 列表（未完成则 Codex 不应开始）
+- **前置任务**：本 Task 执行前必须已完成的 Task ID 列表（未完成则 Codex 不应开始）
 - **允许改动范围**：具体文件/目录路径清单
 - **禁止改动 / 越界红线**：不能碰的目录（尤其是别的 Track 正在进行中的文件）+ 项目级红线（确定性规则、密钥泄露等）
-- **后置任务**：本卡产出被哪些后续任务消费，帮助 Codex 理解"为什么不能自己顺手把后面的活也干了"
+- **后置任务**：本 Task 产出被哪些后续 Task 消费，帮助 Codex 理解"为什么不能自己顺手把后面的活也干了"
 
-### 9.3 Goal 提示词标准模板
+### 9.3 Task 规格标准模板 + Goal 启动提示词模板
 
-具体每张任务卡的 Goal 提示词见 task-breakdown 文档，统一遵循以下结构：
+具体每个 Task 的规格见 task-breakdown 文档，统一遵循以下结构（这是**会话内部的施工单元说明**，不是独立的 `/goal` 调用）：
 
 ```
 目标：<一句话，可判定完成>
@@ -382,17 +434,37 @@ STEPFUN_VISION_MODEL=       # 视觉模型验收节点（P1 可选增强）；�
 禁止改动：
 - <path 或规则>
 
-完成条件（全部满足才可 update_goal(complete)）：
+完成条件（全部满足才视为该 Task 完成）：
 - [ ] ...
 - [ ] ...
 
-不在本任务范围内（不要做，留给后续任务）：
+不在本任务范围内（不要做，留给后续 Task）：
 - ...
+```
+
+每个 **Track** 启动时，人工对 Codex 下达的 **Goal 提示词**统一遵循以下结构（这才是真正交给 `/goal` 的 objective）：
+
+```
+Goal：完成 <Track 名> 的全部 Task（<Task ID 范围>），依据
+docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行。
+
+执行要求：
+- 严格按 Task 编号顺序执行，每个 Task 完成后在该文档中把状态由 ☐ 改为 ☑
+- 每个 Task 的允许改动范围、禁止改动、完成条件以文档中对应 Task 规格为准
+- 全部 Task 完成后，运行 Tier A 验收（pnpm lint && pnpm tsc --noEmit，及各 Task
+  要求的单测），确认无误后再判定本 Goal 完成
+- 若某个 Task 执行中发现前置假设有误（如依赖的前置 Task 产出不符合预期），
+  停止并汇报，不要跳过验证强行继续
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] Track 内全部 Task 状态已勾选为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit 通过
+- [ ] 本 Track 要求的 Tier B 里程碑验收项（见 §8.2）已完成
 ```
 
 ### 9.4 Track 完成后的衔接方式
 
-Track 内任务卡按顺序单个提交给 Codex 执行；每个任务卡的 Goal 被判定 complete 后，由人工（或后续脚本化）确认 Tier A 验收通过，再开启下一张任务卡的 Goal。Track 全部任务卡完成后，触发一次 Tier B 里程碑验收（§8.2），通过后才进入下一个 Track。
+一次 Goal（对应一个 Track 或其中一段）被 Codex 判定 complete 后，人工确认 Tier A/Tier B 验收通过，再对下一个 Track 启动新的 Goal。Track 之间若无交叉依赖，可以对不同 Track 同时启动多个独立的 Goal 会话并行推进（不同 thread）。
 
 ---
 
@@ -416,3 +488,24 @@ Track 内任务卡按顺序单个提交给 Codex 执行；每个任务卡的 Goa
 |---|---|
 | 2026-07-23 | 初版发布，与配套的 task-breakdown 文档一并作为 Demo 阶段的操作准绳 |
 | 2026-07-23（修订） | **架构纠正**：video-director 不再作为 Pi Skill 运行时挂载，改为移植进原生代码（新增 §3.0/§3.1 移植映射表，§3 全面重写）；新增 §4.2 画布交互范式对标 Dify/Coze；新增 §5.6 Pencil MCP 组件港口强制约束 + `/playbook` 唯一登记处规则；新增 §5.7 依赖补全（`lucide-react`/`@dagrejs/dagre`）；§7.4 授权范围扩大为允许直接写入 `.env` 真实测试值 |
+| 2026-07-23（修订二） | **Pi SDK 口径纠正**：实测确认 `createAgentSession()` 属于被排除的 `pi-coding-agent`，`pi-agent-core` 正确入口为 `Agent`；Director 改为项目原生 `createDirectorSession()` 组合 `Agent + JsonlSessionRepo`，继续禁止 Skills/Extensions。 |
+| 2026-07-23（修订三） | **会话边界细化**：新增 `DirectorSessionStore`，明确 StorageAdapter 分配根目录、JsonlSessionRepo 提供追加式文件语义、Agent `message_end` 单写入点、恢复注入与 SQLite 相对指针规则。 |
+| 2026-07-23（修订四） | **Tool 注入边界补齐**：`DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，在 pi-session 内适配 Pi Tool，供 stage-runner 挂载阶段工具且不向领域外泄漏 Pi 类型。 |
+| 2026-07-23（修订五） | **D1.3 执行契约补齐**：新增 `canvas_nodes.data.directorInput`、`stage-prompt.ts` 与 `runtime-repository.ts` 边界；明确 enqueue 负责 pending、runner 只执行 pending→running；Next 启动改用根 `instrumentation.ts`。 |
+| 2026-07-24（修订九） | **阶段结果提交缺口**：新增类型化归一与副作用提交协议；Demo INGEST 不再让模型猜音频数据，成功结果必须物化分镜通道；FABRICATE 的 renderSpec 改由可信应用层从 allocation 确定性派生。 |
+| 2026-07-23（修订六） | **Agent 写权限收口**：`write-artifact.ts` 从 Pi Tool 调整为 stage runner 专用可信应用服务；Agent 只保留诊断 Tool，避免模型决定业务归属、路径或造成双写。 |
+| 2026-07-23（修订七） | **入队失败补偿**：明确节点置 pending 与队列 enqueue 非原子时的补偿路径，失败节点必须落 failed + error，禁止永久悬挂 pending。 |
+| 2026-07-23（修订八） | **入队前置校验**：领域 enqueue 在改状态前校验 project/node/stage/状态组合，API 返回 jobId 才表示作业已被领域规则接受。 |
+| 2026-07-23（修订九） | **Render 资源与边界重构**：定义 `__CVC_RENDER__@v1`、磁盘 FrameSequence、可信 Render repository/export service、统一后台启动与内容寻址缓存，替代全帧内存和路由查库方案。 |
+| 2026-07-24（修订十） | **Shot artifact 可搬运性**：明确 Director 生成的 HTML 必须自包含且位置无关，禁止依赖工作区相对 `node_modules`/`docs` 资源；真实渲染验收从 StorageAdapter 路径加载 artifact。 |
+| 2026-07-24（修订十一） | **启动副作用收口**：Director/Render queue 与 runner 的模块导入不得实例化 SQLite repository；默认依赖延迟到真实 enqueue/handler 执行，避免构建和并行测试争用默认数据库。 |
+| 2026-07-24（修订十二） | **Node UI 领域合同收口**：`CanvasNodeType` 与六态 `NodeStatus` 统一定义在客户端安全 types 层；UI 禁止复制四态枚举或把 PipelineStage 当作节点类型，阶段色由节点类型显式派生。 |
+| 2026-07-24（修订十三） | **Pencil 登记口径收口**：30 个 reusable symbols 全部可追溯，四个 Button symbols 合并为一个 variant 组件，故 `/playbook` 登记 27 个 Pencil UI 组件族；图标白名单独立展示。 |
+| 2026-07-24（修订十四） | **项目初始 DAG 原子化**：创建项目必须在同一事务建立 script-import→shot-split 与 score→export 四个全局节点；projects API 返回可信 ingestNodeId，前端禁止猜节点或创建无入口项目。 |
+| 2026-07-24（修订十五） | **可执行节点 stage 持久化**：分镜通道在 fan-out 时写入唯一 stage 映射，画布读模型返回 stage，Inspector 禁止自行推断。 |
+| 2026-07-24（修订十六） | **作业与产物只读边界**：UI 通过 project-scoped job snapshot 轮询；HTML/MP4 仅由 artifact id 受控读取，浏览器不接触 StorageAdapter key 或本机路径。 |
+| 2026-07-24（修订十七） | **导出 readiness 与结果收口**：导出页先查询服务端完整性计划，未完成时禁用并列出节点；成功响应只返回 artifact URL，不泄露 outputKey。 |
+| 2026-07-24（修订十八） | **StepFun Key 写入顺序**：设置 API 必须先远端 validate，成功后才覆盖 SQLite；失败响应不落盘且客户端只显示规范化错误。 |
+| 2026-07-24（修订十九） | **主题启动合同**：light/dark/system 写入本机 localStorage；根布局在 hydration 前按显式值或系统偏好应用 `.dark`，设置页复用 SegmentedControl。 |
+| 2026-07-24（修订二十） | **Windows 生产渲染路径**：`ffmpeg-static` 设为 Next server external，防止 Turbopack 将平台二进制绝对路径重写为不可执行的 `/ROOT`。 |
+| 2026-07-24（修订二十一） | **渲染键与产物哈希分离**：输入派生 renderKey 只用于缓存寻址路径；`artifacts.contentHash` 与 API 结果统一保存实际 MP4 SHA-256。 |

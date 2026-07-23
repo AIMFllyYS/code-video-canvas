@@ -11,8 +11,3 @@ export const STAGE_META: Record<PipelineStage, StageMeta> = {
 
 /** 有序阶段元数据列表。 */
 export const PIPELINE: StageMeta[] = PIPELINE_STAGES.map((stage) => STAGE_META[stage])
-
-/** Agent 运行器接口（Pi(TS) harness 实现后置）。 */
-export interface AgentRunner {
-  run(stage: PipelineStage, input: unknown): Promise<unknown>
-}
