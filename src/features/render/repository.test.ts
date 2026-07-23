@@ -68,6 +68,49 @@ describe('RenderRepository export plan', () => {
       'node-S002-shot-sfx',
     ])
   })
+
+  it('loads a validated running render context', () => {
+    db.update(canvasNodes)
+      .set({
+        status: 'idle',
+        data: {
+          renderSpec: {
+            fps: 30,
+            durationInFrames: 60,
+            width: 1920,
+            height: 1080,
+          },
+        },
+      })
+      .where(eq(canvasNodes.id, 'node-S001-shot-codegen'))
+      .run()
+    db.insert(artifacts)
+      .values({
+        id: 'html-S001',
+        projectId: 'project-1',
+        nodeId: 'node-S001-shot-codegen',
+        kind: 'director-fabricate',
+        path: 'director/S001.html',
+      })
+      .run()
+
+    expect(() =>
+      repository.assertRenderEnqueueable('project-1', 'node-S001-shot-codegen')
+    ).not.toThrow()
+    db.update(canvasNodes)
+      .set({ status: 'running' })
+      .where(eq(canvasNodes.id, 'node-S001-shot-codegen'))
+      .run()
+    expect(
+      repository.loadRenderContext('project-1', 'node-S001-shot-codegen')
+    ).toMatchObject({
+      projectId: 'project-1',
+      nodeId: 'node-S001-shot-codegen',
+      shotId: 'S001',
+      htmlKey: 'director/S001.html',
+      frames: { fps: 30, durationInFrames: 60, width: 1920, height: 1080 },
+    })
+  })
 })
 
 function insertLane(db: Db, laneKey: string): void {

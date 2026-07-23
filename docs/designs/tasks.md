@@ -118,7 +118,7 @@
     - 对应 task-breakdown：R1.4
     - _Requirements: F9、F13（转场/剪辑）_
 
-  - [ ] 4.5 `renderer.ts`：可信顶层编排 + 单例队列接入
+  - [x] 4.5 `renderer.ts`：可信顶层编排 + 单例队列接入
     - 对应 task-breakdown：R1.5
     - _Requirements: F4、F5_
 

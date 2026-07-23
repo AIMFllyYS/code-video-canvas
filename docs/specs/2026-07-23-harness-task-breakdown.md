@@ -1005,7 +1005,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 ### R1.5 — `renderer.ts`：顶层编排 + 队列接入
 
-- 状态：☐
+- 状态：☑
 - 前置任务：R1.2, R1.3
 - 允许改动范围：`src/features/render/renderer.ts`（替换占位）、`queue-handler.ts`（新建）、`repository.ts`、`types.ts`、`index.ts`、`src/instrumentation.ts` 及对应测试
 - 禁止改动：`frame-sequence.ts`、`encode.ts`、`cache.ts`（本卡只编排，不重写底层）
