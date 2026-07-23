@@ -82,6 +82,8 @@ F0.1 还确认 Pi 包是 ESM-only，而当前仓库根脚本语境为 CommonJS�
 
 `lib/determinism` 的 lint 守卫必须挂在"HTML 生成 Tool 返回结果之后、进入渲染队列之前"这个必经关卡上——这是我们自己的 Tool 实现内部的强制调用，不是靠 Skill 里的一句"不可绕过"文字指令约束模型。任何违规直接判定该次生成失败，Tool 返回结构化错误，让 Pi Agent 的 tool-calling 循环收到失败反馈后自行重试或升级为人工介入。
 
+`validate-shot-plan` / `check-determinism` 是给 Agent 的诊断反馈，不构成可伪造的“已校验”声明；`write-artifact` 必须对**即将写入的同一份内容**再次调用原生 schema/确定性守卫。写入顺序固定为“校验 → StorageAdapter → artifacts 索引”，若索引失败则删除刚写入的文件作补偿，避免产生无法查询的孤儿产物。`pi-session` 属于已由 SessionStore 创建的既有文件，只登记相对指针，不重复写内容。
+
 ### 3.5 会话状态归属与适配边界（已决策）
 
 Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构化数据唯一权威源"的原则不冲突，划分如下：
@@ -93,10 +95,13 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 - 会话写入由 `Agent` 的 `message_end` 生命周期事件驱动，按事件顺序 append 用户、助手与 ToolResult 消息；不得在 stage runner 与 Tool 内重复写同一条消息。
 - `createDirectorSession()` 必须接收 `{ projectId, nodeId, stage, resumeSessionKey? }`，以便会话元数据与画布节点一一追溯。对外最小接口只暴露 `id`、`storageKey`、`run({ prompt, tools })` 与 `close()`；`tools` 使用项目自有 `DirectorTool` 契约，由 `pi-session.ts` 内部适配为 Pi `AgentTool`，不暴露 Pi `Agent`/`Session` 实例或 Pi 类型。
 - `stage-runner.ts` 在第一次模型调用前把 `storageKey` 登记为 `artifacts.kind='pi-session'`；失败路径也保留该指针用于复盘。
+- Director 节点的可恢复输入统一存放在 `canvas_nodes.data.directorInput`；`stage-prompt.ts` 按 `stage` 调用 D0.2 的类型化 prompt builder。`INGEST` 可从项目 `script` 补齐 `rawScript`，其余阶段缺少或不符合对应 schema 时直接失败，不允许临时拼接无类型 prompt。
+- `runStage()` 只接受状态已经为 `pending` 的节点并执行 `pending → running → success|failed`；把节点置为 `pending` 是 `enqueueDirectorStage()` 的职责，不得绕过 C1.3 状态机直接 `idle → running`。
+- `runtime-repository.ts` 是 Director 的持久化端口：负责读取项目/节点执行上下文、登记既有 artifact 指针及记录结构化错误；`stage-runner.ts` 负责跨模块编排但不直接操作 Drizzle。阶段输出仍必须经过 D1.2 的写入门禁后才可登记。
 
 ### 3.6 与 `features/director` 现有骨架的关系
 
-现有 `pipeline.ts` 的 `AgentRunner` 接口需要替换为项目原生的 `DirectorSession` 最小接口；具体实现由 `pi-session.ts` 组合 Pi `Agent` 与 `JsonlSessionRepo`，但不把 Pi 内部类型泄漏到 `features/director` 外部。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
+`pipeline.ts` 只保留阶段元数据，不再声明一套平行的 `AgentRunner` 抽象；运行契约以 `pi-session.ts` 的项目原生 `DirectorSession` 为唯一来源。具体实现由 `pi-session.ts` 组合 Pi `Agent` 与 `JsonlSessionRepo`，但不把 Pi 内部类型泄漏到 `features/director` 外部。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
 
 ---
 
@@ -199,12 +204,15 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 | 文件 | 职责 | 备注 |
 |---|---|---|
-| `pipeline.ts` | 阶段元数据（已存在，阶段命名对齐 §6.3 决策） | 移除现有空 `AgentRunner` 接口定义，改为从 `pi-session.ts` 导入 |
+| `pipeline.ts` | 阶段元数据（已存在，阶段命名对齐 §6.3 决策） | 只定义元数据，不重复声明运行器接口 |
 | `prompts/`（新增子目录） | §3.1 移植映射表中每个阶段的原生 prompt 模板（TS 字符串模板 + 类型化插槽参数），移植自 video-director 的方法论文本 | **不是**运行时读取 `docs/video-director/*.md`；这些文本被移植进代码后独立维护 |
 | `schemas/`（新增子目录） | §3.1 移植映射表中每个阶段的输出 Zod schema（`shot-plan.ts`/`ingest.ts` 等），手写对照 `docs/video-director/schemas/*.json` 移植 | 移植完成后与原 JSON Schema 解耦独立演进，不再同步追更 |
 | `pi-session.ts`（新增） | `DirectorSession` 工厂：组合 Pi `Agent` + `JsonlSessionRepo`，接入 `pi-ai` StepFun Provider，注册 §3.1 移植出的自定义 Tool | 单一职责：只管"怎么起一个会话"；**不依赖 `pi-coding-agent`，不加载任何 Skills/Extensions** |
 | `tools/`（新增子目录） | 每个自定义 Tool 一个文件（`validate-shot-plan.ts`、`write-artifact.ts`、`trigger-render.ts` 等），内部调用 `schemas/` 做校验 | 每个 Tool 文件只做一件事：校验 + 落库/落盘，不做跨阶段编排 |
-| `stage-runner.ts`（新增） | 编排一次"阶段运行"：起会话 → 跑到该阶段产出 → 落 SQLite/StorageAdapter → 更新画布节点状态 | 被 queue handler 调用；本文件是 `features/director` 唯一允许"跨模块编排"的地方 |
+| `stage-prompt.ts`（新增） | 从项目/节点持久输入构建六阶段类型化 prompt | 只路由 D0.2 builder，不读数据库 |
+| `runtime-repository.ts`（新增） | Director 执行上下文、artifact 指针与错误记录的持久化端口 | 封装 Drizzle；不做阶段编排 |
+| `stage-runner.ts`（新增） | 编排一次"阶段运行"：读取持久输入 → 起会话 → 登记会话指针 → 跑到产出 → 经 Tool 门禁落盘 → 更新节点状态 | 被 queue handler 调用；本文件是 `features/director` 唯一允许"跨模块编排"的地方 |
+| `queue-handler.ts`（新增） | `enqueueDirectorStage()` 负责节点置 pending + 入队，处理器负责调用 `runStage()` | 应用启动由根 `instrumentation.ts` 在 Node runtime 幂等注册并启动 |
 
 ### 5.4 `features/render/`（渲染管线）
 
@@ -257,7 +265,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 |---|---|---|
 | `api/canvas/fan-out` | 物化分镜通道 | `features/canvas/fan-out.ts` |
 | `api/canvas/nodes/[id]/status` | 查询/推进节点状态 | `features/canvas/status.ts` |
-| `api/director/stage` | 触发一次阶段运行 | `features/director/stage-runner.ts` |
+| `api/director/stage` | 触发一次阶段运行 | `features/director/queue-handler.ts` 的 `enqueueDirectorStage()` |
 | `api/render` | 触发单镜渲染 | `features/render/renderer.ts` |
 | `api/render/export` | 触发合并导出 | `features/render/concat.ts` |
 | `api/projects` | 项目 CRUD（已存在） | `features/canvas/actions.ts`/`queries.ts` |
@@ -456,3 +464,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订二） | **Pi SDK 口径纠正**：实测确认 `createAgentSession()` 属于被排除的 `pi-coding-agent`，`pi-agent-core` 正确入口为 `Agent`；Director 改为项目原生 `createDirectorSession()` 组合 `Agent + JsonlSessionRepo`，继续禁止 Skills/Extensions。 |
 | 2026-07-23（修订三） | **会话边界细化**：新增 `DirectorSessionStore`，明确 StorageAdapter 分配根目录、JsonlSessionRepo 提供追加式文件语义、Agent `message_end` 单写入点、恢复注入与 SQLite 相对指针规则。 |
 | 2026-07-23（修订四） | **Tool 注入边界补齐**：`DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，在 pi-session 内适配 Pi Tool，供 stage-runner 挂载阶段工具且不向领域外泄漏 Pi 类型。 |
+| 2026-07-23（修订五） | **D1.3 执行契约补齐**：新增 `canvas_nodes.data.directorInput`、`stage-prompt.ts` 与 `runtime-repository.ts` 边界；明确 enqueue 负责 pending、runner 只执行 pending→running；Next 启动改用根 `instrumentation.ts`。 |

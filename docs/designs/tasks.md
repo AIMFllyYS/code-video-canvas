@@ -70,27 +70,27 @@
   - 对应 Goal：Track D（前置：Task 1 全部完成，1.1 的 Spike 结论已确定）
   - _Requirements: F2、F3（分镜脚本撰写）、F4_
 
-  - [ ] 3.1 `schemas/`：移植 video-director 输出契约为原生 Zod schema
+  - [x] 3.1 `schemas/`：移植 video-director 输出契约为原生 Zod schema
     - 对应 task-breakdown：D0.1
     - _Requirements: F2、F3_
 
-  - [ ] 3.2 `prompts/`：移植 video-director 方法论为原生 prompt 模板
+  - [x] 3.2 `prompts/`：移植 video-director 方法论为原生 prompt 模板
     - 对应 task-breakdown：D0.2
     - _Requirements: F2、F3、F4_
 
-  - [ ] 3.3 `pi-session.ts`：Director 会话工厂（`Agent + JsonlSessionRepo`，不挂 Skill）
+  - [x] 3.3 `pi-session.ts`：Director 会话工厂（`Agent + JsonlSessionRepo`，不挂 Skill）
     - 对应 task-breakdown：D1.1
     - _Requirements: F2、F3、F4_
 
-  - [ ] 3.4 `tools/`：阶段自定义 Tool 集
+  - [x] 3.4 `tools/`：阶段自定义 Tool 集
     - 对应 task-breakdown：D1.2
     - _Requirements: F4（确定性红线强制点）_
 
-  - [ ] 3.5 `stage-runner.ts`：单阶段运行编排
+  - [ ] 3.5 `stage-runner.ts`：持久输入 + 类型化 prompt + 单阶段运行编排
     - 对应 task-breakdown：D1.3
     - _Requirements: F2、F3、F4_
 
-  - [ ] 3.6 队列接入：`director` 作业处理器注册
+  - [ ] 3.6 队列接入：`director` 作业处理器注册（`instrumentation.ts` 启动）
     - 对应 task-breakdown：D1.4
     - _Requirements: F2、F3、F4_
 

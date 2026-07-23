@@ -702,14 +702,18 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 - 状态：☐
 - 前置任务：D0.1, D0.2, D1.1, D1.2
-- 允许改动范围：`src/features/director/stage-runner.ts`（新建）、测试文件
+- 允许改动范围：`src/features/director/stage-runner.ts`、`stage-prompt.ts`、`runtime-repository.ts`（均新建）、对应测试及 `pipeline.ts`（仅移除空接口）
 - 禁止改动：`src/lib/queue/**`（本卡只消费队列接口，不改队列实现）
 - Task 规格：
   ```
-  目标：实现 stage-runner.ts，导出 runStage(projectId, nodeId, stage): 
-  Promise<void>：将节点状态置为 running（复用 C1.3 的 transitionNodeStatus）→
-  创建 Pi 会话（D1.1）→ 挂载对应 Tool（D1.2）→ 运行会话直到产出 →
-  成功则落 artifact + 置状态 success，失败则记录 error + 置状态 failed。
+  目标：实现 stage-runner.ts，导出 runStage(projectId, nodeId, stage):
+  Promise<void>。通过 runtime-repository.ts 读取并校验项目/节点执行上下文，
+  节点阶段输入统一来自 canvas_nodes.data.directorInput；由 stage-prompt.ts 按
+  stage 调用 D0.2 的原生类型化 builder（INGEST 可用项目 script 补齐 rawScript）。
+  节点必须已经是 pending，runner 复用 C1.3 的 transitionNodeStatus 执行
+  pending→running；随后创建 Pi 会话（D1.1）→ 挂载对应 Tool（D1.2）→
+  运行会话直到产出 → 产出再次经过 write-artifact 门禁后落盘并置 success。
+  失败则由 repository 记录结构化 error 并置 failed，不绕过状态机。
   在第一次模型调用前必须把 DirectorSession.storageKey 作为 kind='pi-session'
   的 artifact 指针登记；失败时保留该指针用于追踪，不删除会话留痕。
   本函数是 features/director 内唯一允许跨模块编排（canvas 状态 + AI 会话 +
@@ -720,6 +724,11 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   允许改动范围：
   - src/features/director/stage-runner.ts
   - src/features/director/stage-runner.test.ts
+  - src/features/director/stage-prompt.ts
+  - src/features/director/stage-prompt.test.ts
+  - src/features/director/runtime-repository.ts
+  - src/features/director/runtime-repository.test.ts
+  - src/features/director/pipeline.ts（仅删除已被 DirectorSession 取代的空 AgentRunner）
 
   禁止改动：
   - src/lib/queue/in-process-queue.ts
@@ -731,6 +740,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - [ ] 单测：mock 会话失败场景（如 Tool 返回校验失败），断言节点状态为 failed
         且错误信息被记录，不残留 running 状态
   - [ ] 单测：成功/失败路径都已登记 pi-session artifact，且只存相对 storageKey
+  - [ ] 单测：节点不是 pending、stage 与节点不一致、directorInput 不合法时在
+        模型调用前失败；INGEST 可从项目 script 构造输入
   - [ ] 函数本身不直接操作数据库连接细节，通过已有 features 函数间接操作
 
   不在本任务范围内：
@@ -741,19 +752,22 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 - 状态：☐
 - 前置任务：D1.3
-- 允许改动范围：`src/features/director/queue-handler.ts`（新建）、`src/server/**`（若需要启动时注册的入口文件）
+- 允许改动范围：`src/features/director/queue-handler.ts`（新建）、对应测试、`src/instrumentation.ts`（新建）
 - 禁止改动：`src/lib/queue/in-process-queue.ts` 的核心实现（只调用 `register()` 方法）
 - Task 规格：
   ```
   目标：实现 queue-handler.ts，注册 kind='director-stage' 的作业处理器到
-  InProcessQueue，处理器内部调用 stage-runner.ts 的 runStage。在应用启动路径
-  （src/server/ 下合适位置）接入注册与队列启动逻辑。
+  InProcessQueue，处理器内部调用 stage-runner.ts 的 runStage。导出
+  enqueueDirectorStage()，先用 C1.3 状态机把节点置 pending，再 enqueue，
+  API 路由不得自行拼装队列细节。在 Next.js 根 instrumentation.ts 的 Node
+  runtime register() 中幂等接入处理器注册与队列启动。
 
   前置任务：D1.3
 
   允许改动范围：
   - src/features/director/queue-handler.ts
-  - src/server/**（仅新增启动时注册代码，不改动其他 server-only 工具）
+  - src/features/director/queue-handler.test.ts
+  - src/instrumentation.ts
 
   禁止改动：
   - src/lib/queue/in-process-queue.ts
@@ -762,6 +776,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 单测：enqueue 一个 director-stage 作业后（mock stage-runner），处理器被
         正确调用且参数传递正确
+  - [ ] 单测：enqueueDirectorStage() 先合法推进节点到 pending，再写入队列
   - [ ] 应用启动时队列被启动且处理器已注册（可通过一次集成性测试或手动验证描述）
 
   不在本任务范围内：
@@ -777,8 +792,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 - Task 规格：
   ```
   目标：实现 POST /api/director/stage 路由，接收 { projectId, nodeId, stage }，
-  Zod 校验请求体，调用 features/canvas/queries 确认节点存在后，enqueue 一个
-  director-stage 作业（D1.4 已注册），返回 { jobId }。
+  Zod 校验请求体，调用 features/canvas/queries 的 getCanvasGraph(projectId)
+  确认节点属于该项目后，调用 D1.4 的 enqueueDirectorStage()，返回 { jobId }。
 
   前置任务：D1.4
 
@@ -1587,3 +1602,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订五） | **Canvas 读模型缺口**：C1.4 补充 `queries.ts#getCanvasGraph(projectId)` 与隔离测试，页面经 features 读模型取节点/边，禁止在 `page.tsx` 直接访问数据库。 |
 | 2026-07-23（修订六） | **六阶段 prompt 文件漏项**：D0.2 允许范围补齐 `assemble.ts` 与 `finalize.ts`，使文件清单与任务目标中的 INGEST/DIRECT/SHOT-SPEC/FABRICATE/ASSEMBLE/FINALIZE 一致。 |
 | 2026-07-23（修订七） | **阶段 Tool 注入缺口**：D1.1 明确 `DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，由会话适配层转换为 Pi Tool，D1.3 无需越界操作 Agent。 |
+| 2026-07-23（修订八） | **Director 执行链重构**：D1.3–D1.5 增加持久 `directorInput`、类型化 prompt 路由、repository 端口与 pending 前置；队列启动改用 Next 根 `instrumentation.ts`，API 只调用领域 enqueue。 |

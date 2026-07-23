@@ -86,12 +86,15 @@ src/
 - **SQLite（Drizzle）**：项目 / 画布图 / 节点参数 / 作业 / 产物索引。
 - **本地文件系统**：mp4 / 帧 / 音频（经 StorageAdapter，未来可换对象存储）。
 - **Agent 会话 JSONL**：`StorageAdapter.localPath('pi-sessions')` 分配受控根目录，`DirectorSessionStore` 在该根内封装 `JsonlSessionRepo + NodeExecutionEnv`；SQLite 仅保存相对 `storageKey` 指针（`artifacts.kind='pi-session'`）。
+- **Director 可恢复输入**：节点的阶段输入持久化在 `canvas_nodes.data.directorInput`，由 `stage-prompt.ts` 路由到六个原生 prompt builder；Director repository 读取上下文与登记 artifact，stage runner 不直接操作 Drizzle。
+- **产物提交协议**：Agent 的校验 Tool 只提供诊断；写入端对同一内容复验后按“Storage → SQLite 索引”提交，索引失败补偿删除文件。既有 Pi JSONL 仅登记受控相对指针。
 
 ### AI（StepFun）
 
 - 服务端 `LlmAdapter` 指向 `https://api.stepfun.com/v1`（OpenAI 兼容）。
 - 需要多轮 Tool 调用的 Director 阶段走 `pi-ai` 原生 StepFun Provider；F0.1 已真实验证 `Agent` 单轮调用与 JSONL 会话创建。
 - 项目原生 `createDirectorSession({ projectId, nodeId, stage, resumeSessionKey? })` 负责 Agent 运行、消息事件持久化与恢复；不依赖 `pi-coding-agent`，不加载 Skill/Extension。
+- `enqueueDirectorStage()` 先把节点合法推进到 `pending` 再入队，`runStage()` 只执行 `pending → running → success|failed`；应用在 Next.js 根 `instrumentation.ts` 的 Node runtime 注册并启动进程内队列。
 - **用户在设置页填自己的 Key**，存本地配置；永不进前端 bundle。
 
 ## 满足核心技术诉求
@@ -134,3 +137,4 @@ src/
 |---|---|
 | 2026-07-23 | Demo 基线发布。 |
 | 2026-07-23（修订） | 对齐 Harness：video-director 改为原生移植；画布改为动态 fan-out；Agent 改为 `Agent + JsonlSessionRepo + DirectorSessionStore`，明确 JSONL/SQLite/StorageAdapter 边界并排除 coding-agent/Skills/Extensions。 |
+| 2026-07-23（修订二） | 补齐 Director 执行契约：节点持久化 `directorInput`，新增类型化 prompt 路由与 repository 端口，状态机由 enqueue/runner 分工，队列通过 Next `instrumentation.ts` 启动。 |

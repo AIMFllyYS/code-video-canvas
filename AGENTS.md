@@ -78,6 +78,7 @@ src/
     ui/                纯展示原语（Button / Card …）
     icons/             Lucide 图标组件（白名单制，源自 Pencil）
   server/              server-only 工具（import 'server-only'）
+  instrumentation.ts  Next Node runtime 启动钩子（队列注册/启动）
 docs/  scripts/  public/
 ```
 
@@ -113,6 +114,13 @@ docs/  scripts/  public/
 
 - 结构化数据走 Drizzle+SQLite；二进制产物走 `StorageAdapter`；不要在业务里散落裸 `fs` 调用（便于未来换对象存储）。
 - Pi JSONL 是特殊的追加式文件产物：只能由 `DirectorSessionStore` 在 `StorageAdapter.localPath('pi-sessions')` 分配的根目录内操作；业务层只持有相对 `storageKey`，SQLite 只登记指针。
+
+### Director 执行边界
+
+- 节点阶段输入持久化在 `canvas_nodes.data.directorInput`；`stage-prompt.ts` 只调用六阶段原生 prompt builder，禁止临时拼无类型 prompt。
+- `enqueueDirectorStage()` 负责把节点推进到 `pending` 并入队；`runStage()` 只接受 pending 节点，执行 `pending → running → success|failed`。
+- `stage-runner.ts` 是显式应用编排器，可通过各领域公开入口组合 canvas/AI/storage；Drizzle 细节收口在 `runtime-repository.ts`，不得散落到 runner。
+- 进程内队列通过根 `src/instrumentation.ts` 在 Node runtime 幂等注册和启动，不假设 `src/server/` 文件会被 Next.js 自动执行。
 
 ## When Writing Code
 
