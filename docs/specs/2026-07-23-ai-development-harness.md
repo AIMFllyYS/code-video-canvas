@@ -229,8 +229,8 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 |---|---|---|
 | `frame-capture.ts`（新增） | 实现 `window.__CVC_RENDER__@v1` 合同：从 StorageAdapter 本地路径加载可搬运、自包含的 shot HTML，页面加载一次，多次 frame/fps seek + CDP 截图 | shot 不得依赖工作区相对路径或运行时读取 `docs/`/`node_modules/`；session 显式 close；同一 page 禁止并发 seek |
 | `frame-sequence.ts`（新增） | 用有限 capture session 池把 PNG 写入隔离临时目录，返回可 cleanup 的磁盘句柄 | 禁止整段 1080p 帧序列常驻 Buffer[] |
-| `encode.ts`（新增） | 从磁盘 pattern 流式读取帧，以固定/bitexact 参数编码 mp4 | 临时输出 + 原子 rename |
-| `cache.ts`（新增） | 版本化内容哈希 → render-mp4 artifact，命中时复核 StorageAdapter.exists | 依赖 §6 的 contentHash，是 F5 核心 |
+| `encode.ts`（新增） | 从磁盘 pattern 流式读取帧，以固定/bitexact 参数编码 mp4 | 临时输出 + 原子 rename；`ffmpeg-static` 必须保持 Next server external，由 Node 解析真实平台二进制路径 |
+| `cache.ts`（新增） | 版本化 renderKey → render-mp4 artifact，命中时复核 StorageAdapter.exists | renderKey 由 HTML + 帧规格 + seed 派生并进入路径；artifact.contentHash 始终保存 MP4 实体 SHA-256 |
 | `repository.ts`（新增） | Render context、节点/产物顺序与 artifact 指针的持久化端口 | 封装 Drizzle，不做渲染编排 |
 | `renderer.ts` | 可信顶层编排：HTML 守卫 → cache → frame sequence → encode → Storage/索引 | finally 清理临时资源，不直接暴露给路由 |
 | `queue-handler.ts`（新增） | render-shot 入队/状态机/失败补偿与 handler | 与 Director 共用单例队列和 instrumentation 启动；模块导入不得打开 SQLite，默认 repository 延迟到 enqueue/handler 执行时创建 |
@@ -506,3 +506,5 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十七） | **导出 readiness 与结果收口**：导出页先查询服务端完整性计划，未完成时禁用并列出节点；成功响应只返回 artifact URL，不泄露 outputKey。 |
 | 2026-07-24（修订十八） | **StepFun Key 写入顺序**：设置 API 必须先远端 validate，成功后才覆盖 SQLite；失败响应不落盘且客户端只显示规范化错误。 |
 | 2026-07-24（修订十九） | **主题启动合同**：light/dark/system 写入本机 localStorage；根布局在 hydration 前按显式值或系统偏好应用 `.dark`，设置页复用 SegmentedControl。 |
+| 2026-07-24（修订二十） | **Windows 生产渲染路径**：`ffmpeg-static` 设为 Next server external，防止 Turbopack 将平台二进制绝对路径重写为不可执行的 `/ROOT`。 |
+| 2026-07-24（修订二十一） | **渲染键与产物哈希分离**：输入派生 renderKey 只用于缓存寻址路径；`artifacts.contentHash` 与 API 结果统一保存实际 MP4 SHA-256。 |

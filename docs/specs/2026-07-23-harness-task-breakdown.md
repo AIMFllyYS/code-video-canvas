@@ -1711,3 +1711,5 @@ Goal 2：完成 Track U 的 U1.5~U1.8（含 U1.6a 全局主题补充卡；导出
 | 2026-07-23（修订十一） | **入队前置校验**：D1.4 在改状态前验证 project/node/stage/可入队状态，确保 API 的 jobId 表示领域规则已接受。 |
 | 2026-07-23（修订十二） | **Render 链路重构**：R1.1–R1.6 增加显式 shot runtime、复用 capture session、磁盘帧序列、可信 Render repository/export service、统一 instrumentation 与内容寻址提交，消除内存爆炸和 API 无输入来源问题。 |
 | 2026-07-24（修订十三） | **U1.8 暴露的阶段提交断点**：补充类型化阶段结果协议；INGEST 成功必须事务性物化分镜通道，FABRICATE renderSpec 必须由可信 allocation 与上下文派生，禁止“模型返回即 success”。 |
+| 2026-07-24（修订十四） | **U1.8 暴露的 Windows 编码断点**：`ffmpeg-static` 必须保持 Next server external，避免生产 bundle 将真实二进制路径改写为 `/ROOT` 后导致 `spawn ENOENT`。 |
+| 2026-07-24（修订十五） | **U1.8 暴露的哈希语义冲突**：输入派生 renderKey 只负责缓存寻址；`artifacts.contentHash` 与 RenderResult 必须保存最终 MP4 实体 SHA-256。 |

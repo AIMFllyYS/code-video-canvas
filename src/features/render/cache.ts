@@ -11,6 +11,12 @@ export interface RenderCacheEntry {
   contentHash: string
 }
 
+export interface RenderCacheLookup {
+  projectId: string
+  nodeId: string
+  renderKey: string
+}
+
 export interface WriteRenderCacheInput extends RenderCacheEntry {
   projectId: string
   nodeId: string
@@ -23,18 +29,21 @@ interface CacheDependencies {
 
 /** 查找仍有实体文件的最新 render-mp4 缓存。 */
 export async function lookupCache(
-  contentHash: string,
+  input: RenderCacheLookup,
   dependencies: CacheDependencies = {}
 ): Promise<RenderCacheEntry | null> {
   const db = dependencies.db ?? getDb()
   const storage = dependencies.storage ?? defaultStorage
+  const outputKey = renderOutputKey(input)
   const candidates = db
     .select({ path: artifacts.path, contentHash: artifacts.contentHash })
     .from(artifacts)
     .where(
       and(
         eq(artifacts.kind, 'render-mp4'),
-        eq(artifacts.contentHash, contentHash)
+        eq(artifacts.projectId, input.projectId),
+        eq(artifacts.nodeId, input.nodeId),
+        eq(artifacts.path, outputKey)
       )
     )
     .orderBy(desc(artifacts.createdAt))
@@ -45,6 +54,10 @@ export async function lookupCache(
     }
   }
   return null
+}
+
+export function renderOutputKey(input: RenderCacheLookup): string {
+  return `render/${input.projectId}/${input.nodeId}/${input.renderKey}.mp4`
 }
 
 /** 登记已由可信 renderer 提交到 StorageAdapter 的内容寻址 mp4。 */

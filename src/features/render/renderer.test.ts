@@ -1,5 +1,6 @@
 import os from 'node:os'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StorageAdapter } from '@/lib/storage'
@@ -88,6 +89,9 @@ describe('HyperframesRenderer', () => {
     const result = await renderer.render(job)
 
     expect(result.outputKey).toMatch(/^render\/project-1\/node-1\/[a-f0-9]{64}\.mp4$/)
+    expect(result.contentHash).toBe(
+      createHash('sha256').update(Buffer.from('mp4')).digest('hex')
+    )
     expect(order).toEqual(['capture', 'encode', 'store', 'index', 'cleanup'])
   })
 

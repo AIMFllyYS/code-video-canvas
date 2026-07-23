@@ -50,15 +50,20 @@ describe('render cache', () => {
       {
         projectId: 'project-1',
         nodeId: 'node-1',
-        outputKey: 'render/project-1/node-1/shot.mp4',
-        contentHash: 'hash-1',
+        outputKey: 'render/project-1/node-1/render-key-1.mp4',
+        contentHash: 'file-hash-1',
       },
       { db }
     )
 
-    await expect(lookupCache('hash-1', { db, storage })).resolves.toEqual({
-      outputKey: 'render/project-1/node-1/shot.mp4',
-      contentHash: 'hash-1',
+    await expect(
+      lookupCache(
+        { projectId: 'project-1', nodeId: 'node-1', renderKey: 'render-key-1' },
+        { db, storage }
+      )
+    ).resolves.toEqual({
+      outputKey: 'render/project-1/node-1/render-key-1.mp4',
+      contentHash: 'file-hash-1',
     })
   })
 
@@ -75,6 +80,11 @@ describe('render cache', () => {
       .run()
     vi.mocked(storage.exists).mockResolvedValue(false)
 
-    await expect(lookupCache('hash-1', { db, storage })).resolves.toBeNull()
+    await expect(
+      lookupCache(
+        { projectId: 'project-1', nodeId: 'node-1', renderKey: 'hash-1' },
+        { db, storage }
+      )
+    ).resolves.toBeNull()
   })
 })

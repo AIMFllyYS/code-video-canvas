@@ -97,6 +97,7 @@ docs/  scripts/  public/
 - 边界：确定性红线**只约束视频 shot 渲染**；应用 UI（`components/*`、`/playbook`、编辑器）允许 hover / CSS transition / 交互动画。
 - shot HTML 必须是可搬运的自包含 artifact，不得依赖工作区相对路径或运行时读取 `docs/`/`node_modules/`；唯一 seek 接口是 `window.__CVC_RENDER__@v1`。同一 Playwright page 串行 seek，允许有限 page 池并发。
 - PNG 帧必须写入可显式 cleanup 的隔离临时目录，由 ffmpeg 从 pattern 流式读取；禁止以 `Buffer[]` 常驻完整帧序列。
+- Render 缓存键由 HTML + 帧规格 + seed 派生并只用于寻址；`artifacts.contentHash` 必须是最终 MP4 实体 SHA-256，禁止把输入 renderKey 冒充产物哈希。
 - Render 路由不得自行查表/拼 artifact 路径，只调用可信 enqueue/export service；Director/Render 共用根 `instrumentation.ts` 启动的单例队列。
 - UI 作业轮询必须按 projectId 隔离；浏览器只使用 artifact id 下载 URL，不得
   暴露 StorageAdapter key、本机绝对路径或让页面自行拼 artifact 路径。
@@ -206,6 +207,6 @@ docs/  scripts/  public/
 - `docs/designs/2026-07-23-ui-design-handoff.md` — UI 设计交接（逐页规格 + 文案复用库）
 - `docs/conventions/` — 编码 / 架构 / Git 完整规范
 - `docs/designs/2026-07-23-design-system-inventory.md` — 设计系统清单（Token / 颜色 / 图标 / 组件 / 布局）
-- `next.config.ts` — Next.js 配置（全栈，`serverExternalPackages: ['better-sqlite3']`）
+- `next.config.ts` — Next.js 配置（全栈；原生 SQLite 与 `ffmpeg-static` 平台二进制保持 server external）
 - `src/lib/db/` — Drizzle + SQLite
 - `src/lib/determinism/` — 确定性守卫

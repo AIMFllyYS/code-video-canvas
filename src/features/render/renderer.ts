@@ -5,7 +5,13 @@ import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { checkSource } from '@/lib/determinism'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
-import { lookupCache, writeCache, type RenderCacheEntry } from './cache'
+import {
+  lookupCache,
+  renderOutputKey,
+  writeCache,
+  type RenderCacheEntry,
+  type RenderCacheLookup,
+} from './cache'
 import { encodeToMp4 } from './encode'
 import { captureSequence, type FrameSequence } from './frame-sequence'
 import type { RenderJob, RenderResult } from './types'
@@ -16,7 +22,7 @@ export interface Renderer {
 
 interface RendererDependencies {
   storage: StorageAdapter
-  lookupCache(contentHash: string): Promise<RenderCacheEntry | null>
+  lookupCache(input: RenderCacheLookup): Promise<RenderCacheEntry | null>
   writeCache(input: {
     projectId: string
     nodeId: string
@@ -57,8 +63,13 @@ export class HyperframesRenderer implements Renderer {
   async render(job: RenderJob): Promise<RenderResult> {
     const html = await this.dependencies.storage.get(job.htmlKey)
     assertDeterministic(html.toString('utf8'))
-    const contentHash = renderHash(html, job)
-    const cached = await this.dependencies.lookupCache(contentHash)
+    const renderKey = renderHash(html, job)
+    const cacheLookup = {
+      projectId: job.projectId,
+      nodeId: job.nodeId,
+      renderKey,
+    }
+    const cached = await this.dependencies.lookupCache(cacheLookup)
     if (cached) return { shotId: job.shotId, ...cached }
 
     let sequence: FrameSequence | undefined
@@ -74,8 +85,10 @@ export class HyperframesRenderer implements Renderer {
       workDirectory = await mkdtemp(path.join(this.dependencies.tempRoot, 'cvc-render-'))
       const encodedPath = path.join(workDirectory, 'shot.mp4')
       await this.dependencies.encode(sequence, job.frames.fps, encodedPath)
-      const outputKey = `render/${job.projectId}/${job.nodeId}/${contentHash}.mp4`
-      await this.dependencies.storage.put(outputKey, await readFile(encodedPath))
+      const outputKey = renderOutputKey(cacheLookup)
+      const encoded = await readFile(encodedPath)
+      const contentHash = createHash('sha256').update(encoded).digest('hex')
+      await this.dependencies.storage.put(outputKey, encoded)
       try {
         this.dependencies.writeCache({
           projectId: job.projectId,

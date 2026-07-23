@@ -94,10 +94,11 @@ src/
 ### 渲染执行（本机、服务端）
 
 - 服务端用 Playwright（自带 Chromium）加载 shot HTML；每个 page 串行 seek、有限 page 池有界并发，PNG 落隔离临时目录后由 `ffmpeg-static` 流式编码，避免全片帧 Buffer 常驻内存。
+- `ffmpeg-static` 作为携带平台二进制的运行时依赖保持 Next server external，Node 直接解析真实文件路径，避免打包器的 `/ROOT` 资源占位路径进入 `spawn()`。
 - Render repository 负责持久输入与 artifact 顺序；renderer/export service 是可信编排层。API 不拼路径、不查 artifact 表，Director/Render handler 由同一 `instrumentation.ts` 注册后启动单例队列。queue/runner 模块导入保持无 SQLite 副作用，默认 repository 只在真实 enqueue/handler 执行时延迟创建。
 - UI 只通过按 projectId 隔离的 job snapshot 轮询作业；HTML/MP4 下载由 artifact
   id 解析并返回，浏览器永不接触 StorageAdapter key 或本机绝对路径。
-- 渲染作业走**进程内队列**（状态持久化到 SQLite，崩溃可恢复），有界并发（≈本机核数），内容哈希缓存 → 只重渲变化节点。
+- 渲染作业走**进程内队列**（状态持久化到 SQLite，崩溃可恢复），有界并发（≈本机核数）。HTML + 帧规格 + seed 派生的 renderKey 负责缓存寻址，MP4 实体 SHA-256 单独写入 artifact contentHash，二者不得混用。
 
 ### 存储
 
@@ -168,3 +169,5 @@ src/
 | 2026-07-24（修订九） | 分镜通道节点在 fan-out 时持久化 Director stage，画布读模型与 Inspector 直接消费该字段。 |
 | 2026-07-24（修订十） | 增加 project-scoped job snapshot 与 artifact-id 下载边界，支持 UI 安全轮询与预览。 |
 | 2026-07-24（修订十一） | 主题状态统一为 light/dark/system 本机值，根布局在 hydration 前应用暗色类，避免首屏闪烁。 |
+| 2026-07-24（修订十二） | `ffmpeg-static` 保持 Next server external，由 Node 在 Windows 生产运行时解析真实平台二进制路径。 |
+| 2026-07-24（修订十三） | 分离 renderKey 与产物 contentHash：前者只定位缓存路径，后者始终是 MP4 实体 SHA-256。 |
