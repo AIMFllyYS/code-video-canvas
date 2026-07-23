@@ -61,13 +61,17 @@ src/
   app/              路由与 API 入口
   features/         业务领域：canvas / director / render / ai / audio
   lib/              db(SQLite) / storage / queue / gsap / determinism
-  components/ui/    纯展示组件
+  components/       ui 原语 / icons（SSOT，见 /playbook）
   server/           server-only 工具
 docs/               PRD / 架构 / 规范 / 计划 等
 scripts/            辅助脚本
 ```
 
 详细结构与规则见 [AGENTS.md](./AGENTS.md)。
+
+## 组件复用（/playbook）
+
+所有前端 UI 组件遵循单一真源（SSOT）：在 `src/components/*` 定义一份，其他页面 `import` 复用、不重复实现。运行后访问 [/playbook](http://localhost:3000/playbook) 查看组件手册（应用内「活文档 / 组件画廊」）；新增组件在 `src/app/playbook/registry.ts` 登记并加 `*.demo.tsx`。详见 [架构规范](./docs/conventions/architecture-conventions.md)。
 
 ## 文档
 

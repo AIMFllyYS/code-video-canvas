@@ -54,3 +54,15 @@ app  →  features  →  lib
 - Demo：标准全栈 Next.js 单应用。
 - 规模化 / 多团队：再拆多包 Monorepo（apps/packages）与独立服务；因此现在就把领域逻辑收敛在 `features/*`、`lib/*`，保证"抽包 = 搬运"。
 - 分发：Electron 薄壳包裹同一应用（Phase 2）。
+
+## 7. 组件复用与 SSOT（/playbook 组件手册）
+
+- **单一真源（SSOT）**：每个前端 UI 组件只有一份权威实现，集中在 `src/components/*`；其他页面 / 功能一律 `import` 复用，**禁止复制粘贴或重复实现视觉原语**。
+- **组件分层（原子化）**：
+  - `components/ui/`：纯展示原语（Button / Card / Input …），无业务逻辑。
+  - `components/icons/`：SVG 图标组件（多源自 Pencil 稿件）。
+  - `components/motion/`（可选）：应用内交互动效原语。
+  - `features/*/components/`：功能内组件，只能**组合** `components/ui`，不得重定义视觉原语（依赖方向单向：`features/*/components → components/ui`）。
+- **/playbook 组件手册**：应用内「活文档 / 组件画廊」（应用内版 Storybook，零额外构建工具）。新增组件时在 `src/app/playbook/registry.ts` 登记并新建 `*.demo.tsx`；`/playbook` 按分类实时渲染展示。
+- **确定性边界**：`components/*` 与 `/playbook` 属**应用 UI**，允许 hover / CSS transition / 交互动画；确定性红线（禁 rAF / 墙钟 / CSS 动画）**只约束视频 shot 渲染**（见 §5）。
+- **Pencil → 组件工作流**：Pencil 稿（`.pen`）设计 → Pencil MCP（`export_html` / `export_nodes`）取标记 / SVG → 落为 `components/ui|icons/*` 的类型化命名导出组件 → `/playbook` 注册示例 → 各页 `import` 复用。

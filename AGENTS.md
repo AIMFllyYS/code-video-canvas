@@ -50,9 +50,10 @@
 ```
 src/
   app/                 路由与 API 入口（不放业务逻辑）
-    (canvas)/          画布编辑器
+    canvas/            画布编辑器（占位，React Flow 后置）
     projects/          项目管理
     settings/          StepFun Key 等本地设置
+    playbook/          组件手册（活文档 / 组件画廊）
     api/               route handlers（渲染触发、作业状态、AI 代理如需）
     layout.tsx  globals.css  loading.tsx  error.tsx  not-found.tsx
   features/            业务领域（按域聚合）
@@ -67,7 +68,9 @@ src/
     queue/             进程内持久队列
     gsap/              GSAP↔seek 确定性桥
     determinism/       确定性 lint / 守卫
-  components/ui/       纯展示组件
+  components/
+    ui/                纯展示原语（Button / Card …）
+    icons/             SVG 图标（源自 Pencil）
   server/              server-only 工具（import 'server-only'）
 docs/  scripts/  public/
 ```
@@ -84,6 +87,7 @@ docs/  scripts/  public/
 - GSAP：`gsap.timeline({ paused: true })` + 每帧 `seek(frame / fps)`。
 - 随机必须由 `seed`（+ 索引）派生；同帧永远同画面。
 - 渲染发生在**服务端**（route handler / 后台作业中的 Playwright），**不在用户浏览器**。
+- 边界：确定性红线**只约束视频 shot 渲染**；应用 UI（`components/*`、`/playbook`、编辑器）允许 hover / CSS transition / 交互动画。
 
 ### Next.js 16.2+
 
@@ -109,6 +113,7 @@ docs/  scripts/  public/
 - Tailwind 处理样式，`clsx`/`cn()` 处理条件 className。
 - 新功能必须写测试；改动后跑 `pnpm lint`。
 - 调试/原型放 `src/app/_dev/`，完成后迁回正式路由并清理。
+- UI 组件复用（SSOT）：视觉原语只在 `components/*` 定义一份，页面 `import` 复用、禁重复实现；新组件在 `src/app/playbook/registry.ts` 登记并加 `*.demo.tsx`。
 
 ## When Reviewing Code
 
@@ -118,6 +123,7 @@ docs/  scripts/  public/
 - 是否绕过 `StorageAdapter` 直接读写文件系统。
 - `page.tsx` 行数是否超限；`'use client'` 是否过度上浮到页面级。
 - 是否有 `middleware.ts` 残留、`pages/` 目录、正式代码反向引用 `_dev/`。
+- 组件复用：是否重复实现了 `components/ui` 已有的视觉原语；新组件是否登记 `/playbook`。
 
 ## Git Workflow
 
