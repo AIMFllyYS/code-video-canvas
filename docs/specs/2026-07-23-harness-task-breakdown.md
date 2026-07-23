@@ -6,14 +6,17 @@
 
 ## 使用说明
 
-- 本文档是 §9（Goal 模式协作协议）的具体落地。每张任务卡对应 Codex 的一次 `/goal` 生命周期。
-- 任务卡按 Track 分组，Track 内按序号严格顺序执行（有前置依赖）；不同 Track 之间若无交叉依赖可并行分配给不同会话。
+**核心机制（务必先读，纠正上一版本的粒度误解）**：Codex 的 `/goal` 是**一次长时间自主运行的会话**，对应**一个 Track**（或人工分割出的一段 Track），不是对应单张任务卡。Codex 拿到 Goal 的 objective 后，自己在会话内部按顺序处理该 Track 下列出的**Task**（即下文每张卡片），自己判断每个 Task 是否完成、逐一勾选状态，全部 Task 完成、objective 达成后才调用 `update_goal(complete)`。详见总纲 §9。
+
+- 本文档是总纲 §9 的具体落地。**每个 Track 对应一次 Goal**；Track 内逐张列出的是**Task 规格**（不是独立的 `/goal` 调用），供 Codex 在该 Goal 会话内部依次执行参照。
+- 每个 Track 标题下方给出该 Track 的**Goal 启动提示词**（复制给 Codex 作为 `/goal` 的 objective），随后是该 Track 内按序执行的 Task 列表。
+- Task 之间按序号严格顺序执行（有前置依赖）；不同 Track 之间若无交叉依赖，可对每个 Track 分别启动独立的 Goal 会话并行推进。
 - **Track 依赖速览**：F（地基）最先；C/D/R/P 可在 F 完成后并行推进；**Track P 必须在 Track U 开始前完成**（U 的每张卡都要求"只 import Track P 组件"）；A 依赖 C/D。
 - **Track D 不依赖任何 Pi Skills 机制**：D0.1/D0.2 是把 `docs/video-director/` 的方法论移植为本项目原生 TypeScript 代码（Zod schema + prompt 模板），D1.x 只把 Pi 当作裸的 tool-calling 循环引擎使用。
-- 每张卡执行前，先确认「前置任务」已全部通过 Tier A 验收。
-- 每张卡的「Goal 提示词」可直接复制给 Codex 作为 `/goal` 的 objective + 附加说明。
-- Track 全部完成后执行一次 Tier B 里程碑验收（见总纲 §8.2），产出报告追加至 `docs/updates/`。
+- 每个 Task 执行前，先确认「前置任务」已全部完成。
+- 每个 Track 的全部 Task 完成后，在该 Goal 会话内执行一次 Tier B 里程碑验收（见总纲 §8.2），通过后才调用 `update_goal(complete)`，验收报告追加至 `docs/updates/`。
 - 状态列：`☐` 未开始 · `◐` 进行中 · `☑` 完成。执行时请在本文件中就地勾选，保持台账唯一可信。
+- 若某 Track 的 Task 数量多、预计单次会话跨度过长，允许人工把该 Track 拆成多个 Goal 顺序启动（如 Track U 拆成"Goal 1：U1.1~U1.4"、"Goal 2：U1.5~U1.8"），拆分方式在该 Track 的 Goal 启动提示词处注明。
 
 ---
 
@@ -21,16 +24,46 @@
 
 **目的**：验证总纲里标记为"未实测"的架构假设，补齐缺失依赖与字段，避免后续 Track 建立在错误假设上。**必须最先完成，且内部严格顺序执行**（F0.1 的结论直接决定 F0.2~F0.7 怎么写）。
 
+**Goal 启动提示词**（复制给 Codex 作为 `/goal` objective；含开工前自查步骤，适用于不确定本 Track 实际进度的情况）：
+```
+Goal：完成 Track F（Foundation）的全部 Task（F0.1~F0.7），依据
+docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行。
+
+第 0 步 — 开工前自查（必须先做，不要假设从零开始）：
+- 检查 git status / git log 是否已有与 F0.1~F0.7 相关的未提交或已提交改动
+  （如 scripts/spikes/、package.json 的 pi-agent-core/pi-ai/playwright/
+  ffmpeg-static 依赖、.env.example、src/lib/db/schema.ts、
+  src/features/canvas/types.ts、src/lib/determinism/check.ts 等）
+- 对每个 Task（F0.1~F0.7），核对其「完成条件」是否已经满足（读代码，不要只
+  看文件是否存在）；本文档中的 ☐/☑ 状态列可能与实际代码进度不一致，以实际
+  代码状态为准，若发现文档状态滞后，先修正状态列再继续
+- 自查完成后，先向用户简要汇报"实际已完成到哪个 Task、从哪个 Task 继续"，
+  再开始正式执行（除非该 Goal 会话被明确要求全自动无需汇报）
+
+执行要求：
+- 严格按 F0.1→F0.7 顺序执行（F0.1 的结论决定后续任务卡怎么写，不可跳过或
+  并行提前做 F0.2 之后的任务）；已确认完成的 Task 跳过，不重复执行
+- 每个 Task 完成后在本文档中把状态由 ☐ 改为 ☑
+- 每个 Task 的允许改动范围/禁止改动/完成条件以文档中对应 Task 规格为准
+- 全部 Task 完成后运行 pnpm lint && pnpm tsc --noEmit，确认无误后再判定
+  本 Goal 完成
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] F0.1~F0.7 状态已全部为 ☑（且与实际代码状态一致）
+- [ ] pnpm lint / pnpm tsc --noEmit 通过
+- [ ] F0.1 的验证结论已记录（供 Track D 后续 Goal 参照）
+```
+
 ### F0.1 — Spike：Pi Agent + StepFun 自定义 Provider 可行性验证
 
-- 状态：☐
+- 状态：☑
 - 前置任务：无
 - 允许改动范围：
   - 新建 `scripts/spikes/pi-stepfun-probe.ts`（一次性验证脚本，不进生产路径）
   - `package.json`（新增 `@earendil-works/pi-agent-core`、`@earendil-works/pi-ai` 为 devDependency，因为此阶段只是验证，不确定是否采纳）
 - 禁止改动：
   - `src/features/director/**`、`src/features/ai/**` 的现有文件（本卡只验证，不重构）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：编写一个一次性验证脚本，确认 @earendil-works/pi-ai 能否将 StepFun
   （OpenAI 兼容端点，环境变量 STEPFUN_API_KEY / STEPFUN_BASE_URL / STEPFUN_CHAT_MODEL）
@@ -62,11 +95,11 @@
 
 ### F0.2 — `.env` 契约核查与修正
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.1（需要知道最终选用哪个 chat 模型名）
 - 允许改动范围：`.env.example`、`docs/specs/2026-07-23-ai-development-harness.md`（仅 §7.3 变量清单表格，不改其他章节）
 - 禁止改动：`.env`、`.env.local`（这些文件属于用户本地机密配置，Codex 不应写入或提交）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：核实 StepFun 可用模型列表与当前代码默认值（stepfun-adapter.ts 中的
   step-2-mini、默认 base URL）是否一致，若不一致，更新 .env.example 为可用的
@@ -99,7 +132,7 @@
 - 前置任务：F0.2
 - 允许改动范围：`src/features/ai/stepfun-adapter.ts`、`src/features/ai/stepfun-adapter.test.ts`（新建，若不存在）
 - 禁止改动：`src/features/ai/types.ts`（接口不变，只改实现内的默认值）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：将 stepfun-adapter.ts 中的默认模型常量与 base URL 修正为 F0.2 核实过的
   真实可用值，默认值来源优先级为环境变量 STEPFUN_CHAT_MODEL/STEPFUN_BASE_URL，
@@ -132,7 +165,7 @@
 - 前置任务：无（可与 F0.1~F0.3 并行）
 - 允许改动范围：`src/lib/db/schema.ts`、`src/lib/db/migrations/**`（新迁移文件）、`src/lib/db/schema.test.ts`
 - 禁止改动：`canvas_nodes` 表已有字段的类型/约束（只做新增列，不改现有列）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：为 canvas_nodes 表新增四个字段：status（text，枚举
   idle|pending|running|success|failed|stale，默认 idle）、contentHash
@@ -167,7 +200,7 @@
 - 前置任务：F0.4
 - 允许改动范围：`src/features/canvas/types.ts`、`src/features/canvas/schemas.ts`、所有引用 `CanvasNodeType` 的现有文件（先用 grep 全项目定位引用点后逐一更新）
 - 禁止改动：数据库 schema（本卡只改 TS 类型层，不再动 DB；`type` 列本身是自由 text，不需要迁移）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：将 CanvasNodeType 从当前的 ingest|direct|shot-spec|shot|assemble|finalize
   （这是"阶段"命名，与"节点类型"概念混淆）替换为两类节点类型的联合类型：
@@ -205,7 +238,7 @@
 - 前置任务：无（可并行）
 - 允许改动范围：`package.json`、`.gitignore`（若需排除 playwright 浏览器缓存目录）
 - 禁止改动：`src/features/render/**`（本卡只装依赖，不写实现，实现是 Track R）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：将 playwright（含自动下载的 Chromium）与 ffmpeg-static 加入生产依赖，
   执行安装并确认 Chromium 可在当前环境无头启动一次（用一次性验证脚本，跑完即删）。
@@ -235,7 +268,7 @@
 - 前置任务：无（可并行）
 - 允许改动范围：`src/lib/determinism/**`
 - 禁止改动：`src/features/render/**`、`src/features/canvas/**`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：核查现有 lib/determinism/check.ts 的扫描范围是否覆盖"AI 生成的 shot HTML
   字符串"这一输入源（当前测试可能只覆盖静态文件路径场景），若不覆盖，补充一个
@@ -269,13 +302,30 @@
 
 **前置**：Track F 全部完成（尤其 F0.4/F0.5）。
 
+**Goal 启动提示词**：
+```
+Goal：完成 Track C（Canvas DAG）的全部 Task（C1.1~C1.5），依据
+docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行。
+前置条件：Track F 已全部完成（尤其 F0.4/F0.5，节点字段与类型 taxonomy 已定稿）。
+
+执行要求：
+- 按 C1.1→C1.5 顺序执行（C1.4/C1.5 依赖 C1.1~C1.3 的产出）
+- 每个 Task 完成后在本文档中把状态由 ☐ 改为 ☑
+- 全部 Task 完成后运行 pnpm lint && pnpm tsc --noEmit && pnpm build
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] C1.1~C1.5 状态已全部为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+- [ ] 50 个模拟分镜通道下画布可交互不卡死（C1.5 的压测结论已记录）
+```
+
 ### C1.1 — `fan-out.ts`：分镜通道物化
 
 - 状态：☐
 - 前置任务：F0.4, F0.5
 - 允许改动范围：`src/features/canvas/fan-out.ts`（新建）、`src/features/canvas/fan-out.test.ts`
 - 禁止改动：`src/features/canvas/actions.ts`、`queries.ts`（不要把物化逻辑塞进这两个文件）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 fan-out.ts，导出函数 materializeShotLanes(projectId, shotIds: string[])，
   给定分镜 ID 数组，为每个分镜 ID 批量创建 5 个通道节点（类型
@@ -314,7 +364,7 @@
 - 前置任务：C1.1
 - 允许改动范围：`src/features/canvas/layout.ts`（新建）、`layout.test.ts`、`package.json`（新增 dagre 或等价轻量布局库依赖）
 - 禁止改动：`fan-out.ts`（布局是独立后处理步骤，不要合并进物化事务）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 layout.ts，导出函数 computeLayout(nodes, edges): Map<nodeId, {x,y}>，
   用轻量自动布局库（如 dagre）为 C1.1 产出的拓扑计算坐标：全局单例节点在最外层
@@ -348,7 +398,7 @@
 - 前置任务：F0.4
 - 允许改动范围：`src/features/canvas/status.ts`（新建）、`status.test.ts`
 - 禁止改动：`fan-out.ts`、`layout.ts`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 status.ts：(1) computeContentHash(input: unknown): string，对任意
   可序列化输入做稳定哈希（需保证同输入同哈希、跨进程重复调用结果一致）；
@@ -385,7 +435,7 @@
 - 前置任务：C1.1, C1.2, C1.3
 - 允许改动范围：`src/app/canvas/**`、`src/components/ui/**`（若需新增纯展示原语，需先确认 `/playbook` 无同类组件）
 - 禁止改动：`src/features/canvas/**`（本卡只消费已完成的 features 层函数，不新增业务逻辑）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：在 canvas 路由下实现 React Flow 画布视图，渲染 features/canvas 已提供的
   节点/边数据；按 laneKey 对分镜通道分组，提供折叠/展开交互；节点按 §设计系统
@@ -417,7 +467,7 @@
 - 前置任务：C1.4
 - 允许改动范围：`src/app/canvas/**`（仅性能相关配置与代码，不改交互逻辑）
 - 禁止改动：无特别限制之外的其他 Track 文件
-- Goal 提示词：
+- Task 规格：
   ```
   目标：为 C1.4 的画布视图开启 React Flow 的视口裁剪相关能力，编写一个压测脚本
   或测试用例，生成 250+ 模拟节点，验证画布仍可交互（不卡死）。
@@ -441,7 +491,28 @@
 
 ## Track D — Director（video-director 方法论原生移植 + Pi tool-calling 编排）
 
-**前置**：Track F 全部完成，F0.1 的 Spike 结论已确定采用哪条路径。以下任务卡按"Pi 原生 Provider 可行"路径编写；若 F0.1 结论为退回方案，D1.2 的 Goal 提示词需相应替换为"改造 LlmAdapter 转发"版本（人工在启动该卡前调整措辞，架构原则不变）。**本 Track 不使用 Pi 的 Skills/Extensions 加载机制**——`docs/video-director/` 只作为编写 D0.1/D0.2 时对照阅读的参考语料，不在任何运行时代码路径中被读取或挂载。
+**前置**：Track F 全部完成，F0.1 的 Spike 结论已确定采用哪条路径。以下任务卡按"Pi 原生 Provider 可行"路径编写；若 F0.1 结论为退回方案，D1.2 的 Task 规格需相应替换为"改造 LlmAdapter 转发"版本（人工在启动该 Goal 前调整措辞，架构原则不变）。**本 Track 不使用 Pi 的 Skills/Extensions 加载机制**——`docs/video-director/` 只作为编写 D0.1/D0.2 时对照阅读的参考语料，不在任何运行时代码路径中被读取或挂载。
+
+**Goal 启动提示词**：
+```
+Goal：完成 Track D（Director）的全部 Task（D0.1~D1.5），依据
+docs/specs/2026-07-23-harness-task-breakdown.md 的 Track D 章节逐一执行。
+前置条件：Track F 已全部完成，F0.1 的 Spike 结论已确定（Pi 原生 Provider 是否
+可行）。本 Track 严禁使用 Pi 的 Skills/Extensions 加载机制，
+docs/video-director/ 只读参照，不在运行时代码路径中读取或挂载。
+
+执行要求：
+- 按 D0.1→D0.2→D1.1→D1.2→D1.3→D1.4→D1.5 顺序执行
+- 若 F0.1 结论为退回方案，D1.1/D1.2 的具体实现改为包装现有 StepfunAdapter，
+  但仍不引入 Skill 挂载机制，架构原则不变
+- 每个 Task 完成后在本文档中把状态由 ☐ 改为 ☑
+- 全部 Task 完成后运行 pnpm lint && pnpm tsc --noEmit
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] D0.1~D1.5 状态已全部为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit 通过
+- [ ] 完成汇报中确认零处运行时代码读取 docs/video-director/ 路径
+```
 
 ### D0.1 — `schemas/`：移植 video-director 输出契约为原生 Zod schema
 
@@ -449,7 +520,7 @@
 - 前置任务：无（可与 Track F 并行）
 - 允许改动范围：`src/features/director/schemas/**`（新建目录及文件）
 - 禁止改动：`docs/video-director/**`（只读参照，不修改）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：对照 docs/video-director/schemas/shot-plan.schema.json 及 INGEST 阶段
   相关 schema（script-units/audio-manifest/audio-allocation），逐字段手写对应
@@ -489,7 +560,7 @@
 - 前置任务：D0.1
 - 允许改动范围：`src/features/director/prompts/**`（新建目录及文件）
 - 禁止改动：`docs/video-director/**`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：对照 docs/video-director/SKILL.md 的"正向视觉法则"（10 条）、"构图模式"
   （11 种 enum）、DIRECT 阶段的 master-plan/style-bible 产出要求、SHOT-SPEC
@@ -530,7 +601,7 @@
 - 前置任务：F0.1（含结论）
 - 允许改动范围：`src/features/director/pi-session.ts`（新建）、`pi-session.test.ts`
 - 禁止改动：`src/features/director/pipeline.ts`（本卡先不改现有阶段元数据文件）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 pi-session.ts，导出 createDirectorSession(stage: PipelineStage):
   Promise<AgentSession>，内部创建 Pi AgentSession，配置 StepFun Provider
@@ -570,7 +641,7 @@
 - 前置任务：D0.1, D1.1, F0.7
 - 允许改动范围：`src/features/director/tools/**`（新建目录及文件）
 - 禁止改动：`pi-session.ts`（Tool 定义与会话工厂分离）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：在 tools/ 下为每个阶段边界实现一个自定义 Pi Tool：
   validate-shot-plan.ts（用 D0.1 产出的原生 Zod schema 校验模型输出，不依赖
@@ -607,7 +678,7 @@
 - 前置任务：D0.1, D0.2, D1.1, D1.2
 - 允许改动范围：`src/features/director/stage-runner.ts`（新建）、测试文件
 - 禁止改动：`src/lib/queue/**`（本卡只消费队列接口，不改队列实现）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 stage-runner.ts，导出 runStage(projectId, nodeId, stage): 
   Promise<void>：将节点状态置为 running（复用 C1.3 的 transitionNodeStatus）→
@@ -643,7 +714,7 @@
 - 前置任务：D1.3
 - 允许改动范围：`src/features/director/queue-handler.ts`（新建）、`src/server/**`（若需要启动时注册的入口文件）
 - 禁止改动：`src/lib/queue/in-process-queue.ts` 的核心实现（只调用 `register()` 方法）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 queue-handler.ts，注册 kind='director-stage' 的作业处理器到
   InProcessQueue，处理器内部调用 stage-runner.ts 的 runStage。在应用启动路径
@@ -674,7 +745,7 @@
 - 前置任务：D1.4
 - 允许改动范围：`src/app/api/director/stage/route.ts`（新建）
 - 禁止改动：`src/features/director/**`（路由层只调用，不新增业务逻辑）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 POST /api/director/stage 路由，接收 { projectId, nodeId, stage }，
   Zod 校验请求体，调用 features/canvas/queries 确认节点存在后，enqueue 一个
@@ -706,13 +777,31 @@
 
 **前置**：F0.6, F0.7。
 
+**Goal 启动提示词**：
+```
+Goal：完成 Track R（Render）的全部 Task（R1.1~R1.6），依据
+docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行。
+前置条件：F0.6（playwright/ffmpeg-static 已装）、F0.7（确定性守卫 checkSource
+已就位）均已完成。
+
+执行要求：
+- 按 R1.1→R1.2→R1.3→R1.4→R1.5→R1.6 顺序执行
+- 每个 Task 完成后在本文档中把状态由 ☐ 改为 ☑
+- 全部 Task 完成后运行 pnpm lint && pnpm tsc --noEmit && pnpm build
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] R1.1~R1.6 状态已全部为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+- [ ] 至少一次真实渲染出确定性一致的 mp4（同输入两次渲染哈希一致）的验证记录
+```
+
 ### R1.1 — `frame-capture.ts`：单帧截图
 
 - 状态：☐
 - 前置任务：F0.6, F0.7
 - 允许改动范围：`src/features/render/frame-capture.ts`（新建）、测试文件、`fixtures/`（测试用最小 shot HTML 样例）
 - 禁止改动：`renderer.ts`（顶层编排留到 R1.5）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 frame-capture.ts，导出 captureFrame(htmlPath, frame, fps):
   Promise<Buffer>：用 Playwright 打开该 HTML，在 page 上执行对应 GSAP 时间轴的
@@ -748,7 +837,7 @@
 - 前置任务：R1.1
 - 允许改动范围：`src/features/render/cache.ts`（新建）、`frame-sequence.ts`（新建）、测试文件
 - 禁止改动：`frame-capture.ts`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 cache.ts（导出 lookupCache(hash)/writeCache(hash, result) 基于
   artifacts 表按 contentHash 查找/写入已渲染产物）与 frame-sequence.ts（导出
@@ -783,7 +872,7 @@
 - 前置任务：R1.2
 - 允许改动范围：`src/features/render/encode.ts`（新建）、测试文件
 - 禁止改动：`frame-sequence.ts`、`cache.ts`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 encode.ts，导出 encodeToMp4(frames: Buffer[], fps, outputPath):
   Promise<string>：调用 ffmpeg-static 二进制，将帧序列编码为确定性参数的 mp4
@@ -817,7 +906,7 @@
 - 前置任务：R1.3
 - 允许改动范围：`src/features/render/concat.ts`（新建）、测试文件
 - 禁止改动：`encode.ts`（复用而非重写编码逻辑）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现 concat.ts，导出 concatExport(mp4Paths: string[], musicPath, 
   outputPath): Promise<string>：用 ffmpeg 的 concat 模式按序拼接已渲染的分镜
@@ -851,7 +940,7 @@
 - 前置任务：R1.2, R1.3
 - 允许改动范围：`src/features/render/renderer.ts`（替换现有 throw NotImplemented 实现）、`queue-handler.ts`（新建）
 - 禁止改动：`frame-sequence.ts`、`encode.ts`、`cache.ts`（本卡只编排，不重写底层）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：将 renderer.ts 的 HyperframesRenderer.render() 从 throw NotImplemented
   改为真实编排：查缓存（cache.ts）→ 未命中则截帧序列（frame-sequence.ts）→
@@ -888,7 +977,7 @@
 - 前置任务：R1.5, R1.4
 - 允许改动范围：`src/app/api/render/route.ts`（新建）、`src/app/api/render/export/route.ts`（新建）
 - 禁止改动：`src/features/render/**`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：实现两个路由：POST /api/render（接收 { projectId, nodeId }，enqueue
   render-shot 作业，返回 jobId）与 POST /api/render/export（接收 { projectId }，
@@ -922,12 +1011,29 @@
 
 **前置**：Track C（通道节点已建）、Track D（阶段编排已通）。**Demo 阶段仅要求节点存在 + UI 可见 + 内部逻辑占位（明确抛出"待实现"或返回固定 mock），真实生成能力延后到 P1**，与总纲 §4.1 决策一致。
 
+**Goal 启动提示词**：
+```
+Goal：完成 Track A（Audio 占位）的 Task A1.1，依据
+docs/specs/2026-07-23-harness-task-breakdown.md 的 Track A 章节执行。
+前置条件：Track C、Track D 均已完成。
+
+执行要求：
+- 本 Track 仅一个 Task，Demo 阶段只做占位实现，不接入真实 StepFun TTS/ASR
+- 完成后在本文档中把状态由 ☐ 改为 ☑
+- 完成后运行 pnpm lint && pnpm tsc --noEmit
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] A1.1 状态为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit 通过
+- [ ] 四个占位函数均不抛异常，返回结构清晰标注"P1 实现"
+```
+
 ### A1.1 — `features/audio/` 骨架与占位实现
 
 - 状态：☐
 - 前置任务：Track C 完成
 - 允许改动范围：`src/features/audio/subtitle.ts`、`voiceover.ts`、`sfx.ts`、`score.ts`（均新建，替换现有仅有 index.ts/types.ts 的空骨架）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：为字幕/配音/音效/配乐四个子域各建一个文件，导出与其角色对应的函数
   签名（如 generateSubtitle(shotId): Promise<SubtitleResult>），Demo 阶段函数体
@@ -959,6 +1065,27 @@
 
 **目的**：把 `docs/designs/canvas.pen` 中标记 `reusable:true` 的 30 个组件，通过 **Pencil MCP 工具**（`mcp_pencil_batch_get`/`mcp_pencil_get_variables`/`mcp_pencil_get_screenshot`/`mcp_pencil_export_html` 等）逐一读取真实结构与样式，一比一移植为 `src/components/ui/*.tsx` 或 `src/components/icons/*.tsx`，并登记进 `/playbook`。**这是总纲 §5.6 的强制约束的具体执行**：Track U 的任何页面任务卡都只允许 `import` 这里产出的组件，不允许重新实现。**必须排在 Track U 之前完成。**
 
+**Goal 启动提示词**：
+```
+Goal：完成 Track P（Pencil 组件港口）的全部 Task（P0.1~P1.5），依据
+docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行。
+
+执行要求：
+- 按 P0.1→P1.1→P1.2→P1.3→P1.4→P1.5 顺序执行
+- 每个组件移植前必须用 Pencil MCP 工具（mcp_pencil_batch_get 等）实际读取
+  canvas.pen 中的真实结构，禁止凭记忆/凭空实现
+- 每个组件完成后立即登记 src/app/playbook/registry.ts + 配 *.demo.tsx，
+  不要攒到最后一次性登记
+- 每个 Task 完成后在本文档中把状态由 ☐ 改为 ☑
+- 全部 Task 完成后运行 pnpm lint && pnpm tsc --noEmit && pnpm build
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] P0.1~P1.5 状态已全部为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+- [ ] /playbook 页面可查看到 canvas.pen 全部 30 个 reusable 组件对应的条目
+      （或在完成汇报中说明任何有意合并/不单列的组件及理由）
+```
+
 **执行铁律（每张任务卡都适用）**：
 1. 严禁凭记忆或凭空实现——每个组件必须先用 `mcp_pencil_batch_get` 读取该组件在 `canvas.pen` 中的真实节点结构（fill/padding/gap/cornerRadius/stroke/effect 等），必要时用 `mcp_pencil_get_screenshot` 核对视觉。
 2. 颜色/圆角/间距/阴影必须映射到 `mcp_pencil_get_variables` 读出的 Design Token（对应 Tailwind CSS 变量或 `tailwind.config` 扩展），不允许硬编码 hex/px 数值。
@@ -967,10 +1094,10 @@
 
 ### P0.1 — 依赖补全：`lucide-react` + 自动布局库
 
-- 状态：☐
+- 状态：☑
 - 前置任务：无
 - 允许改动范围：`package.json`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：安装 lucide-react（全部图标的唯一来源）与 @dagrejs/dagre（画布自动
   布局，供后续 C1.2 使用），确认安装后可从两个包分别成功 import 一个符号
@@ -993,10 +1120,10 @@
 
 ### P1.1 — B1 基础控件港口（13 个组件）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：P0.1
 - 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：用 Pencil MCP 读取 canvas.pen 中以下 13 个 reusable 组件的真实结构：
   Button/Primary、Button/Tinted、Button/Gray、Button/Destructive、IconButton、
@@ -1029,7 +1156,7 @@
 - 状态：☐
 - 前置任务：P0.1
 - 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：用 Pencil MCP 读取并移植 Toast、Dialog、EmptyState 三个组件，登记进
   playbook。Dialog 需支持作为受控组件（open/onClose props），Toast 需考虑
@@ -1058,7 +1185,7 @@
 - 状态：☐
 - 前置任务：P0.1
 - 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：用 Pencil MCP 读取并移植 NavItem、TopBar、Sidebar 三个组件。Sidebar
   的毛玻璃效果（glass-sidebar + background_blur）需用 Tailwind 的
@@ -1088,7 +1215,7 @@
 - 状态：☐
 - 前置任务：P0.1, F0.5（节点类型 taxonomy 已定稿，命名需与组件对齐）
 - 允许改动范围：`src/components/ui/**`（新建，节点类组件可单独放 `src/components/ui/node/` 子目录）、`src/app/playbook/registry.ts`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：用 Pencil MCP 读取并移植 11 个业务组件：ProjectCard、ArtifactChip、
   Node/StageNode、Node/ShotNode、Node/AudioNode、Node/ExportNode、
@@ -1122,7 +1249,7 @@
 - 状态：☐
 - 前置任务：P1.1, P1.2, P1.3, P1.4
 - 允许改动范围：`src/components/icons/**`、`src/app/playbook/**`（仅核查/补registry条目，不改已完成组件的实现）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：核查 P1.1~P1.4 移植的全部组件内部使用的图标名，逐一对照设计系统清单
   §6.3 的 Lucide 新命名表，修正任何使用旧名（如 plus-circle）的引用为标准名
@@ -1152,6 +1279,37 @@
 
 **前置**：**Track P 全部完成**（30 个组件已港口完成并登记 `/playbook`）、Track C（画布）、Track D（触发阶段的路由）、Track R（触发渲染的路由）均已完成对应 API。UI Track 内部各页面耦合度低，可并行分配给不同会话，但均依赖 [`2026-07-23-ui-design-handoff.md`](../designs/2026-07-23-ui-design-handoff.md) 的逐页规格与 [`2026-07-23-design-system-inventory.md`](../designs/2026-07-23-design-system-inventory.md) 的 Token/组件清单。
 
+**Goal 启动提示词**（Task 数较多，建议按下述方式拆成两个 Goal 顺序启动）：
+```
+Goal 1：完成 Track U 的 U1.1~U1.4（首页/新建项目对话框/画布主视图/分镜详情页），
+依据 docs/specs/2026-07-23-harness-task-breakdown.md 的 Track U 章节执行。
+前置条件：Track P、Track C、Track D、Track R 均已完成对应 API。
+
+执行要求：
+- 按 U1.1→U1.2→U1.3→U1.4 顺序执行
+- 严格只 import Track P 已登记组件，禁止在页面内重新实现任何视觉原语；若发现
+  缺失组件，先停下补一张 Track P 任务卡完成移植再回来使用
+- 每个 Task 完成后在本文档中把状态由 ☐ 改为 ☑
+
+完成条件：
+- [ ] U1.1~U1.4 状态已全部为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+```
+```
+Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到端 UI 走查），
+前置条件：Goal 1（U1.1~U1.4）已完成。
+
+执行要求：
+- 按 U1.5→U1.6→U1.7→U1.8 顺序执行
+- U1.8 是本 Track 的 Tier B 里程碑收口，需按 §7 使用开发期种子 Key 做一次
+  真实 AI 调用的功能性验证
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] U1.5~U1.8 状态已全部为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+- [ ] U1.8 的完整路径走查报告已产出（推送进 docs/updates/ 前先由人工审阅）
+```
+
 **强制约束（每张 U 任务卡都适用）**：页面只能 `import` Track P 已登记的组件，**禁止在页面文件或页面私有子组件内重新实现任何视觉原语**（Button/Card/StatusPill/NavItem 等）。若发现某页面需要一个 Track P 尚未覆盖的组件，必须先停下补一张 Track P 任务卡完成移植，再回来 `import` 使用，不允许"页面里先临时糊一个"。
 
 ### U1.1 — S1 首页 / 项目列表
@@ -1159,7 +1317,7 @@
 - 状态：☐
 - 前置任务：Track P 全部完成，Track C 完成（`api/projects` 已可用）
 - 允许改动范围：`src/app/page.tsx`、`src/app/_components/**`（若需要页面私有子组件；仅允许拼装 Track P 已登记组件，不新增视觉原语）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：按 UI 设计交接文档 S1 章节的结构、文案（第 8 节复用库原文，禁止发明新
   文案）实装首页：项目列表 + 新建项目入口。只允许 import Track P 已登记的组件
@@ -1189,7 +1347,7 @@
 - 状态：☐
 - 前置任务：U1.1
 - 允许改动范围：`src/app/_components/new-project-dialog.tsx`（新建）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：按设计交接文档 S2 章节实装新建项目对话框：标题输入 + 脚本文本域，
   提交后调用 features/canvas 的创建项目接口，成功后跳转到画布页并触发
@@ -1215,7 +1373,7 @@
 - 状态：☐
 - 前置任务：C1.4, C1.5, U1.2
 - 允许改动范围：`src/app/canvas/**`（在 C1.4/C1.5 骨架基础上补齐 Sidebar/Inspector 布局）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：按设计交接文档 S3 章节的 Sidebar(240)|Center|Inspector(320) 三栏布局，
   整合 C1.4 已实现的画布核心视图，补齐侧边栏（项目信息/阶段进度）与检视器
@@ -1243,7 +1401,7 @@
 - 状态：☐
 - 前置任务：R1.6, U1.3
 - 允许改动范围：`src/app/canvas/shot/[id]/**`（新建路由，路径需与设计稿路由意图核对，若设计稿另有约定的路径以设计稿为准并在完成汇报中说明）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：按设计交接文档 S4 章节实装分镜详情页：展示该分镜的代码生成结果预览
   （HTML iframe 或等价渲染），提供"单独导出"按钮对接 api/render 触发该分镜
@@ -1271,7 +1429,7 @@
 - 状态：☐
 - 前置任务：R1.6, U1.3
 - 允许改动范围：`src/app/canvas/export/**`（新建，路径以设计稿为准）
-- Goal 提示词：
+- Task 规格：
   ```
   目标：按设计交接文档 S5 章节实装导出页：展示全部分镜通道的完成状态汇总，
   全部完成后启用"合并导出"按钮，对接 api/render/export，展示导出进度与终片
@@ -1297,7 +1455,7 @@
 - 状态：☐
 - 前置任务：F0.3
 - 允许改动范围：`src/app/settings/**`
-- Goal 提示词：
+- Task 规格：
   ```
   目标：按设计交接文档 S6 章节实装设置页：StepFun API Key 输入与保存（对接
   已有 api/settings 与 stepfun-adapter 的 saveApiKey/validateKey），保存前先
@@ -1325,7 +1483,7 @@
 - 状态：☐
 - 前置任务：U1.1~U1.6 全部完成
 - 允许改动范围：全部已实装页面的样式层（Tailwind class / Design Token 引用），不改业务逻辑
-- Goal 提示词：
+- Task 规格：
   ```
   目标：为 U1.1~U1.6 已实装的六个页面补齐暗色主题样式，严格复用设计系统清单中
   的暗色专属 Token（glass/on-accent/*-fill 等），不新增未在 Token 体系中定义
@@ -1351,7 +1509,7 @@
 
 - 状态：☐
 - 前置任务：U1.1~U1.7 全部完成
-- Goal 提示词：
+- Task 规格：
   ```
   目标：作为 UI Track 的里程碑收口，Codex 自主走查一次完整用户路径：
   首页→新建项目（提交脚本）→画布（触发语义拆分，观察分镜通道物化）→
@@ -1394,3 +1552,4 @@
 |---|---|
 | 2026-07-23 | 初版发布，32 张任务卡覆盖 Foundation/Canvas/Director/Render/Audio/UI 六条 Track |
 | 2026-07-23（修订） | **架构纠正**：Track D 新增 D0.1/D0.2（video-director 方法论移植为原生 Zod schema + prompt 模板），D1.1/D1.2 措辞改为"裸 tool-calling 引擎，不挂 Skill"；新增 **Track P — Pencil 组件港口**（6 张任务卡，`canvas.pen` 30 个组件通过 Pencil MCP 一比一移植 + 登记 `/playbook`），并设为 Track U 的强制前置；Track U 全部任务卡改为"只 import Track P 组件，禁止重新实现"；任务卡合计 32→40 |
+| 2026-07-23（修订二） | **Goal/Task 粒度纠正**：更正"一张任务卡=一次 Goal"的错误理解为"一个 Track=一次 Goal，Track 内的任务卡是 Codex 在该 Goal 会话内部自主拆解执行的 Task"；每张卡片标签由「Goal 提示词」改为「Task 规格」；为每个 Track 新增独立的「Goal 启动提示词」区块（Track U 因 Task 数较多拆成两个顺序 Goal）；同步更新总纲 §9 |

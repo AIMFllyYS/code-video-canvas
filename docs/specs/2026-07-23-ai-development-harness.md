@@ -26,7 +26,7 @@
 ## 1. 背景
 
 - PRD（[`2026-07-23-prd-code-video-canvas.md`](./2026-07-23-prd-code-video-canvas.md)）与架构设计（[`2026-07-23-platform-architecture-design.md`](../designs/2026-07-23-platform-architecture-design.md)）已确定产品范围与技术选型，但两者都停在"设计"层面，没有回答"施工顺序"和"每一步怎么判定做对了"。
-- 项目引入 Codex 的 Goal 模式作为主力施工方式。Goal 模式的真实机制是：**一个 thread 一次只能挂一个目标，模型自己判断"完成"并调用 `update_goal(complete)`，续接是一次性的**（没有工具调用就不会再触发）。这意味着任务粒度必须卡在"一次 Goal 生命周期内能够被模型自主判定完成"的颗粒度——太粗会导致模型中途瞎猜完成条件、越界改动；太细则浪费 Goal 机制的持久化价值。
+- 项目引入 Codex 的 Goal 模式作为主力施工方式。Goal 模式的真实机制是：**一个 thread 一次只能挂一个持久目标（objective），Codex 在该目标下可以长时间自主运行、自己把工作拆解成一系列 Task 并逐一执行，全部完成后自己判断"目标达成"并调用 `update_goal(complete)`**；续接是一次性的（某轮没有工具调用就不会再自动触发）。这意味着：**Goal 的颗粒度应该对应一个 Track（一批相关 Task 的集合）**，而不是单个 Task；单个 Task 的颗粒度则要卡在"边界清晰、允许改动范围明确、完成条件可机器判定"，方便 Codex 在会话内部自主排序执行、不越界。详见 §9。
 - 项目采用 **Pi Agent 架构**（`@earendil-works/pi-agent-core` + `pi-ai`）作为 `features/director` 的运行时底座，而不是自造一套 Agent 编排框架。这是本次规划中最大的架构决定，详见 §3。
 - 产品的画布本质是一个**运行时动态生成拓扑的 DAG**，不是 Dify/Coze 那种人工手动拖拽连线的静态工作流。这个特性直接决定了 `features/canvas` 的数据模型和模块拆分方式，详见 §4。
 
@@ -302,15 +302,15 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 - **生产行为**（面向最终用户）：用户在「设置」页填入自己的 StepFun Key → 写入本地 SQLite `settings` 表 → 服务端读取。这是产品既定设计，不变。
 - **开发/测试行为**（面向本项目开发期）：`.env.local` 提供一份种子 Key，`LlmAdapter`（以及未来 Pi Provider 配置）读取优先级为 **SQLite `settings` 表 > 环境变量**，即用户一旦在 UI 里配置过 Key，环境变量种子值自动失效。这样开发时不必每次都走 UI 填key，Tier B 里程碑验收时也可以直接做真实 AI 调用的端到端烟测。
 
-### 7.3 变量清单（草案，Foundation Track 验证后定稿）
+### 7.3 变量清单（已通过 Foundation Spike 验证）
 
 ```
 STEPFUN_API_KEY=            # 开发期种子 Key；生产路径走设置页写 SQLite，不用此变量
-STEPFUN_BASE_URL=           # 默认 https://api.stepfun.com/v1；需验证是否应为 step_plan 变体
-STEPFUN_CHAT_MODEL=         # 文本生成（分镜拆分/脚本撰写/HTML生成）；候选 step-3.5-flash / step-3.7-flash，需验证选型
-STEPFUN_TTS_MODEL=          # 配音/声音克隆；候选 stepaudio-2.5-tts
-STEPFUN_ASR_MODEL=          # 语音转写（若用于字幕时间轴对齐）；候选 stepaudio-2.5-asr
-STEPFUN_VISION_MODEL=       # 视觉模型验收节点（P1 可选增强）；具体选型需验证，列表中未见明确 vision-only 型号
+STEPFUN_BASE_URL=https://api.stepfun.com/v1 # 默认 API 基础端点（已验证，非 step_plan 变体）
+STEPFUN_CHAT_MODEL=step-3.5-flash # 文本生成模型（已验证，可选择 step-3.5-flash / step-3.7-flash）
+STEPFUN_TTS_MODEL=stepaudio-2.5-tts # 配音/声音克隆模型
+STEPFUN_ASR_MODEL=stepaudio-2.5-asr # 语音转写模型
+STEPFUN_VISION_MODEL=step-1.5v    # 视觉模型验收节点（多模态，P1 可选增强）
 ```
 
 ### 7.4 授权与安全边界
@@ -353,22 +353,34 @@ STEPFUN_VISION_MODEL=       # 视觉模型验收节点（P1 可选增强）；�
 
 ### 9.1 任务卡与 Goal 生命周期的对应关系
 
-- **一张 L3 任务卡 = 一次 Goal 生命周期**。任务卡的"目标"字段即 Goal 的 objective；"完成条件"整段作为模型判定 `update_goal(complete)` 前必须满足的说明，随 objective 一并交给 Codex。
-- Goal 机制是单 thread 单目标、续接一次性（没有工具调用即停）。因此任务卡颗粒度必须卡在**一次会话内可完成**的范围：约 1~3 个新文件或对既有文件的一处聚焦改动，有明确输入契约（依赖哪些已完成任务的产出）和输出契约（自己产出什么、供后续任务消费什么）。
-- 任务卡之间的依赖关系必须是**单向 DAG**，不能有循环依赖，这样大部分任务可以并行分配给不同 Codex 会话执行，不必排成一条长链死等。
+### 9.0 核心纠正：Goal 是长时会话的持久目标，Task 是会话内部的施工单元
+
+**上一版本把"一张任务卡"等同于"一次 Goal 生命周期"，这是对 Goal 机制粒度的误解，此处纠正**：
+
+- Codex Goal 的真实运作方式是**一个 Goal 对应一段可以长时间自主运行的会话**（可以是几十分钟到数小时，跨越很多次工具调用）。Codex 拿到 Goal 的 objective 后，**自己在会话内部把工作拆解成一系列 Task 并顺序/按需执行**，自己判断每个 Task 是否完成，全部完成、objective 达成后才调用 `update_goal(complete)`。
+- 因此**本 Harness 里 Track（或 Track 内的一组任务卡）对应一次 Goal**；Track 内逐张列出的任务卡是**Task**——即 Codex 在这一次 Goal 会话内部要按序处理的施工单元清单，不是分别启动多次 `/goal` 的对象。
+- 之前 task-breakdown 文档中每张任务卡下"Goal 提示词"这一标签是**误用**，已更正为「**Task 规格**」：它描述的是一个 Task 的目标、允许改动范围、完成条件，供 Codex 在 Goal 会话内部执行到该 Task 时参照，不是独立的 `/goal` 调用参数。
+- 单个 Track 内的 Task 依赖关系仍必须是**单向 DAG**，理由不变：即便同属一个 Goal 会话，Codex 仍需要清楚的执行顺序与边界，防止在会话内部越界或前后矛盾地修改同一文件。
+
+### 9.1 Goal 与 Track 的对应关系
+
+- **一次 Goal = 一个 Track（或一个 Track 内经人工分割的一段）**。启动 Goal 时给 Codex 的 objective 是"完成 Track X 的全部/某几个 Task"，而不是单个 Task 的目标。
+- Track 内的**每张任务卡是一个 Task**：Task 之间的顺序、允许改动范围、完成条件仍按原有卡片格式逐一列出（task-breakdown 文档保持现有卡片结构，只是标签从"Goal 提示词"改为"Task 规格"）。
+- Codex 在 Goal 会话执行期间，应当依次处理该 Track 下的 Task 列表，每完成一个 Task 就在 task-breakdown 文档中就地勾选状态（`☐→☑`），全部 Task 完成后再判定该 Goal 是否达成 objective、是否可以 `update_goal(complete)`。
+- 若某个 Track 的 Task 数量过多、预计单次会话跨度过长（比如 Track U 的 8 个 Task），允许人工把该 Track 拆成多个 Goal 顺序启动（如"Goal 1：完成 U1.1~U1.4"、"Goal 2：完成 U1.5~U1.8"），拆分方式记录在该 Track 的 Goal 启动提示词中（§9.3）。
 
 ### 9.2 严格范围限制（防止越界施工）
 
-每张任务卡必须显式声明：
+每张任务卡（Task）必须显式声明：
 
-- **前置任务**：本卡执行前必须已完成的任务卡 ID 列表（未完成则 Codex 不应开始）
+- **前置任务**：本 Task 执行前必须已完成的 Task ID 列表（未完成则 Codex 不应开始）
 - **允许改动范围**：具体文件/目录路径清单
 - **禁止改动 / 越界红线**：不能碰的目录（尤其是别的 Track 正在进行中的文件）+ 项目级红线（确定性规则、密钥泄露等）
-- **后置任务**：本卡产出被哪些后续任务消费，帮助 Codex 理解"为什么不能自己顺手把后面的活也干了"
+- **后置任务**：本 Task 产出被哪些后续 Task 消费，帮助 Codex 理解"为什么不能自己顺手把后面的活也干了"
 
-### 9.3 Goal 提示词标准模板
+### 9.3 Task 规格标准模板 + Goal 启动提示词模板
 
-具体每张任务卡的 Goal 提示词见 task-breakdown 文档，统一遵循以下结构：
+具体每个 Task 的规格见 task-breakdown 文档，统一遵循以下结构（这是**会话内部的施工单元说明**，不是独立的 `/goal` 调用）：
 
 ```
 目标：<一句话，可判定完成>
@@ -382,17 +394,37 @@ STEPFUN_VISION_MODEL=       # 视觉模型验收节点（P1 可选增强）；�
 禁止改动：
 - <path 或规则>
 
-完成条件（全部满足才可 update_goal(complete)）：
+完成条件（全部满足才视为该 Task 完成）：
 - [ ] ...
 - [ ] ...
 
-不在本任务范围内（不要做，留给后续任务）：
+不在本任务范围内（不要做，留给后续 Task）：
 - ...
+```
+
+每个 **Track** 启动时，人工对 Codex 下达的 **Goal 提示词**统一遵循以下结构（这才是真正交给 `/goal` 的 objective）：
+
+```
+Goal：完成 <Track 名> 的全部 Task（<Task ID 范围>），依据
+docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行。
+
+执行要求：
+- 严格按 Task 编号顺序执行，每个 Task 完成后在该文档中把状态由 ☐ 改为 ☑
+- 每个 Task 的允许改动范围、禁止改动、完成条件以文档中对应 Task 规格为准
+- 全部 Task 完成后，运行 Tier A 验收（pnpm lint && pnpm tsc --noEmit，及各 Task
+  要求的单测），确认无误后再判定本 Goal 完成
+- 若某个 Task 执行中发现前置假设有误（如依赖的前置 Task 产出不符合预期），
+  停止并汇报，不要跳过验证强行继续
+
+完成条件（达成后才可 update_goal(complete)）：
+- [ ] Track 内全部 Task 状态已勾选为 ☑
+- [ ] pnpm lint / pnpm tsc --noEmit 通过
+- [ ] 本 Track 要求的 Tier B 里程碑验收项（见 §8.2）已完成
 ```
 
 ### 9.4 Track 完成后的衔接方式
 
-Track 内任务卡按顺序单个提交给 Codex 执行；每个任务卡的 Goal 被判定 complete 后，由人工（或后续脚本化）确认 Tier A 验收通过，再开启下一张任务卡的 Goal。Track 全部任务卡完成后，触发一次 Tier B 里程碑验收（§8.2），通过后才进入下一个 Track。
+一次 Goal（对应一个 Track 或其中一段）被 Codex 判定 complete 后，人工确认 Tier A/Tier B 验收通过，再对下一个 Track 启动新的 Goal。Track 之间若无交叉依赖，可以对不同 Track 同时启动多个独立的 Goal 会话并行推进（不同 thread）。
 
 ---
 
