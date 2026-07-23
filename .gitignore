@@ -16,6 +16,11 @@ dist/
 build/
 
 # ========================
+# Local demo data (SQLite + render artifacts)
+# ========================
+/.data/
+
+# ========================
 # Next.js
 # ========================
 next-env.d.ts
