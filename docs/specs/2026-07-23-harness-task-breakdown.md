@@ -1242,7 +1242,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
 
 ### P1.2 — B2 反馈组件港口（Toast / Dialog / EmptyState）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：P0.1
 - 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
 - Task 规格：

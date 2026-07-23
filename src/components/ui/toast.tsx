@@ -77,7 +77,7 @@ function notify() {
 /** 全局 toast 调用入口（最小可用）。 */
 export const toast = {
   show(variant: ToastVariant, title: ReactNode, body?: ReactNode) {
-    const id = `${Date.now()}-${Math.random()}`
+    const id = crypto.randomUUID()
     toasts = [...toasts, { id, variant, title, body }]
     notify()
   },

@@ -26,7 +26,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
       {description && (
         <p className="text-[13px] font-sc text-label-tertiary">{description}</p>
       )}
-      {action && <div className="mt-1">{action}</div>}
+      {action && <div>{action}</div>}
     </div>
   )
 }

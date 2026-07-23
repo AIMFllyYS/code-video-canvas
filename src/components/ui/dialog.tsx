@@ -39,6 +39,8 @@ export function Dialog({
       onClick={handleBackdropClick}
     >
       <div
+        role="dialog"
+        aria-modal="true"
         className={cn(
           'flex w-[480px] flex-col gap-4 rounded-xl bg-surface-raised p-6 shadow-float',
           className,
@@ -46,7 +48,7 @@ export function Dialog({
       >
         {title && <h2 className="text-[22px] font-semibold font-sc text-label">{title}</h2>}
         {description && <p className="text-[15px] font-sc text-label-secondary">{description}</p>}
-        {children && <div className="rounded-sm bg-fill">{children}</div>}
+        {children && <div className="min-h-20 rounded-sm bg-fill">{children}</div>}
         {actions && <div className="flex justify-end gap-2">{actions}</div>}
       </div>
     </div>
