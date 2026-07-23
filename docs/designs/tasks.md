@@ -110,7 +110,7 @@
     - 对应 task-breakdown：R1.2
     - _Requirements: F5_
 
-  - [ ] 4.3 `encode.ts`：ffmpeg 编码
+  - [x] 4.3 `encode.ts`：ffmpeg 编码
     - 对应 task-breakdown：R1.3
     - _Requirements: F4_
 
