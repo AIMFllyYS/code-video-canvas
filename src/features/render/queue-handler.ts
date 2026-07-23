@@ -33,36 +33,23 @@ interface EnqueueDependencies {
   recordRenderError(nodeId: string, error: unknown): void
 }
 
-const repository = new RenderRepository()
-const handlerDefaults: HandlerDependencies = {
-  repository,
-  transitionNodeStatus,
-  renderer: new HyperframesRenderer(),
-}
-const enqueueDefaults: EnqueueDependencies = {
-  queue: defaultQueue,
-  assertRenderEnqueueable: (projectId, nodeId) =>
-    repository.assertRenderEnqueueable(projectId, nodeId),
-  transitionNodeStatus,
-  recordRenderError: (nodeId, error) => repository.recordRenderError(nodeId, error),
-}
-
 export function registerRenderShotHandler(
   targetQueue: QueueAdapter = defaultQueue,
-  dependencies: HandlerDependencies = handlerDefaults
+  dependencies?: HandlerDependencies
 ): void {
   targetQueue.register('render-shot', async (job) => {
+    const resolved = dependencies ?? createHandlerDependencies()
     const payload = renderJobPayloadSchema.parse(job.payload)
-    dependencies.transitionNodeStatus(payload.nodeId, 'running')
+    resolved.transitionNodeStatus(payload.nodeId, 'running')
     try {
-      const context = dependencies.repository.loadRenderContext(
+      const context = resolved.repository.loadRenderContext(
         payload.projectId,
         payload.nodeId
       )
-      await dependencies.renderer.render(context)
-      dependencies.transitionNodeStatus(payload.nodeId, 'success')
+      await resolved.renderer.render(context)
+      resolved.transitionNodeStatus(payload.nodeId, 'success')
     } catch (error) {
-      failRender(payload.nodeId, error, dependencies)
+      failRender(payload.nodeId, error, resolved)
       throw error
     }
   })
@@ -70,19 +57,40 @@ export function registerRenderShotHandler(
 
 export function enqueueRenderShot(
   input: RenderShotInput,
-  dependencies: EnqueueDependencies = enqueueDefaults
+  dependencies?: EnqueueDependencies
 ): string {
+  const resolved = dependencies ?? createEnqueueDependencies()
   const payload = renderJobPayloadSchema.parse(input)
-  dependencies.assertRenderEnqueueable(payload.projectId, payload.nodeId)
-  dependencies.transitionNodeStatus(payload.nodeId, 'pending')
+  resolved.assertRenderEnqueueable(payload.projectId, payload.nodeId)
+  resolved.transitionNodeStatus(payload.nodeId, 'pending')
   try {
-    return dependencies.queue.enqueue('render-shot', payload, {
+    return resolved.queue.enqueue('render-shot', payload, {
       projectId: payload.projectId,
       nodeId: payload.nodeId,
     })
   } catch (error) {
-    compensateEnqueueFailure(payload.nodeId, error, dependencies)
+    compensateEnqueueFailure(payload.nodeId, error, resolved)
     throw error
+  }
+}
+
+function createHandlerDependencies(): HandlerDependencies {
+  return {
+    repository: new RenderRepository(),
+    transitionNodeStatus,
+    renderer: new HyperframesRenderer(),
+  }
+}
+
+function createEnqueueDependencies(): EnqueueDependencies {
+  const repository = new RenderRepository()
+  return {
+    queue: defaultQueue,
+    assertRenderEnqueueable: (projectId, nodeId) =>
+      repository.assertRenderEnqueueable(projectId, nodeId),
+    transitionNodeStatus,
+    recordRenderError: (nodeId, error) =>
+      repository.recordRenderError(nodeId, error),
   }
 }
 

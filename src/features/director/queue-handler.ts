@@ -29,16 +29,6 @@ interface EnqueueDependencies {
   recordStageError(nodeId: string, stage: PipelineStage, error: unknown): void
 }
 
-const defaultRepository = new DirectorRuntimeRepository()
-const defaultEnqueueDependencies: EnqueueDependencies = {
-  queue: defaultQueue,
-  assertEnqueueable: (input) =>
-    defaultRepository.assertEnqueueable(input.projectId, input.nodeId, input.stage),
-  transitionNodeStatus,
-  recordStageError: (nodeId, stage, error) =>
-    defaultRepository.recordStageError(nodeId, stage, error),
-}
-
 export function registerDirectorStageHandler(
   targetQueue: QueueAdapter = defaultQueue,
   runStage: RunStage = defaultRunStage
@@ -59,19 +49,32 @@ export function startDirectorQueue(
 
 export function enqueueDirectorStage(
   input: DirectorStageJobInput,
-  dependencies: EnqueueDependencies = defaultEnqueueDependencies
+  dependencies?: EnqueueDependencies
 ): string {
+  const resolved = dependencies ?? createDefaultEnqueueDependencies()
   const payload = directorStageJobSchema.parse(input)
-  dependencies.assertEnqueueable(payload)
-  dependencies.transitionNodeStatus(payload.nodeId, 'pending')
+  resolved.assertEnqueueable(payload)
+  resolved.transitionNodeStatus(payload.nodeId, 'pending')
   try {
-    return dependencies.queue.enqueue('director-stage', payload, {
+    return resolved.queue.enqueue('director-stage', payload, {
       projectId: payload.projectId,
       nodeId: payload.nodeId,
     })
   } catch (error) {
-    compensateEnqueueFailure(payload, error, dependencies)
+    compensateEnqueueFailure(payload, error, resolved)
     throw error
+  }
+}
+
+function createDefaultEnqueueDependencies(): EnqueueDependencies {
+  const repository = new DirectorRuntimeRepository()
+  return {
+    queue: defaultQueue,
+    assertEnqueueable: (input) =>
+      repository.assertEnqueueable(input.projectId, input.nodeId, input.stage),
+    transitionNodeStatus,
+    recordStageError: (nodeId, stage, error) =>
+      repository.recordStageError(nodeId, stage, error),
   }
 }
 

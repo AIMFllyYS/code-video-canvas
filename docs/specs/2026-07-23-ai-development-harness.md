@@ -218,13 +218,13 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 | 文件 | 职责 | 备注 |
 |---|---|---|
-| `frame-capture.ts`（新增） | 实现 `window.__CVC_RENDER__@v1` 合同：页面加载一次，多次 frame/fps seek + CDP 截图 | session 显式 close；同一 page 禁止并发 seek |
+| `frame-capture.ts`（新增） | 实现 `window.__CVC_RENDER__@v1` 合同：从 StorageAdapter 本地路径加载可搬运、自包含的 shot HTML，页面加载一次，多次 frame/fps seek + CDP 截图 | shot 不得依赖工作区相对路径或运行时读取 `docs/`/`node_modules/`；session 显式 close；同一 page 禁止并发 seek |
 | `frame-sequence.ts`（新增） | 用有限 capture session 池把 PNG 写入隔离临时目录，返回可 cleanup 的磁盘句柄 | 禁止整段 1080p 帧序列常驻 Buffer[] |
 | `encode.ts`（新增） | 从磁盘 pattern 流式读取帧，以固定/bitexact 参数编码 mp4 | 临时输出 + 原子 rename |
 | `cache.ts`（新增） | 版本化内容哈希 → render-mp4 artifact，命中时复核 StorageAdapter.exists | 依赖 §6 的 contentHash，是 F5 核心 |
 | `repository.ts`（新增） | Render context、节点/产物顺序与 artifact 指针的持久化端口 | 封装 Drizzle，不做渲染编排 |
 | `renderer.ts` | 可信顶层编排：HTML 守卫 → cache → frame sequence → encode → Storage/索引 | finally 清理临时资源，不直接暴露给路由 |
-| `queue-handler.ts`（新增） | render-shot 入队/状态机/失败补偿与 handler | 与 Director 共用单例队列和 instrumentation 启动 |
+| `queue-handler.ts`（新增） | render-shot 入队/状态机/失败补偿与 handler | 与 Director 共用单例队列和 instrumentation 启动；模块导入不得打开 SQLite，默认 repository 延迟到 enqueue/handler 执行时创建 |
 | `concat.ts` + `export-service.ts`（新增） | 已渲染 mp4 稳定排序后流拷贝拼接，可选混入配乐并提交终片 | 不重新逐帧渲染；未完成节点结构化返回 |
 
 ### 5.5 `features/audio/`（字幕/配音/音效/配乐）
@@ -472,3 +472,5 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订七） | **入队失败补偿**：明确节点置 pending 与队列 enqueue 非原子时的补偿路径，失败节点必须落 failed + error，禁止永久悬挂 pending。 |
 | 2026-07-23（修订八） | **入队前置校验**：领域 enqueue 在改状态前校验 project/node/stage/状态组合，API 返回 jobId 才表示作业已被领域规则接受。 |
 | 2026-07-23（修订九） | **Render 资源与边界重构**：定义 `__CVC_RENDER__@v1`、磁盘 FrameSequence、可信 Render repository/export service、统一后台启动与内容寻址缓存，替代全帧内存和路由查库方案。 |
+| 2026-07-24（修订十） | **Shot artifact 可搬运性**：明确 Director 生成的 HTML 必须自包含且位置无关，禁止依赖工作区相对 `node_modules`/`docs` 资源；真实渲染验收从 StorageAdapter 路径加载 artifact。 |
+| 2026-07-24（修订十一） | **启动副作用收口**：Director/Render queue 与 runner 的模块导入不得实例化 SQLite repository；默认依赖延迟到真实 enqueue/handler 执行，避免构建和并行测试争用默认数据库。 |

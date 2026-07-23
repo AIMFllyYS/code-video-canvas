@@ -42,15 +42,19 @@ type StageRunner = (
   stage: PipelineStage
 ) => Promise<void>
 
-const defaultDependencies: StageRunnerDependencies = {
-  repository: new DirectorRuntimeRepository(),
-  transitionNodeStatus,
-  createSession: createDirectorSession,
-  buildPrompt: buildStagePrompt,
-  writeArtifact: writeValidatedArtifact,
-}
+let defaultRunner: StageRunner | undefined
 
-export const runStage: StageRunner = createStageRunner(defaultDependencies)
+/** 首次真正执行作业时才打开 SQLite，模块导入保持无副作用。 */
+export const runStage: StageRunner = (projectId, nodeId, stage) => {
+  defaultRunner ??= createStageRunner({
+    repository: new DirectorRuntimeRepository(),
+    transitionNodeStatus,
+    createSession: createDirectorSession,
+    buildPrompt: buildStagePrompt,
+    writeArtifact: writeValidatedArtifact,
+  })
+  return defaultRunner(projectId, nodeId, stage)
+}
 
 export function createStageRunner(
   dependencies: StageRunnerDependencies

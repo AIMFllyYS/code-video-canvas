@@ -27,19 +27,17 @@
   </head>
   <body>
     <div id="hero">CodeVideoCanvas</div>
-    <script src="../../../../node_modules/gsap/dist/gsap.min.js"></script>
     <script>
       const hero = document.querySelector('#hero')
-      const timeline = gsap.timeline({ paused: true })
-      timeline.fromTo(
-        hero,
-        { x: 80, y: 120, rotation: -8, opacity: 0.25 },
-        { x: 720, y: 420, rotation: 16, opacity: 1, duration: 2, ease: 'none' }
-      )
       window.__CVC_RENDER__ = {
         version: 1,
         seek(frame, fps) {
-          timeline.seek(frame / fps, false)
+          const progress = Math.min(frame / fps / 2, 1)
+          const x = 80 + 640 * progress
+          const y = 120 + 300 * progress
+          const rotation = -8 + 24 * progress
+          hero.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`
+          hero.style.opacity = String(0.25 + 0.75 * progress)
         },
       }
     </script>

@@ -49,3 +49,28 @@
   `instrumentation.ts`、入队前置校验与失败补偿，并同步更新 AGENTS、架构规范、
   Harness、平台架构和任务路线图。
 - 遗留/跳过：无。
+
+## Track R — Render
+
+- 完成范围：R1.1–R1.6，全部状态与代码一致。
+- 静态门禁：`pnpm lint`、`pnpm tsc --noEmit`、`pnpm build` 全部通过。
+- 测试：项目全量 34 个测试文件、98 条测试连续两轮通过；API 的请求校验、
+  节点归属、入队与未完成节点 409 均有覆盖。
+- 真实渲染：从隔离 StorageAdapter 路径加载自包含 shot artifact，经真实
+  Chromium/CDP 截取 6 帧并由真实 ffmpeg 编码；相同可信输入连续两次得到相同
+  contentHash、outputKey 与逐字节一致的非空 mp4。
+- 真实合并：真实 ffmpeg concat 测试完成有序镜头拼接并验证时长；缺失输入时
+  明确失败且不提交终片。
+- 确定性：Render/守卫相关非测试源码扫描无 rAF、墙钟、无种子随机、ticker、
+  timer 或 CSS animation/transition 违规；截图前守卫失败路径为零截图、零编码、
+  零 artifact。
+- 资源与状态：帧序列写隔离磁盘目录并显式 cleanup；renderer 使用版本化内容
+  哈希与 StorageAdapter；enqueue/handler 成功、渲染失败和入队失败均不遗留
+  pending/running。
+- 发现并修正：原测试 shot 依赖工作区相对 `node_modules`，复制到 artifact
+  存储后 runtime 失效，现将 shot 合同收紧为可搬运、自包含、位置无关，并同步
+  AGENTS、Harness、平台架构和 FABRICATE prompt。
+- 发现并修正：Director/Render queue 与 runner 在模块导入时急切打开默认
+  SQLite，导致并行测试争用；现改为 enqueue/handler 执行时延迟创建 repository，
+  新增“模块导入不得访问 DB”边界测试，全量测试连续两轮稳定通过。
+- 遗留/跳过：无。

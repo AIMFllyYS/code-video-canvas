@@ -31,6 +31,8 @@ export function buildFabricatePrompt(input: FabricatePromptInput): string {
 - 一节点只允许一个 transform writer；静态外层与动画内层分离。
 - 画面必须满足 shot 的 mustShow，且不得出现 mustAvoid。
 - 不读取远程运行时素材，不改写镜头职责、音频时长或核心文案。
+- HTML 必须可从任意 StorageAdapter 本地路径独立加载，不得引用工作区相对
+  node_modules/docs 路径；所需运行时代码与素材必须内联或使用 data URL。
 
 shot contract：
 ${JSON.stringify(parsed.shot)}

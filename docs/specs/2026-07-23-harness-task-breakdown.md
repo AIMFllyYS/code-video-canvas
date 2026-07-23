@@ -860,6 +860,8 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
   ```
   目标：实现 frame-capture.ts，定义唯一 shot runtime 合同
   window.__CVC_RENDER__ = { version: 1, seek(frame, fps) }。导出
+  的 shot HTML 必须是可搬运、自包含且位置无关的 StorageAdapter artifact，
+  不得依赖工作区相对 node_modules/docs 资源。
   openFrameCapture(htmlPath, viewport?)（页面加载一次、可多次 seek/capture、
   显式 close）与便捷函数 captureFrame(htmlPath, frame, fps): Promise<Buffer>
   （内部打开/关闭 session）。用 Playwright 等待 runtime 就绪，调用 seek 后通过
