@@ -964,7 +964,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 ### R1.4 — `concat.ts`：终局合并导出
 
-- 状态：☐
+- 状态：☑
 - 前置任务：R1.3
 - 允许改动范围：`src/features/render/concat.ts`、`repository.ts`、`export-service.ts`（均新建）及对应测试
 - 禁止改动：`encode.ts`（复用而非重写编码逻辑）

@@ -114,7 +114,7 @@
     - 对应 task-breakdown：R1.3
     - _Requirements: F4_
 
-  - [ ] 4.4 `concat.ts` + 可信 export service：终局合并导出
+  - [x] 4.4 `concat.ts` + 可信 export service：终局合并导出
     - 对应 task-breakdown：R1.4
     - _Requirements: F9、F13（转场/剪辑）_
 
