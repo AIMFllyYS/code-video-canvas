@@ -1412,7 +1412,7 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
 ### U1.1 — S1 首页 / 项目列表
 
-- 状态：☐
+- 状态：☑
 - 前置任务：Track P 全部完成，Track C 完成（`api/projects` 已可用）
 - 允许改动范围：`src/app/page.tsx`、`src/app/_components/**`（若需要页面私有子组件；仅允许拼装 Track P 已登记组件，不新增视觉原语）
 - Task 规格：

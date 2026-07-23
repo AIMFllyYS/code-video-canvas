@@ -161,7 +161,7 @@
   - 对应 Goal：Track U（前置：Task 5 全部完成，Task 2/3/4 已完成对应 API；建议拆成两个顺序 Goal，见 task-breakdown）
   - _Requirements: F1（脚本导入）、F6、F7（本地项目存储）、F8、F9_
 
-  - [ ] 7.1 S1 首页 / 项目列表
+  - [x] 7.1 S1 首页 / 项目列表
     - 对应 task-breakdown：U1.1
     - _Requirements: F7_
 
