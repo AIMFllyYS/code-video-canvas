@@ -7941,17 +7941,6 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "vjWkB",
-                  "x": 356,
-                  "y": 276,
-                  "name": "Shot02Glow",
-                  "width": 248,
-                  "height": 268,
-                  "fill": "$accent-fill",
-                  "cornerRadius": "$radius-md"
-                },
-                {
-                  "type": "frame",
                   "id": "Rp642",
                   "x": 24,
                   "y": 24,
@@ -8127,276 +8116,1309 @@
                   "cornerRadius": 1
                 },
                 {
-                  "id": "fuAxx",
+                  "type": "frame",
+                  "id": "wvcfG",
+                  "x": 756,
+                  "y": 276,
+                  "name": "Shot02Glow",
+                  "width": 208,
+                  "height": 128,
+                  "fill": "$accent-fill",
+                  "cornerRadius": "$radius-md"
+                },
+                {
+                  "id": "O5XaZI",
                   "type": "ref",
                   "ref": "k8sYlm",
                   "name": "Ingest",
                   "x": 40,
-                  "y": 60,
+                  "y": 280,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
                   "descendants": {
                     "pBcR8": {
-                      "icon": "file-input",
+                      "icon": "file-text",
                       "fill": "$stage-ingest"
                     },
                     "B0Now": {
-                      "content": "Ingest 语义分镜"
+                      "content": "文稿提交 Ingest"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "rRuoF",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "UQlqO",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Script",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-text"
+                            },
+                            "Vu6bM": {
+                              "content": "draft.txt"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
-                  "id": "ZMlgx",
+                  "id": "SrEAL",
                   "type": "ref",
                   "ref": "k8sYlm",
-                  "name": "Direct",
-                  "x": 300,
-                  "y": 60,
+                  "name": "Split",
+                  "x": 280,
+                  "y": 280,
                   "stroke": "$stage-direct",
+                  "width": 200,
                   "descendants": {
                     "pBcR8": {
-                      "icon": "palette",
+                      "icon": "git-branch",
                       "fill": "$stage-direct"
                     },
                     "B0Now": {
-                      "content": "Direct 风格圣经"
+                      "content": "语义拆分 Split"
                     },
-                    "VXZ9l": {
-                      "stroke": "$stage-direct"
+                    "TYBLK": {
+                      "fill": "$success"
                     },
-                    "HzOlM": {
-                      "stroke": "$stage-direct"
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "Ah7RV",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "x7u42",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Config",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "settings"
+                            },
+                            "Vu6bM": {
+                              "content": "split-config.json"
+                            }
+                          }
+                        },
+                        {
+                          "id": "nqIQY",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Count",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "layers"
+                            },
+                            "Vu6bM": {
+                              "content": "50 lanes generated"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
-                  "id": "m5vqP",
+                  "id": "rusKC",
                   "type": "ref",
                   "ref": "k8sYlm",
-                  "name": "ShotSpec",
-                  "x": 560,
+                  "name": "L1_Spec",
+                  "x": 520,
                   "y": 60,
                   "stroke": "$stage-shotspec",
+                  "width": 200,
                   "descendants": {
                     "pBcR8": {
-                      "icon": "file-check",
+                      "icon": "pen-tool",
                       "fill": "$stage-shotspec"
                     },
                     "B0Now": {
-                      "content": "Shot-Spec 分镜合同"
-                    }
-                  }
-                },
-                {
-                  "id": "vUx9C",
-                  "type": "ref",
-                  "ref": "quFnC",
-                  "name": "Shot01",
-                  "x": 80,
-                  "y": 280,
-                  "descendants": {
-                    "PQTlo": {
-                      "content": "开场：一个问题"
-                    }
-                  }
-                },
-                {
-                  "id": "t2FYGD",
-                  "type": "ref",
-                  "ref": "quFnC",
-                  "name": "Shot03",
-                  "x": 640,
-                  "y": 280,
-                  "descendants": {
-                    "x1IRR0": {
-                      "fill": "#FF3B301A"
-                    },
-                    "x1IRR0/sCxDd": {
-                      "fill": "$danger"
-                    },
-                    "x1IRR0/GsVew": {
-                      "content": "失败",
-                      "fill": "$danger"
-                    },
-                    "PQTlo": {
-                      "content": "流程图解"
-                    }
-                  }
-                },
-                {
-                  "id": "p4Tbu",
-                  "type": "ref",
-                  "ref": "O9enHS",
-                  "name": "Audio",
-                  "x": 180,
-                  "y": 560
-                },
-                {
-                  "id": "xNKye",
-                  "type": "ref",
-                  "ref": "k8sYlm",
-                  "name": "Assemble",
-                  "x": 420,
-                  "y": 560,
-                  "stroke": "$stage-assemble",
-                  "descendants": {
-                    "pBcR8": {
-                      "icon": "layers",
-                      "fill": "$stage-assemble"
-                    },
-                    "B0Now": {
-                      "content": "Assemble 合成"
+                      "content": "分镜01 详细脚本"
                     },
                     "TYBLK": {
-                      "fill": "$label-tertiary"
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "eiQbM",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "T7F2Z1",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Spec",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-signature"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_01_spec.md"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
-                  "id": "cvPyW",
+                  "id": "Wgnoc",
                   "type": "ref",
-                  "ref": "LsozN",
-                  "name": "Finalize",
-                  "x": 640,
-                  "y": 560
+                  "ref": "k8sYlm",
+                  "name": "L1_Code",
+                  "x": 760,
+                  "y": 60,
+                  "stroke": "$stage-shot",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "code",
+                      "fill": "$stage-shot"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 代码生成"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "v9DHp",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "HrIl6",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Code",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "terminal"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_01_code.js"
+                            }
+                          }
+                        },
+                        {
+                          "id": "egsRn",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Video",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "video"
+                            },
+                            "Vu6bM": {
+                              "content": "preview_01.mp4"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
                 },
                 {
-                  "id": "WvOcx",
+                  "id": "dweS0",
                   "type": "ref",
-                  "ref": "quFnC",
-                  "name": "Shot02",
-                  "x": 360,
+                  "ref": "k8sYlm",
+                  "name": "L1_Audio",
+                  "x": 1000,
+                  "y": 60,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "mic",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 配音音效"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "abPHP",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "RNcuB",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Audio",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "volume-2"
+                            },
+                            "Vu6bM": {
+                              "content": "voice_01.wav"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "xV4G0",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L1_Subtitle",
+                  "x": 1240,
+                  "y": 60,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "type",
+                      "fill": "$stage-ingest"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 字幕"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "bs6I0",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "KVhhZ",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Sub",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-text"
+                            },
+                            "Vu6bM": {
+                              "content": "sub_01.srt"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "fjVw8",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L1_QA",
+                  "x": 1480,
+                  "y": 60,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "shield-check",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 抽帧验收"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "R7GkFv",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "CUMo6",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "QA",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "check-circle"
+                            },
+                            "Vu6bM": {
+                              "content": "QA Passed"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "PO8yB",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Spec",
+                  "x": 520,
+                  "y": 280,
+                  "stroke": "$stage-shotspec",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "pen-tool",
+                      "fill": "$stage-shotspec"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 详细脚本"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "G0vryn",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "c2hU7v",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Spec",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-signature"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_02_spec.md"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "CxfnA",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Code",
+                  "x": 760,
                   "y": 280,
                   "stroke": "$accent",
-                  "strokeWidth": 2,
+                  "width": 200,
                   "descendants": {
-                    "x1IRR0": {
-                      "fill": "$accent-fill"
-                    },
-                    "x1IRR0/sCxDd": {
+                    "pBcR8": {
+                      "icon": "code",
                       "fill": "$accent"
                     },
-                    "x1IRR0/GsVew": {
-                      "content": "生成中",
+                    "B0Now": {
+                      "content": "分镜02 代码生成"
+                    },
+                    "TYBLK": {
                       "fill": "$accent"
                     },
-                    "PQTlo": {
-                      "content": "核心概念"
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "kRN5r",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "Iq7zw",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Code",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "terminal"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_02_code.js"
+                            }
+                          }
+                        },
+                        {
+                          "id": "M1fDZi",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Status",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "loader"
+                            },
+                            "Vu6bM": {
+                              "content": "generating..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "BrS9K",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Audio",
+                  "x": 1000,
+                  "y": 280,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "mic",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 配音音效"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "f1H5HT",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "IiFsE",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Audio",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "HIiFP",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Subtitle",
+                  "x": 1240,
+                  "y": 280,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "type",
+                      "fill": "$stage-ingest"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 字幕"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "b2Sc8",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "J1I3GG",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Sub",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "M799b1",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_QA",
+                  "x": 1480,
+                  "y": 280,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "shield-check",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 抽帧验收"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "L8j4w",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "O220li",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "QA",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "P8AVLZ",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Spec",
+                  "x": 520,
+                  "y": 500,
+                  "stroke": "$stage-shotspec",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "pen-tool",
+                      "fill": "$stage-shotspec"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 详细脚本"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "vuYO2",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "m5rJ2",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Spec",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "WPcR0",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Code",
+                  "x": 760,
+                  "y": 500,
+                  "stroke": "$stage-shot",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "code",
+                      "fill": "$stage-shot"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 代码生成"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "UC5Fa",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "WQ0d7",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Code",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "ZhAzu",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Audio",
+                  "x": 1000,
+                  "y": 500,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "mic",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 配音音效"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "bV7oZ",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "Zw5L9",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Audio",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "oaDFp",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Subtitle",
+                  "x": 1240,
+                  "y": 500,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "type",
+                      "fill": "$stage-ingest"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 字幕"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "j37vQO",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "pqIwl",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Sub",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "AprBE",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_QA",
+                  "x": 1480,
+                  "y": 500,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "shield-check",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 抽帧验收"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "D748Xs",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "ata7Z",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "QA",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "C0R4GL",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "Music",
+                  "x": 1720,
+                  "y": 280,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "music",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "全局配乐 Music"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "fvB8S",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "QCuKY",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Music",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "disc"
+                            },
+                            "Vu6bM": {
+                              "content": "bg_music.mp3"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "q7JIVU",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "Export",
+                  "x": 1960,
+                  "y": 280,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "download",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "渲染导出 Export"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "muqZz",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "lM7GD",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Video",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "film"
+                            },
+                            "Vu6bM": {
+                              "content": "final_video.mp4"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
                   "type": "path",
-                  "id": "oJSIM",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E1",
-                  "geometry": "M240 120c30 0 30 0 60 0",
+                  "id": "yxGFA",
+                  "x": 226,
+                  "y": 326,
+                  "name": "E_Ingest_Split",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "f6eFp",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E2",
-                  "geometry": "M500 120c30 0 30 0 60 0",
+                  "id": "GK62p",
+                  "x": 466,
+                  "y": 106,
+                  "name": "E_Split_L1",
+                  "geometry": "M10 230c20 0 20-220 40-220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 240,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "JbIgG",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E3",
-                  "geometry": "M660 180c-230 0-230 100-460 100",
+                  "id": "B8Tnd",
+                  "x": 466,
+                  "y": 326,
+                  "name": "E_Split_L2",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "RJJS5",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E4",
-                  "geometry": "M660 180c-90 0-90 100-180 100",
+                  "id": "Pkf9Y",
+                  "x": 466,
+                  "y": 326,
+                  "name": "E_Split_L3",
+                  "geometry": "M10 10c20 0 20 220 40 220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 240,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "dUbWi",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E5",
-                  "geometry": "M660 180c50 0 50 100 100 100",
+                  "id": "jHIuO",
+                  "x": 706,
+                  "y": 106,
+                  "name": "E_L1_S_C",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "reOAk",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E6",
-                  "geometry": "M200 540c60 0 60 20 120 20",
+                  "id": "P08qf1",
+                  "x": 946,
+                  "y": 106,
+                  "name": "E_L1_C_A",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "scbah",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E7",
-                  "geometry": "M480 540c50 0 50 20 100 20",
+                  "id": "RD2zs",
+                  "x": 1186,
+                  "y": 106,
+                  "name": "E_L1_A_S",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "jfMpY",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E8",
-                  "geometry": "M600 540c40 0 40 20 80 20",
+                  "id": "YD4Cn",
+                  "x": 1426,
+                  "y": 106,
+                  "name": "E_L1_S_Q",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "oaxuj",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E9",
-                  "geometry": "M620 620c10 0 10 0 20 0",
+                  "id": "V7K6q",
+                  "x": 706,
+                  "y": 326,
+                  "name": "E_L2_S_C",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "bheZ8",
+                  "x": 946,
+                  "y": 326,
+                  "name": "E_L2_C_A",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "M6fwjR",
+                  "x": 1186,
+                  "y": 326,
+                  "name": "E_L2_A_S",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "TOTwo",
+                  "x": 1426,
+                  "y": 326,
+                  "name": "E_L2_S_Q",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "ZIr7o",
+                  "x": 706,
+                  "y": 546,
+                  "name": "E_L3_S_C",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "sLCec",
+                  "x": 946,
+                  "y": 546,
+                  "name": "E_L3_C_A",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "yspTn",
+                  "x": 1186,
+                  "y": 546,
+                  "name": "E_L3_A_S",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "kQOQT",
+                  "x": 1426,
+                  "y": 546,
+                  "name": "E_L3_S_Q",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "PZZ2Q",
+                  "x": 1666,
+                  "y": 106,
+                  "name": "E_L1_Q_M",
+                  "geometry": "M10 10c20 0 20 220 40 220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 240,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "ojaTy",
+                  "x": 1666,
+                  "y": 326,
+                  "name": "E_L2_Q_M",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "ZYg7K",
+                  "x": 1666,
+                  "y": 326,
+                  "name": "E_L3_Q_M",
+                  "geometry": "M10 230c20 0 20-220 40-220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 240,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "cdNtV",
+                  "x": 1906,
+                  "y": 326,
+                  "name": "E_M_E",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 }
@@ -9120,6 +10142,289 @@
                           "fill": "$fill",
                           "cornerRadius": 4,
                           "stroke": "$transparent"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PiYWc",
+                  "name": "MiddleCol",
+                  "width": 380,
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rOCTV",
+                      "name": "CodeHeader",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "f8D7i",
+                          "name": "Left",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "VcW9f",
+                              "name": "Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "code",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "UDrAB",
+                              "name": "Title",
+                              "fill": "$label",
+                              "content": "分镜画布代码",
+                              "fontFamily": "$font-sc",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "o6WBe",
+                          "name": "Right",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "voZbQ",
+                              "name": "StatusIcon",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$success"
+                            },
+                            {
+                              "type": "text",
+                              "id": "nff6N",
+                              "name": "StatusText",
+                              "fill": "$success",
+                              "content": "已同步",
+                              "fontFamily": "$font-sc",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Do0a8",
+                      "name": "CodeEditor",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wj0DA",
+                          "name": "Line",
+                          "fill": "$label-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "import { Canvas, Text } from \"canvas-video\";",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "l7D18v",
+                          "name": "Line",
+                          "fill": "$label-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZS9r8",
+                          "name": "Line",
+                          "fill": "$accent",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "export default function Shot02() {",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "qX4yY",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "  return (",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "a7sSWa",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "    <Canvas width={1920} height={1080}>",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Yze4K",
+                          "name": "Line",
+                          "fill": "$purple",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "      <Text",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "yq6uX",
+                          "name": "Line",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        content=\"核心概念\"",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "sCoVD",
+                          "name": "Line",
+                          "fill": "$warning",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        fontSize={80}",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "I3yHO",
+                          "name": "Line",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        fontFamily=\"Inter\"",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "B1rtc",
+                          "name": "Line",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        animation=\"fade-in\"",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tU8C6",
+                          "name": "Line",
+                          "fill": "$purple",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "      />",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Md0R3",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "    </Canvas>",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "VOdJr",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "  );",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "x0lA2e",
+                          "name": "Line",
+                          "fill": "$accent",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "}",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XXdOz",
+                      "name": "CodeActions",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "id": "WBXc7",
+                          "type": "ref",
+                          "ref": "g6r6q",
+                          "name": "BtnPreview",
+                          "width": "fill_container"
+                        },
+                        {
+                          "id": "JglnW",
+                          "type": "ref",
+                          "ref": "F9sUFv",
+                          "name": "BtnExport",
+                          "width": "fill_container"
                         }
                       ]
                     }
@@ -10271,6 +11576,158 @@
                         },
                         "YF8sO": {
                           "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "teON1",
+                  "name": "GTtsTitle",
+                  "fill": "$label-tertiary",
+                  "content": "TTS 语音克隆服务",
+                  "fontFamily": "$font-sc",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "i337Da",
+                  "name": "GroupTTS",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-md",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "$shadow-card",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "WYm9d",
+                      "name": "TtsKeyRow",
+                      "width": "fill_container",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YjeyU",
+                          "name": "KeyL",
+                          "fill": "$label",
+                          "content": "API Key",
+                          "fontFamily": "$font-sc",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Ul2TM",
+                          "name": "KeyRight",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s371w",
+                              "name": "KeyVal",
+                              "fill": "$label",
+                              "content": "sk-tts-••••••••••••8a2c",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "WEPQV",
+                              "type": "ref",
+                              "ref": "E34mv",
+                              "name": "Verify",
+                              "descendants": {
+                                "guoxr": {
+                                  "enabled": false
+                                },
+                                "jgcAX": {
+                                  "content": "校验",
+                                  "fontSize": 13
+                                }
+                              }
+                            },
+                            {
+                              "id": "pB4uQ",
+                              "type": "ref",
+                              "ref": "mcsWg",
+                              "name": "Verified",
+                              "descendants": {
+                                "sCxDd": {
+                                  "fill": "$success"
+                                },
+                                "GsVew": {
+                                  "content": "已验证",
+                                  "fill": "$success"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rmLev",
+                      "name": "TtsSep1",
+                      "width": "fill_container",
+                      "height": 1,
+                      "fill": "$separator"
+                    },
+                    {
+                      "id": "n1XwgS",
+                      "type": "ref",
+                      "ref": "cmoDy",
+                      "name": "TtsProviderRow",
+                      "width": "fill_container",
+                      "descendants": {
+                        "PkkC4": {
+                          "content": "服务商"
+                        },
+                        "WKs29": {
+                          "content": "Fish Audio"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lc87x",
+                      "name": "TtsSep2",
+                      "width": "fill_container",
+                      "height": 1,
+                      "fill": "$separator"
+                    },
+                    {
+                      "id": "q2HFk7",
+                      "type": "ref",
+                      "ref": "cmoDy",
+                      "name": "TtsVoiceRow",
+                      "width": "fill_container",
+                      "descendants": {
+                        "PkkC4": {
+                          "content": "克隆声音"
+                        },
+                        "WKs29": {
+                          "content": "Default Male (Cloned)"
                         }
                       }
                     }
@@ -12069,17 +13526,6 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "mFzXF",
-                  "x": 356,
-                  "y": 276,
-                  "name": "Shot02Glow",
-                  "width": 248,
-                  "height": 268,
-                  "fill": "$accent-fill",
-                  "cornerRadius": "$radius-md"
-                },
-                {
-                  "type": "frame",
                   "id": "ZYAAJ",
                   "x": 24,
                   "y": 24,
@@ -12255,276 +13701,1309 @@
                   "cornerRadius": 1
                 },
                 {
-                  "id": "BX2GY",
+                  "type": "frame",
+                  "id": "sJMvj",
+                  "x": 756,
+                  "y": 276,
+                  "name": "Shot02Glow",
+                  "width": 208,
+                  "height": 128,
+                  "fill": "$accent-fill",
+                  "cornerRadius": "$radius-md"
+                },
+                {
+                  "id": "OTmSg",
                   "type": "ref",
                   "ref": "k8sYlm",
                   "name": "Ingest",
                   "x": 40,
-                  "y": 60,
+                  "y": 280,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
                   "descendants": {
                     "pBcR8": {
-                      "icon": "file-input",
+                      "icon": "file-text",
                       "fill": "$stage-ingest"
                     },
                     "B0Now": {
-                      "content": "Ingest 语义分镜"
+                      "content": "文稿提交 Ingest"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "WQRRg",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "RmhWp",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Script",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-text"
+                            },
+                            "Vu6bM": {
+                              "content": "draft.txt"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
-                  "id": "weBwJ",
+                  "id": "b7ZhK",
                   "type": "ref",
                   "ref": "k8sYlm",
-                  "name": "Direct",
-                  "x": 300,
-                  "y": 60,
+                  "name": "Split",
+                  "x": 280,
+                  "y": 280,
                   "stroke": "$stage-direct",
+                  "width": 200,
                   "descendants": {
                     "pBcR8": {
-                      "icon": "palette",
+                      "icon": "git-branch",
                       "fill": "$stage-direct"
                     },
                     "B0Now": {
-                      "content": "Direct 风格圣经"
+                      "content": "语义拆分 Split"
                     },
-                    "VXZ9l": {
-                      "stroke": "$stage-direct"
+                    "TYBLK": {
+                      "fill": "$success"
                     },
-                    "HzOlM": {
-                      "stroke": "$stage-direct"
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "P5qwJi",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "ithhi",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Config",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "settings"
+                            },
+                            "Vu6bM": {
+                              "content": "split-config.json"
+                            }
+                          }
+                        },
+                        {
+                          "id": "ISie4",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Count",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "layers"
+                            },
+                            "Vu6bM": {
+                              "content": "50 lanes generated"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
-                  "id": "OPWrq",
+                  "id": "WSzjj",
                   "type": "ref",
                   "ref": "k8sYlm",
-                  "name": "ShotSpec",
-                  "x": 560,
+                  "name": "L1_Spec",
+                  "x": 520,
                   "y": 60,
                   "stroke": "$stage-shotspec",
+                  "width": 200,
                   "descendants": {
                     "pBcR8": {
-                      "icon": "file-check",
+                      "icon": "pen-tool",
                       "fill": "$stage-shotspec"
                     },
                     "B0Now": {
-                      "content": "Shot-Spec 分镜合同"
-                    }
-                  }
-                },
-                {
-                  "id": "hnmNb",
-                  "type": "ref",
-                  "ref": "quFnC",
-                  "name": "Shot01",
-                  "x": 80,
-                  "y": 280,
-                  "descendants": {
-                    "PQTlo": {
-                      "content": "开场：一个问题"
-                    }
-                  }
-                },
-                {
-                  "id": "pHPO6",
-                  "type": "ref",
-                  "ref": "quFnC",
-                  "name": "Shot03",
-                  "x": 640,
-                  "y": 280,
-                  "descendants": {
-                    "x1IRR0": {
-                      "fill": "#FF3B301A"
-                    },
-                    "x1IRR0/sCxDd": {
-                      "fill": "$danger"
-                    },
-                    "x1IRR0/GsVew": {
-                      "content": "失败",
-                      "fill": "$danger"
-                    },
-                    "PQTlo": {
-                      "content": "流程图解"
-                    }
-                  }
-                },
-                {
-                  "id": "w7HVx",
-                  "type": "ref",
-                  "ref": "O9enHS",
-                  "name": "Audio",
-                  "x": 180,
-                  "y": 560
-                },
-                {
-                  "id": "YNvBs",
-                  "type": "ref",
-                  "ref": "k8sYlm",
-                  "name": "Assemble",
-                  "x": 420,
-                  "y": 560,
-                  "stroke": "$stage-assemble",
-                  "descendants": {
-                    "pBcR8": {
-                      "icon": "layers",
-                      "fill": "$stage-assemble"
-                    },
-                    "B0Now": {
-                      "content": "Assemble 合成"
+                      "content": "分镜01 详细脚本"
                     },
                     "TYBLK": {
-                      "fill": "$label-tertiary"
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "i7YBp",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "THRko",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Spec",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-signature"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_01_spec.md"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
-                  "id": "Xe3Cv",
+                  "id": "i7jXVu",
                   "type": "ref",
-                  "ref": "LsozN",
-                  "name": "Finalize",
-                  "x": 640,
-                  "y": 560
+                  "ref": "k8sYlm",
+                  "name": "L1_Code",
+                  "x": 760,
+                  "y": 60,
+                  "stroke": "$stage-shot",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "code",
+                      "fill": "$stage-shot"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 代码生成"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "T4Fjf",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "IvcHQ",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Code",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "terminal"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_01_code.js"
+                            }
+                          }
+                        },
+                        {
+                          "id": "TBp4N",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Video",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "video"
+                            },
+                            "Vu6bM": {
+                              "content": "preview_01.mp4"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
                 },
                 {
-                  "id": "wKC4a",
+                  "id": "W0ybDP",
                   "type": "ref",
-                  "ref": "quFnC",
-                  "name": "Shot02",
-                  "x": 360,
+                  "ref": "k8sYlm",
+                  "name": "L1_Audio",
+                  "x": 1000,
+                  "y": 60,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "mic",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 配音音效"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "u7WPp",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "S3ppV",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Audio",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "volume-2"
+                            },
+                            "Vu6bM": {
+                              "content": "voice_01.wav"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "B0aYxJ",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L1_Subtitle",
+                  "x": 1240,
+                  "y": 60,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "type",
+                      "fill": "$stage-ingest"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 字幕"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "M9LAcV",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "jfJqs",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Sub",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-text"
+                            },
+                            "Vu6bM": {
+                              "content": "sub_01.srt"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "V2p7gX",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L1_QA",
+                  "x": 1480,
+                  "y": 60,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "shield-check",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "分镜01 抽帧验收"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "gt2Ny",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "eU9ST",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "QA",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "check-circle"
+                            },
+                            "Vu6bM": {
+                              "content": "QA Passed"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "k32b3",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Spec",
+                  "x": 520,
+                  "y": 280,
+                  "stroke": "$stage-shotspec",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "pen-tool",
+                      "fill": "$stage-shotspec"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 详细脚本"
+                    },
+                    "TYBLK": {
+                      "fill": "$success"
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "Qr5dx",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "H2khH",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Spec",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "file-signature"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_02_spec.md"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "mHBkc",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Code",
+                  "x": 760,
                   "y": 280,
                   "stroke": "$accent",
-                  "strokeWidth": 2,
+                  "width": 200,
                   "descendants": {
-                    "x1IRR0": {
-                      "fill": "$accent-fill"
-                    },
-                    "x1IRR0/sCxDd": {
+                    "pBcR8": {
+                      "icon": "code",
                       "fill": "$accent"
                     },
-                    "x1IRR0/GsVew": {
-                      "content": "生成中",
+                    "B0Now": {
+                      "content": "分镜02 代码生成"
+                    },
+                    "TYBLK": {
                       "fill": "$accent"
                     },
-                    "PQTlo": {
-                      "content": "核心概念"
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "u3193n",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "bbHNg",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Code",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "terminal"
+                            },
+                            "Vu6bM": {
+                              "content": "shot_02_code.js"
+                            }
+                          }
+                        },
+                        {
+                          "id": "OrlDd",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Status",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "loader"
+                            },
+                            "Vu6bM": {
+                              "content": "generating..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "ZToVJ",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Audio",
+                  "x": 1000,
+                  "y": 280,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "mic",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 配音音效"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "e2Hh4",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "NbKfY",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Audio",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "f7zIQk",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_Subtitle",
+                  "x": 1240,
+                  "y": 280,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "type",
+                      "fill": "$stage-ingest"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 字幕"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "GunO9",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "TTtsW",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Sub",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "I4NmGR",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L2_QA",
+                  "x": 1480,
+                  "y": 280,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "shield-check",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "分镜02 抽帧验收"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "i4bGA",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "X8jxNQ",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "QA",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "hrnQx",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Spec",
+                  "x": 520,
+                  "y": 500,
+                  "stroke": "$stage-shotspec",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "pen-tool",
+                      "fill": "$stage-shotspec"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 详细脚本"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "sy8LU",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "T9J6L5",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Spec",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "hLWW8",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Code",
+                  "x": 760,
+                  "y": 500,
+                  "stroke": "$stage-shot",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "code",
+                      "fill": "$stage-shot"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 代码生成"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "n9xw6",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "DTpDn",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Code",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "oU50c",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Audio",
+                  "x": 1000,
+                  "y": 500,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "mic",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 配音音效"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "IbYux",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "sbueL",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Audio",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "ik7ez",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_Subtitle",
+                  "x": 1240,
+                  "y": 500,
+                  "stroke": "$stage-ingest",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "type",
+                      "fill": "$stage-ingest"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 字幕"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "yEBvz",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "wbvsA",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Sub",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "fYU21",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "L3_QA",
+                  "x": 1480,
+                  "y": 500,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "shield-check",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "分镜03 抽帧验收"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "nBUuG",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "g6R4T",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "QA",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "clock"
+                            },
+                            "Vu6bM": {
+                              "content": "waiting..."
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "T6QzW",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "Music",
+                  "x": 1720,
+                  "y": 280,
+                  "stroke": "$stage-audio",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "music",
+                      "fill": "$stage-audio"
+                    },
+                    "B0Now": {
+                      "content": "全局配乐 Music"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "J6wvU",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "CcAiU",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Music",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "disc"
+                            },
+                            "Vu6bM": {
+                              "content": "bg_music.mp3"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "udpKZ",
+                  "type": "ref",
+                  "ref": "k8sYlm",
+                  "name": "Export",
+                  "x": 1960,
+                  "y": 280,
+                  "stroke": "$stage-finalize",
+                  "width": 200,
+                  "descendants": {
+                    "pBcR8": {
+                      "icon": "download",
+                      "fill": "$stage-finalize"
+                    },
+                    "B0Now": {
+                      "content": "渲染导出 Export"
+                    },
+                    "TYBLK": {
+                      "enabled": false
+                    },
+                    "VvJfF": {
+                      "type": "frame",
+                      "id": "t4VOh",
+                      "name": "Chips",
+                      "width": 176,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "OGSNn",
+                          "type": "ref",
+                          "ref": "gPP3r",
+                          "name": "Video",
+                          "descendants": {
+                            "ib2Xg": {
+                              "icon": "film"
+                            },
+                            "Vu6bM": {
+                              "content": "final_video.mp4"
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
                 {
                   "type": "path",
-                  "id": "fp8G3",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E1",
-                  "geometry": "M240 120c30 0 30 0 60 0",
+                  "id": "n7vmv",
+                  "x": 226,
+                  "y": 326,
+                  "name": "E_Ingest_Split",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "ypKNr",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E2",
-                  "geometry": "M500 120c30 0 30 0 60 0",
+                  "id": "BKEuR",
+                  "x": 466,
+                  "y": 106,
+                  "name": "E_Split_L1",
+                  "geometry": "M10 230c20 0 20-220 40-220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 240,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "O9jz6",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E3",
-                  "geometry": "M660 180c-230 0-230 100-460 100",
+                  "id": "l2lKbp",
+                  "x": 466,
+                  "y": 326,
+                  "name": "E_Split_L2",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "Ut6Ji",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E4",
-                  "geometry": "M660 180c-90 0-90 100-180 100",
+                  "id": "z15uc",
+                  "x": 466,
+                  "y": 326,
+                  "name": "E_Split_L3",
+                  "geometry": "M10 10c20 0 20 220 40 220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 240,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "OFMku",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E5",
-                  "geometry": "M660 180c50 0 50 100 100 100",
+                  "id": "snHJX",
+                  "x": 706,
+                  "y": 106,
+                  "name": "E_L1_S_C",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "pu7jt",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E6",
-                  "geometry": "M200 540c60 0 60 20 120 20",
+                  "id": "xJZrM",
+                  "x": 946,
+                  "y": 106,
+                  "name": "E_L1_C_A",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "EggAb",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E7",
-                  "geometry": "M480 540c50 0 50 20 100 20",
+                  "id": "lNDeL",
+                  "x": 1186,
+                  "y": 106,
+                  "name": "E_L1_A_S",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "rOsEL",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E8",
-                  "geometry": "M600 540c40 0 40 20 80 20",
+                  "id": "YNQ1V",
+                  "x": 1426,
+                  "y": 106,
+                  "name": "E_L1_S_Q",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 },
                 {
                   "type": "path",
-                  "id": "MAI59",
-                  "x": 0,
-                  "y": 0,
-                  "name": "E9",
-                  "geometry": "M620 620c10 0 10 0 20 0",
+                  "id": "WleAn",
+                  "x": 706,
+                  "y": 326,
+                  "name": "E_L2_S_C",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
                   "fill": "$transparent",
-                  "width": 0,
-                  "height": 0,
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "e5r7j",
+                  "x": 946,
+                  "y": 326,
+                  "name": "E_L2_C_A",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "auPUy",
+                  "x": 1186,
+                  "y": 326,
+                  "name": "E_L2_A_S",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "ZFP8Z",
+                  "x": 1426,
+                  "y": 326,
+                  "name": "E_L2_S_Q",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "jeWFi",
+                  "x": 706,
+                  "y": 546,
+                  "name": "E_L3_S_C",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "rQcxv",
+                  "x": 946,
+                  "y": 546,
+                  "name": "E_L3_C_A",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "r6GJ5",
+                  "x": 1186,
+                  "y": 546,
+                  "name": "E_L3_A_S",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "LWkea",
+                  "x": 1426,
+                  "y": 546,
+                  "name": "E_L3_S_Q",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "N2IHT",
+                  "x": 1666,
+                  "y": 106,
+                  "name": "E_L1_Q_M",
+                  "geometry": "M10 10c20 0 20 220 40 220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 240,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "EBxaN",
+                  "x": 1666,
+                  "y": 326,
+                  "name": "E_L2_Q_M",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "P9RVXp",
+                  "x": 1666,
+                  "y": 326,
+                  "name": "E_L3_Q_M",
+                  "geometry": "M10 230c20 0 20-220 40-220",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    240
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 240,
+                  "stroke": "$separator",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "path",
+                  "id": "bKp4k",
+                  "x": 1906,
+                  "y": 326,
+                  "name": "E_M_E",
+                  "geometry": "M10 10c20 0 20 0 40 0",
+                  "viewBox": [
+                    0,
+                    0,
+                    60,
+                    20
+                  ],
+                  "fill": "$transparent",
+                  "width": 60,
+                  "height": 20,
                   "stroke": "$separator",
                   "strokeWidth": 1.5
                 }
@@ -13245,6 +15724,289 @@
                           "fill": "#F2F2F7",
                           "cornerRadius": 4,
                           "stroke": "$transparent"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rBKdp",
+                  "name": "MiddleCol",
+                  "width": 380,
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TSunu",
+                      "name": "CodeHeader",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "tuC50",
+                          "name": "Left",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "TO1rQ",
+                              "name": "Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "code",
+                              "library": "lucide",
+                              "fill": "$accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "m6owc",
+                              "name": "Title",
+                              "fill": "$label",
+                              "content": "分镜画布代码",
+                              "fontFamily": "$font-sc",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gla66",
+                          "name": "Right",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "PnfH3",
+                              "name": "StatusIcon",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "$success"
+                            },
+                            {
+                              "type": "text",
+                              "id": "U2ScG",
+                              "name": "StatusText",
+                              "fill": "$success",
+                              "content": "已同步",
+                              "fontFamily": "$font-sc",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rNKri",
+                      "name": "CodeEditor",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": "$radius-md",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "PEJ3T",
+                          "name": "Line",
+                          "fill": "$label-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "import { Canvas, Text } from \"canvas-video\";",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "JPCmS",
+                          "name": "Line",
+                          "fill": "$label-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "nprjK",
+                          "name": "Line",
+                          "fill": "$accent",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "export default function Shot02() {",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "EI9Vj",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "  return (",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "epqit",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "    <Canvas width={1920} height={1080}>",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "orqGb",
+                          "name": "Line",
+                          "fill": "$purple",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "      <Text",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "xvcu3",
+                          "name": "Line",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        content=\"核心概念\"",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "IkYif",
+                          "name": "Line",
+                          "fill": "$warning",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        fontSize={80}",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vN2ai",
+                          "name": "Line",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        fontFamily=\"Inter\"",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "J3H1Ux",
+                          "name": "Line",
+                          "fill": "$success",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "        animation=\"fade-in\"",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "x5p2X",
+                          "name": "Line",
+                          "fill": "$purple",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "      />",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "uzPxc",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "    </Canvas>",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "gmUCX",
+                          "name": "Line",
+                          "fill": "$label",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "  );",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Px5Yl",
+                          "name": "Line",
+                          "fill": "$accent",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "}",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EAQwg",
+                      "name": "CodeActions",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "id": "RuTZs",
+                          "type": "ref",
+                          "ref": "g6r6q",
+                          "name": "BtnPreview",
+                          "width": "fill_container"
+                        },
+                        {
+                          "id": "TEDOL",
+                          "type": "ref",
+                          "ref": "F9sUFv",
+                          "name": "BtnExport",
+                          "width": "fill_container"
                         }
                       ]
                     }
@@ -14390,6 +17152,158 @@
                         },
                         "YF8sO": {
                           "enabled": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "zAvKb",
+                  "name": "GTtsTitle",
+                  "fill": "$label-tertiary",
+                  "content": "TTS 语音克隆服务",
+                  "fontFamily": "$font-sc",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "YbNZX",
+                  "name": "GroupTTS",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$surface",
+                  "cornerRadius": "$radius-md",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "$shadow-card",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "t5PjC9",
+                      "name": "TtsKeyRow",
+                      "width": "fill_container",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sua4H",
+                          "name": "KeyL",
+                          "fill": "$label",
+                          "content": "API Key",
+                          "fontFamily": "$font-sc",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "u07pAX",
+                          "name": "KeyRight",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "S2TJW",
+                              "name": "KeyVal",
+                              "fill": "$label",
+                              "content": "sk-tts-••••••••••••8a2c",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "mhCCY",
+                              "type": "ref",
+                              "ref": "E34mv",
+                              "name": "Verify",
+                              "descendants": {
+                                "guoxr": {
+                                  "enabled": false
+                                },
+                                "jgcAX": {
+                                  "content": "校验",
+                                  "fontSize": 13
+                                }
+                              }
+                            },
+                            {
+                              "id": "uY01o",
+                              "type": "ref",
+                              "ref": "mcsWg",
+                              "name": "Verified",
+                              "descendants": {
+                                "sCxDd": {
+                                  "fill": "$success"
+                                },
+                                "GsVew": {
+                                  "content": "已验证",
+                                  "fill": "$success"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W36jFF",
+                      "name": "TtsSep1",
+                      "width": "fill_container",
+                      "height": 1,
+                      "fill": "$separator"
+                    },
+                    {
+                      "id": "srcRS",
+                      "type": "ref",
+                      "ref": "cmoDy",
+                      "name": "TtsProviderRow",
+                      "width": "fill_container",
+                      "descendants": {
+                        "PkkC4": {
+                          "content": "服务商"
+                        },
+                        "WKs29": {
+                          "content": "Fish Audio"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iiDNe",
+                      "name": "TtsSep2",
+                      "width": "fill_container",
+                      "height": 1,
+                      "fill": "$separator"
+                    },
+                    {
+                      "id": "X3ok9",
+                      "type": "ref",
+                      "ref": "cmoDy",
+                      "name": "TtsVoiceRow",
+                      "width": "fill_container",
+                      "descendants": {
+                        "PkkC4": {
+                          "content": "克隆声音"
+                        },
+                        "WKs29": {
+                          "content": "Default Male (Cloned)"
                         }
                       }
                     }
