@@ -527,7 +527,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D0.1 — `schemas/`：移植 video-director 输出契约为原生 Zod schema
 
-- 状态：☐
+- 状态：☑
 - 前置任务：无（可与 Track F 并行）
 - 允许改动范围：`src/features/director/schemas/**`（新建目录及文件）
 - 禁止改动：`docs/video-director/**`（只读参照，不修改）
