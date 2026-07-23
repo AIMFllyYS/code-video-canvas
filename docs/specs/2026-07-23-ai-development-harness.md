@@ -72,23 +72,27 @@
 
 仍不用 `@earendil-works/pi-coding-agent`（面向人类终端编码场景，默认工具集 `read/write/edit/bash` 与本项目场景不符）。
 
-### 3.3 StepFun 接入方式（含未验证项）
+### 3.3 StepFun 接入方式（Foundation Spike 已验证）
 
-`pi-ai` 支持注册自定义 OpenAI 兼容 Provider。StepFun 是 OpenAI 兼容端点，**理论上**可以直接注册为 `pi-ai` 的自定义 Provider，从而让 `pi-agent-core` 的 Agent runtime 直接调用 StepFun，不需要我们再写一层 `LlmAdapter` 转发。真实的密钥/Base URL/模型 ID 见根目录 `.env` 文件（AI 代理有权限查看，且在端到端测试期间被授权直接写入该文件的真实测试值，见 §7.4）。
+`pi-ai` 支持注册自定义 OpenAI 兼容 Provider。F0.1 已用 `step-3.5-flash` 对 `https://api.stepfun.com/v1` 完成一次真实单轮调用并收到 `OK`，同时验证 `JsonlSessionRepo` 能创建、读取元数据并清理 JSONL 会话。因此 Director 采用 `pi-ai` 原生 StepFun Provider，不再保留“包装 `StepfunAdapter` 才能调用模型”的默认路径；`StepfunAdapter` 继续服务非 Agent 的普通 LLM 调用与 Key 校验。真实密钥仍只来自 SQLite 设置或 `.env`（见 §7.4）。
 
-**这一点尚未实测**，必须作为 Foundation Track 的第一张任务卡（Spike）验证。若验证失败（比如 `pi-ai` 的自定义 Provider 接口对接不上 StepFun 的某些非标准字段），退回方案是：保留现有 `features/ai/stepfun-adapter.ts` 作为独立的 `LlmAdapter`，`features/director` 内的非 Pi 部分（比如触发渲染、写产物）继续用现有适配器，只把"需要多轮工具调用的生成类任务"（分镜拆分、详细脚本撰写、HTML 代码生成）交给 Pi Agent 的 tool-calling 循环。
+F0.1 还确认 Pi 包是 ESM-only，而当前仓库根脚本语境为 CommonJS；一次性 `.ts` Spike 使用原生动态 `import()` 桥接。生产代码由 Next.js/Turbopack 处理 ESM，不复制该桥接写法。若未来 Provider 升级后真实烟测失败，才启用退回方案：保留 `StepfunAdapter` 作为独立 `LlmAdapter`，并在里程碑报告中记录退回原因，不在运行时静默切换。
 
 ### 3.4 确定性红线的强制位置（不依赖模型自觉遵守）
 
 `lib/determinism` 的 lint 守卫必须挂在"HTML 生成 Tool 返回结果之后、进入渲染队列之前"这个必经关卡上——这是我们自己的 Tool 实现内部的强制调用，不是靠 Skill 里的一句"不可绕过"文字指令约束模型。任何违规直接判定该次生成失败，Tool 返回结构化错误，让 Pi Agent 的 tool-calling 循环收到失败反馈后自行重试或升级为人工介入。
 
-### 3.5 会话状态归属（已决策，不变）
+### 3.5 会话状态归属与适配边界（已决策）
 
 Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构化数据唯一权威源"的原则不冲突，划分如下：
 
-- Pi 会话 JSONL 文件 → 视为**二进制产物**，走 `StorageAdapter` 存本地文件系统（与 mp4/frames/audio 同等对待）。
+- Pi 会话 JSONL 文件 → 视为**追加式文件产物**。`StorageAdapter.localPath('pi-sessions')` 只负责分配受控根目录；`DirectorSessionStore` 在该目录内封装 `JsonlSessionRepo + NodeExecutionEnv` 所需的 append/list/read-lines 文件语义。业务代码不得直接访问裸路径。
 - SQLite 只存**指向会话文件的指针 + 阶段/节点的状态枚举**（`artifacts` 表新增一种 `kind: 'pi-session'`，`canvas_nodes` 表记录该节点当前状态），不解析、不镜像会话内容到关系表。
 - 任何"业务真相"（分镜内容、渲染产物路径、节点状态）必须落在 SQLite / StorageAdapter，Pi 会话文件只是可追溯的执行留痕，重放/调试用，绝不作为业务查询的数据源。
+- `DirectorSession` 是运行层与持久层的唯一桥：新会话先创建 JSONL 并返回相对 `storageKey`；恢复会话时先由 `Session.buildContext()` 重建消息，再作为 `Agent.initialState.messages` 注入。
+- 会话写入由 `Agent` 的 `message_end` 生命周期事件驱动，按事件顺序 append 用户、助手与 ToolResult 消息；不得在 stage runner 与 Tool 内重复写同一条消息。
+- `createDirectorSession()` 必须接收 `{ projectId, nodeId, stage, resumeSessionKey? }`，以便会话元数据与画布节点一一追溯。对外最小接口只暴露 `id`、`storageKey`、`run()` 与 `close()`，不暴露 Pi `Agent`/`Session` 实例。
+- `stage-runner.ts` 在第一次模型调用前把 `storageKey` 登记为 `artifacts.kind='pi-session'`；失败路径也保留该指针用于复盘。
 
 ### 3.6 与 `features/director` 现有骨架的关系
 
@@ -450,3 +454,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23 | 初版发布，与配套的 task-breakdown 文档一并作为 Demo 阶段的操作准绳 |
 | 2026-07-23（修订） | **架构纠正**：video-director 不再作为 Pi Skill 运行时挂载，改为移植进原生代码（新增 §3.0/§3.1 移植映射表，§3 全面重写）；新增 §4.2 画布交互范式对标 Dify/Coze；新增 §5.6 Pencil MCP 组件港口强制约束 + `/playbook` 唯一登记处规则；新增 §5.7 依赖补全（`lucide-react`/`@dagrejs/dagre`）；§7.4 授权范围扩大为允许直接写入 `.env` 真实测试值 |
 | 2026-07-23（修订二） | **Pi SDK 口径纠正**：实测确认 `createAgentSession()` 属于被排除的 `pi-coding-agent`，`pi-agent-core` 正确入口为 `Agent`；Director 改为项目原生 `createDirectorSession()` 组合 `Agent + JsonlSessionRepo`，继续禁止 Skills/Extensions。 |
+| 2026-07-23（修订三） | **会话边界细化**：新增 `DirectorSessionStore`，明确 StorageAdapter 分配根目录、JsonlSessionRepo 提供追加式文件语义、Agent `message_end` 单写入点、恢复注入与 SQLite 相对指针规则。 |

@@ -6,7 +6,7 @@
 
 ## 问题陈述
 
-将 `video-director` skill（一套确定性视频编译方法论：语义分镜 → 分镜合同 → 逐镜代码视频 → 音画字幕 → 配乐转场 → 渲染导出）产品化为**类 AI 工作流的节点式 AIGC 短剧创作平台**。用户以自然语言驱动，画布上每个分镜对应一个可独立渲染的节点。
+将 `docs/video-director/` 中的确定性视频编译方法论（语义分镜 → 分镜合同 → 逐镜代码视频 → 音画字幕 → 配乐转场 → 渲染导出）**移植为项目原生 TypeScript 能力**，形成类 AI 工作流的节点式 AIGC 短剧创作平台。该目录只在开发期作为参考语料，不作为运行时 Skill 或文件依赖；用户以自然语言驱动，画布上每个分镜对应一条可独立生成、渲染和修改的节点通道。
 
 关键约束（来自需求讨论）：
 
@@ -22,7 +22,7 @@
 |---|---|---|---|
 | 渲染基座 | Remotion / HyperFrames | **HyperFrames 特化** | 单文件/镜天然隔离、可定向重渲；配方级复用 |
 | 语言栈 | Python / Go / Node | **全 Node/TS** | 与 Pi(TS)、Chromium 渲染同栈，零跨语言桥 |
-| Agent | Pi / 自研 / Python 框架 | **Pi(TS) harness** | OpenClaw 内核，StepFun 官方兼容 |
+| Agent | Pi / 自研 / Python 框架 | **`pi-agent-core Agent + JsonlSessionRepo + pi-ai`** | 只复用 tool-calling 与会话树；项目原生 `DirectorSession` 隔离 Pi 类型 |
 | 运行位置 | 服务器 / 本机 | **本机** | 解决"无好服务器"，用运行者算力 |
 | AI Key | 内置 / 代理 / 用户自带 | **用户自带** | 零服务器、不泄露、各付各费 |
 | 存储 | Postgres+MinIO / SQLite+FS | **SQLite + 本地 FS** | 单机本地、零外部服务 |
@@ -48,7 +48,7 @@ src/
     layout.tsx / globals.css
   features/
     canvas/              React Flow 节点图 + 节点类型
-    director/            video-director 八阶段编排 + Pi agent 集成（服务端）
+    director/            六阶段原生 prompt/schema/tool + DirectorSession（服务端）
     render/              HyperFrames 截帧循环 + ffmpeg 封装 + 作业运行器
     ai/                  StepFun LlmAdapter（服务端）
     audio/               配音 / SFX / BGM / 字幕（后续）
@@ -65,15 +65,16 @@ src/
 - `src/app/` 只放路由与 API 入口；业务逻辑下沉 `src/features/`。
 - 领域逻辑集中在 `features/*` 与 `lib/*`，未来抽包/上云是"搬运 + 加壳"，非重写。
 
-### 数据流（节点图 = video-director DAG）
+### 数据流（运行时动态物化的三层 DAG）
 
 ```
-文字稿 →[Ingest]script-units+audio →[Direct]master-plan+style-bible
-      →[Shot-Spec]shot-plan →[Shot 节点×N]AI 生成 HTML → 本机渲染（哈希缓存）
-      →[Audio]SFX/字幕/配音 →[Assemble]BGM+转场+拼接 →[Finalize]QA → 终渲 mp4
+[脚本导入] → [语义拆分]
+                 ├─ 分镜 1：[脚本]→[代码]→[音效]→[字幕]→[验收] ─┐
+                 ├─ 分镜 2：[脚本]→[代码]→[音效]→[字幕]→[验收] ─┼→ [配乐] → [合并导出]
+                 └─ 分镜 N：[脚本]→[代码]→[音效]→[字幕]→[验收] ─┘
 ```
 
-画布上每个节点是该 DAG 的可视化投影；每个 Shot 节点单向对应一份可独立渲染的 HTML。
+语义拆分完成后程序化 fan-out 出 N×5 个通道节点，用户不手工连线。应用层 Agent 阶段统一为 INGEST/DIRECT/SHOT-SPEC/FABRICATE/ASSEMBLE/FINALIZE；video-director 的 INIT 并入 INGEST，CALIBRATE 并入 FABRICATE 内部 QA。每个 `shot-codegen` 节点单向对应一份可独立渲染的 HTML。
 
 ### 渲染执行（本机、服务端）
 
@@ -84,17 +85,20 @@ src/
 
 - **SQLite（Drizzle）**：项目 / 画布图 / 节点参数 / 作业 / 产物索引。
 - **本地文件系统**：mp4 / 帧 / 音频（经 StorageAdapter，未来可换对象存储）。
+- **Agent 会话 JSONL**：`StorageAdapter.localPath('pi-sessions')` 分配受控根目录，`DirectorSessionStore` 在该根内封装 `JsonlSessionRepo + NodeExecutionEnv`；SQLite 仅保存相对 `storageKey` 指针（`artifacts.kind='pi-session'`）。
 
 ### AI（StepFun）
 
 - 服务端 `LlmAdapter` 指向 `https://api.stepfun.com/v1`（OpenAI 兼容）。
+- 需要多轮 Tool 调用的 Director 阶段走 `pi-ai` 原生 StepFun Provider；F0.1 已真实验证 `Agent` 单轮调用与 JSONL 会话创建。
+- 项目原生 `createDirectorSession({ projectId, nodeId, stage, resumeSessionKey? })` 负责 Agent 运行、消息事件持久化与恢复；不依赖 `pi-coding-agent`，不加载 Skill/Extension。
 - **用户在设置页填自己的 Key**，存本地配置；永不进前端 bundle。
 
 ## 满足核心技术诉求
 
 - **并发 / 容灾 / 性能**：进程内持久队列 + 有界并发 + 幂等重试 + 哈希缓存；单镜失败不阻塞全片；首轮全渲较慢、改单镜秒级。
 - **复用 + 定向重渲**：配方（G01–G50）+ token 注入层复用；每镜单 HTML 隔离，哈希决定重渲。
-- **HyperFrames 特化**：保留 video-director 协议 / Schema / QA / 自成长，只把实现层特化为 HyperFrames；确定性 lint 守卫（禁 rAF / `Date.now` / 无种子随机）。
+- **HyperFrames 特化**：把 video-director 的 schema / prompt / QA 方法论移植成本项目原生代码，再把实现层特化为 HyperFrames；确定性 lint 守卫（禁 rAF / `Date.now` / 无种子随机）在模型产出进入渲染队列前强制执行。
 
 ## Git / 协作规范
 
@@ -114,7 +118,7 @@ src/
 
 - Electron 打包（electron-builder）+ 代码签名 + 自动更新。
 - 本机渲染性能压测；GPU 加速评估。
-- Pi 八阶段 skill 细分与角色化。
+- DirectorSession 会话分支/重放、视觉模型 QA 与更细粒度角色协作。
 - （规模化 / 多团队时）拆多包 Monorepo、引入 adapters（Db/Queue/Storage/Llm）以支持"服务器 / 云版"。
 
 ## 决策理由
@@ -123,3 +127,10 @@ src/
 - **稳**：HyperFrames + 确定性 lint 保住"同帧同画面"；本机渲染避开服务器瓶颈。
 - **省**：用户自带 Key + 本地存储 = 零服务器成本、零凭据泄露。
 - **可演进**：领域逻辑集中，未来抽包 / 上云低成本。
+
+## 变更记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-07-23 | Demo 基线发布。 |
+| 2026-07-23（修订） | 对齐 Harness：video-director 改为原生移植；画布改为动态 fan-out；Agent 改为 `Agent + JsonlSessionRepo + DirectorSessionStore`，明确 JSONL/SQLite/StorageAdapter 边界并排除 coding-agent/Skills/Extensions。 |

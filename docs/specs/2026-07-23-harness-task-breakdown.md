@@ -600,14 +600,16 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 - 状态：☐
 - 前置任务：F0.1（含结论）
-- 允许改动范围：`src/features/director/pi-session.ts`（新建）、`pi-session.test.ts`
+- 允许改动范围：`src/features/director/pi-session.ts`、`session-store.ts`（均新建）及对应测试
 - 禁止改动：`src/features/director/pipeline.ts`（本卡先不改现有阶段元数据文件）
 - Task 规格：
   ```
-  目标：实现 pi-session.ts，导出 createDirectorSession(stage: PipelineStage):
+  目标：实现 pi-session.ts，导出 createDirectorSession(input: {
+  projectId: string; nodeId: string; stage: PipelineStage; resumeSessionKey?: string
+  }):
   Promise<DirectorSession>。内部用 `pi-agent-core` 的 `Agent` 运行 tool-calling
-  循环，并用 `JsonlSessionRepo` 持久化会话树；若 F0.1 验证通过则使用 `pi-ai`
-  原生 StepFun Provider，否则回退为包装现有 StepfunAdapter 的 Provider 适配层。
+  循环，并通过 session-store.ts 的 DirectorSessionStore 用 `JsonlSessionRepo`
+  持久化会话树；使用 F0.1 已验证的 `pi-ai` 原生 StepFun Provider。
   `DirectorSession` 是本项目定义的最小接口，不向 features/director 外部泄漏 Pi
   内部类型。本函数不依赖 `pi-coding-agent`，不加载任何 Skill/Extension，不挂载
   docs/video-director/ 或任何外部技能包；该阶段所需的领域知识完全来自 D0.2
@@ -618,6 +620,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   允许改动范围：
   - src/features/director/pi-session.ts
   - src/features/director/pi-session.test.ts
+  - src/features/director/session-store.ts
+  - src/features/director/session-store.test.ts
 
   禁止改动：
   - src/features/director/pipeline.ts
@@ -627,9 +631,12 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - [ ] pnpm lint / pnpm tsc --noEmit 通过
   - [ ] 单测：mock Pi SDK，验证 `Agent` 初始状态只包含项目原生 prompt/Tool，
         未调用 `pi-coding-agent`，未加载任何 Skill/Extension（不发起真实网络请求）
-  - [ ] 单测：`JsonlSessionRepo` 得到的会话文件路径来自 StorageAdapter 管理的目录
-  - [ ] 函数对每个 stage 返回类型一致的 DirectorSession 封装，不泄漏 Pi 内部类型
-        到 features/director 外部（对外只暴露必要的最小接口）
+  - [ ] 单测：`JsonlSessionRepo` 根路径来自 `StorageAdapter.localPath('pi-sessions')`，
+        返回给调用方的是相对 storageKey，不是裸绝对路径
+  - [ ] 单测：`message_end` 按顺序只持久化一次；用 resumeSessionKey 恢复时，
+        `Session.buildContext()` 的消息被注入新 Agent
+  - [ ] 函数对每个 stage 返回类型一致的 DirectorSession 封装；对外只暴露
+        id/storageKey/run/close，不泄漏 Pi 内部类型
   - [ ] 代码或测试中不出现任何对 docs/video-director/ 路径的文件 IO 调用
 
   不在本任务范围内：
@@ -686,6 +693,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   Promise<void>：将节点状态置为 running（复用 C1.3 的 transitionNodeStatus）→
   创建 Pi 会话（D1.1）→ 挂载对应 Tool（D1.2）→ 运行会话直到产出 →
   成功则落 artifact + 置状态 success，失败则记录 error + 置状态 failed。
+  在第一次模型调用前必须把 DirectorSession.storageKey 作为 kind='pi-session'
+  的 artifact 指针登记；失败时保留该指针用于追踪，不删除会话留痕。
   本函数是 features/director 内唯一允许跨模块编排（canvas 状态 + AI 会话 +
   存储）的文件。
 
@@ -704,6 +713,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - [ ] 单测：mock 会话成功场景，断言最终节点状态为 success 且 artifact 已写入
   - [ ] 单测：mock 会话失败场景（如 Tool 返回校验失败），断言节点状态为 failed
         且错误信息被记录，不残留 running 状态
+  - [ ] 单测：成功/失败路径都已登记 pi-session artifact，且只存相对 storageKey
   - [ ] 函数本身不直接操作数据库连接细节，通过已有 features 函数间接操作
 
   不在本任务范围内：
@@ -1556,3 +1566,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订） | **架构纠正**：Track D 新增 D0.1/D0.2（video-director 方法论移植为原生 Zod schema + prompt 模板），D1.1/D1.2 措辞改为"裸 tool-calling 引擎，不挂 Skill"；新增 **Track P — Pencil 组件港口**（6 张任务卡，`canvas.pen` 30 个组件通过 Pencil MCP 一比一移植 + 登记 `/playbook`），并设为 Track U 的强制前置；Track U 全部任务卡改为"只 import Track P 组件，禁止重新实现"；任务卡合计 32→40 |
 | 2026-07-23（修订二） | **Goal/Task 粒度纠正**：更正"一张任务卡=一次 Goal"的错误理解为"一个 Track=一次 Goal，Track 内的任务卡是 Codex 在该 Goal 会话内部自主拆解执行的 Task"；每张卡片标签由「Goal 提示词」改为「Task 规格」；为每个 Track 新增独立的「Goal 启动提示词」区块（Track U 因 Task 数较多拆成两个顺序 Goal）；同步更新总纲 §9 |
 | 2026-07-23（修订三） | **Pi SDK 口径纠正**：F0.1 实测确认 `createAgentSession()` 只由 `pi-coding-agent` 导出；F0.1/D1.1 改为 `pi-agent-core Agent + JsonlSessionRepo + createDirectorSession()`，继续禁止 Skills/Extensions。 |
+| 2026-07-23（修订四） | **DirectorSession 持久化边界**：D1.1 新增 session-store.ts，采用 Agent 事件单写入 + JSONL 恢复注入；D1.3 要求成功/失败路径均登记相对 pi-session storageKey。 |

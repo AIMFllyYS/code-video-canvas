@@ -112,6 +112,7 @@ docs/  scripts/  public/
 ### 存储
 
 - 结构化数据走 Drizzle+SQLite；二进制产物走 `StorageAdapter`；不要在业务里散落裸 `fs` 调用（便于未来换对象存储）。
+- Pi JSONL 是特殊的追加式文件产物：只能由 `DirectorSessionStore` 在 `StorageAdapter.localPath('pi-sessions')` 分配的根目录内操作；业务层只持有相对 `storageKey`，SQLite 只登记指针。
 
 ## When Writing Code
 
