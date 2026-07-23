@@ -1,15 +1,6 @@
 import Link from 'next/link'
-import {
-  Clapperboard,
-  CirclePlus,
-  Film,
-  Folder,
-  LayoutDashboard,
-  Plus,
-  Settings,
-  Waypoints,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Clapperboard, Film, Folder, LayoutDashboard, Settings, Waypoints } from 'lucide-react'
+import { NewProjectDialog } from '@/app/_components/new-project-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { NavItem } from '@/components/ui/nav-item'
 import { ProjectCard } from '@/components/ui/project-card'
@@ -49,20 +40,11 @@ export default function HomePage() {
         <p className="text-[15px] text-label-secondary">
           语义分镜 · 节点画布 · 逐镜代码视频 · 本机一键导出
         </p>
-        <Button icon={Plus}>新建项目</Button>
+        <NewProjectDialog />
       </section>
 
       <section className="px-20">
-        <Button
-          variant="gray"
-          className="h-35 w-full flex-col gap-2 rounded-lg border border-separator bg-surface"
-        >
-          <CirclePlus className="h-7 w-7 text-accent" />
-          <span className="text-[17px] text-label-secondary">粘贴一段文字稿，开始创作</span>
-          <span className="text-xs font-normal text-label-tertiary">
-            支持导入 .txt / .md，可选上传配音作为时间地基
-          </span>
-        </Button>
+        <NewProjectDialog featured />
       </section>
 
       <section className="px-20 py-8">
@@ -84,7 +66,7 @@ export default function HomePage() {
               icon={Film}
               title="还没有项目"
               description="粘贴一段文字稿，开始创作"
-              action={<Button icon={Plus}>新建项目</Button>}
+              action={<NewProjectDialog />}
             />
           </div>
         )}

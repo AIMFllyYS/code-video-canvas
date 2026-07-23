@@ -165,7 +165,7 @@
     - 对应 task-breakdown：U1.1
     - _Requirements: F7_
 
-  - [ ] 7.2 S2 新建项目对话框（脚本提交入口）
+  - [x] 7.2 S2 新建项目对话框（脚本提交入口）
     - 对应 task-breakdown：U1.2
     - _Requirements: F1_
 

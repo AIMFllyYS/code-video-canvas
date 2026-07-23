@@ -1442,9 +1442,12 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
 ### U1.2 — S2 新建项目对话框（脚本提交入口）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：U1.1
-- 允许改动范围：`src/app/_components/new-project-dialog.tsx`（新建）
+- 允许改动范围：`src/app/_components/new-project-dialog.tsx`、`new-project-api.ts`
+  与对应测试（新建）、
+  `src/app/page.tsx`（仅接入触发器）、`src/app/api/projects/**`、
+  `src/features/canvas/actions.ts|actions.test.ts`（补齐原子初始 DAG）
 - Task 规格：
   ```
   目标：按设计交接文档 S2 章节实装新建项目对话框：标题输入 + 脚本文本域，
@@ -1454,12 +1457,17 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
   前置任务：U1.1
 
   允许改动范围：
-  - src/app/_components/new-project-dialog.tsx
+  - src/app/_components/new-project-dialog.tsx、new-project-api.ts 与对应测试
+  - src/app/page.tsx（仅接入对话框触发器）
+  - src/app/api/projects/**
+  - src/features/canvas/actions.ts、actions.test.ts（项目与初始全局 DAG 原子创建）
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 表单校验失败时的错误提示文案取自设计交接文档 §8，不发明新文案
   - [ ] 提交成功后正确触发路由跳转 + 阶段触发调用（可 mock 验证调用参数）
+  - [ ] 创建项目在一个事务内同时建立 script-import→shot-split 与
+        score→export 初始全局 DAG；API 返回可信 ingestNodeId，客户端不得猜测
   - [ ] 组件文件不超过 150 行
 
   不在本任务范围内：

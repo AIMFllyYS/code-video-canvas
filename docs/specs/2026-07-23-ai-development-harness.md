@@ -194,7 +194,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 | `types.ts` | 客户端安全的 canonical 节点合同：全局单例类型（`script-import`/`shot-split`/`score`/`export`）+ 分镜通道类型（`shot-script`/`shot-codegen`/`shot-sfx`/`shot-subtitle`/`shot-qa`）+ 六态 `NodeStatus` | UI/React Flow 直接 import type；禁止复制状态枚举，禁止用 `PipelineStage` 冒充节点类型 |
 | `schemas.ts` | 每种节点 `data` payload 的 Zod schema | 现有仅有 `createProjectSchema`，需要按节点类型逐一补 |
 | `queries.ts` | 读：按项目取节点/边、按 `laneKey` 分组取通道 | 现有骨架已存在，扩展查询方法 |
-| `actions.ts` | 写：单节点 CRUD、节点状态转移 | 不放 fan-out 批量物化逻辑（那是独立职责） |
+| `actions.ts` | 写：项目与初始全局 DAG 原子创建、单节点 CRUD、节点状态转移 | 创建项目必须同事务建立 script-import/shot-split/score/export；不放 fan-out 批量物化逻辑 |
 | `fan-out.ts`（新增） | 给定语义拆分节点的输出（N 个分镜），批量物化 N×5 个通道节点 + 通道内部串行边 + 与全局收敛节点的边 | 单一职责：只做"拓扑生成"，不做渲染触发 |
 | `layout.ts`（新增） | 自动布局：给定节点/边集合，计算默认坐标（dagre 或等价算法） | 独立文件，方便未来替换布局算法而不影响其余模块 |
 | `status.ts`（新增） | 节点状态机转移 + 内容哈希比对（判断是否 stale，驱动 F5 定向重渲染） | 依赖 §6 新增的 `contentHash`/`status` 字段 |
@@ -485,3 +485,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十一） | **启动副作用收口**：Director/Render queue 与 runner 的模块导入不得实例化 SQLite repository；默认依赖延迟到真实 enqueue/handler 执行，避免构建和并行测试争用默认数据库。 |
 | 2026-07-24（修订十二） | **Node UI 领域合同收口**：`CanvasNodeType` 与六态 `NodeStatus` 统一定义在客户端安全 types 层；UI 禁止复制四态枚举或把 PipelineStage 当作节点类型，阶段色由节点类型显式派生。 |
 | 2026-07-24（修订十三） | **Pencil 登记口径收口**：30 个 reusable symbols 全部可追溯，四个 Button symbols 合并为一个 variant 组件，故 `/playbook` 登记 27 个 Pencil UI 组件族；图标白名单独立展示。 |
+| 2026-07-24（修订十四） | **项目初始 DAG 原子化**：创建项目必须在同一事务建立 script-import→shot-split 与 score→export 四个全局节点；projects API 返回可信 ingestNodeId，前端禁止猜节点或创建无入口项目。 |
