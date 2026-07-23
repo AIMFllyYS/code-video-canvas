@@ -1,16 +1,14 @@
+import { Plus, RefreshCw, Play } from 'lucide-react'
 import { Button } from './button'
 
-/** Button 组件示例（/playbook 展示单元）。 */
+/** Button 四变体示例。 */
 export function ButtonDemo() {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button variant="primary">Primary</Button>
-      <Button variant="tinted">Tinted</Button>
-      <Button variant="gray">Gray</Button>
-      <Button variant="destructive">Destructive</Button>
-      <Button size="sm">Small</Button>
-      <Button size="lg">Large</Button>
-      <Button disabled>Disabled</Button>
+      <Button icon={Plus}>新建项目</Button>
+      <Button variant="tinted" icon={RefreshCw}>重渲此镜</Button>
+      <Button variant="gray" icon={Play}>取消</Button>
+      <Button variant="destructive">删除</Button>
     </div>
   )
 }
