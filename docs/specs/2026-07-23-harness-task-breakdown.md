@@ -162,7 +162,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
 
 ### F0.4 — DB 迁移：`canvas_nodes` 新增状态与哈希字段
 
-- 状态：☐
+- 状态：☑
 - 前置任务：无（可与 F0.1~F0.3 并行）
 - 允许改动范围：`src/lib/db/schema.ts`、`src/lib/db/migrations/**`（新迁移文件）、`src/lib/db/schema.test.ts`
 - 禁止改动：`canvas_nodes` 表已有字段的类型/约束（只做新增列，不改现有列）
