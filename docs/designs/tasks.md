@@ -102,7 +102,7 @@
   - 对应 Goal：Track R（前置：F0.6、F0.7 完成）
   - _Requirements: F4、F5、F9_
 
-  - [ ] 4.1 `frame-capture.ts`：shot runtime 合同 + 可复用截图 session
+  - [x] 4.1 `frame-capture.ts`：shot runtime 合同 + 可复用截图 session
     - 对应 task-breakdown：R1.1
     - _Requirements: F4_
 

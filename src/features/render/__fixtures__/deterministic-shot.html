@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #0f0f0f;
+      }
+
+      #hero {
+        width: 320px;
+        height: 180px;
+        border-radius: 32px;
+        background: #4fd1c5;
+        color: #0f0f0f;
+        display: grid;
+        place-items: center;
+        font: 700 32px Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hero">CodeVideoCanvas</div>
+    <script src="../../../../node_modules/gsap/dist/gsap.min.js"></script>
+    <script>
+      const hero = document.querySelector('#hero')
+      const timeline = gsap.timeline({ paused: true })
+      timeline.fromTo(
+        hero,
+        { x: 80, y: 120, rotation: -8, opacity: 0.25 },
+        { x: 720, y: 420, rotation: 16, opacity: 1, duration: 2, ease: 'none' }
+      )
+      window.__CVC_RENDER__ = {
+        version: 1,
+        seek(frame, fps) {
+          timeline.seek(frame / fps, false)
+        },
+      }
+    </script>
+  </body>
+</html>

@@ -852,7 +852,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 ### R1.1 — `frame-capture.ts`：单帧截图
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.6, F0.7
 - 允许改动范围：`src/features/render/frame-capture.ts`（新建）、测试文件、`fixtures/`（测试用最小 shot HTML 样例）
 - 禁止改动：`renderer.ts`（顶层编排留到 R1.5）
