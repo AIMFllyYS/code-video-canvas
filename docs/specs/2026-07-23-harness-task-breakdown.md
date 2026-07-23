@@ -96,7 +96,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
 
 ### F0.2 — `.env` 契约核查与修正
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.1（需要知道最终选用哪个 chat 模型名）
 - 允许改动范围：`.env.example`、`docs/specs/2026-07-23-ai-development-harness.md`（仅 §7.3 变量清单表格，不改其他章节）
 - 禁止改动：`.env`、`.env.local`（这些文件属于用户本地机密配置，Codex 不应写入或提交）

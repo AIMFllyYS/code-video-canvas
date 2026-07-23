@@ -305,6 +305,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 ### 7.3 变量清单（已通过 Foundation Spike 验证）
 
 ```
+DATA_DIR=./.data            # 本地 SQLite 数据库与渲染产物根目录
 STEPFUN_API_KEY=            # 开发期种子 Key；生产路径走设置页写 SQLite，不用此变量
 STEPFUN_BASE_URL=https://api.stepfun.com/v1 # 默认 API 基础端点（已验证，非 step_plan 变体）
 STEPFUN_CHAT_MODEL=step-3.5-flash # 文本生成模型（已验证，可选择 step-3.5-flash / step-3.7-flash）
