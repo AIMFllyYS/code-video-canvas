@@ -1,3 +1,5 @@
+'use client'
+
 import type { ComponentType, ReactNode } from 'react'
 import { X, Info, CircleCheck, TriangleAlert, CircleX } from 'lucide-react'
 import { cn } from '@/lib/utils'

@@ -1,3 +1,5 @@
+'use client'
+
 import { Toast } from './toast'
 
 /** Toast 四变体示例（/playbook 展示单元）。 */
