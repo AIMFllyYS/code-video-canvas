@@ -115,3 +115,17 @@
   复用 canvas 域的九种节点类型与六态状态，并同步 AGENTS、Harness 与平台架构。
 - 遗留/跳过：无。旧 Card/LogoMark 文件暂由尚未进入 Track U 重写的占位页面
   使用，但已从 Track P registry 移除，不能被后续页面视为 Pencil 登记组件。
+
+## Track U — UI
+
+- 完成范围：U1.1–U1.8（含 U1.6a），状态与实际代码一致。
+- 最终门禁：54 个测试文件、147 项测试通过；`pnpm lint`、
+  `pnpm tsc --noEmit`、`pnpm build` 全部通过；确定性源码扫描与 U+FFFD 扫描
+  均为 0 命中。
+- 生产 E2E：跑通首页→创建项目→真实 StepFun INGEST→三条分镜通道→
+  S4 单镜渲染→S5 未完成导出门禁→S6 真实 Key 校验。
+- Pencil 复核：最新 S1–S6 均使用常驻 Sidebar；统一 AppShell，修正 S4 三栏和
+  S5 真实数据投影。
+- 详细证据、受控 fixture 偏差和完整缺口清单见
+  `docs/updates/2026-07-24-u1.8-demo-e2e-walkthrough.md`。
+- 跳过 Task：无；主观视觉评价按 U1.8 边界未执行。

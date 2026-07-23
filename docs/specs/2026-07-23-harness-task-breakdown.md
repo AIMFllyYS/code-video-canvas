@@ -1656,7 +1656,7 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 
 ### U1.8 — 端到端 UI 走查（Tier B 里程碑收口）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：U1.1~U1.7 全部完成
 - Task 规格：
   ```
