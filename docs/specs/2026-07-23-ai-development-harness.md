@@ -68,7 +68,7 @@
 
 ### 3.2 依赖选型（修正：仅作裸 tool-calling 循环引擎）
 
-仍使用 **`@earendil-works/pi-agent-core`**（Agent runtime，tool calling + state management）+ **`pi-ai`**（底层多 Provider LLM 客户端），**但用途收窄**：只借用它的会话生命周期管理与工具调用循环机制，**不使用其 Skills/Extensions 加载体系**。`createAgentSession()` 拿到的会话只挂载 §3.1 表格中列出的、我们自己实现的 Tool（对应 Track D 的 `tools/` 目录），不传入任何 `--skill`/`skills` 相关配置。
+仍使用 **`@earendil-works/pi-agent-core`**（Agent runtime，tool calling + state management）+ **`pi-ai`**（底层多 Provider LLM 客户端），**但用途收窄**：只借用它的 `Agent`、会话存储与工具调用循环机制，**不使用其 Skills/Extensions 加载体系**。经 F0.1 核查，`createAgentSession()` 只由 `@earendil-works/pi-coding-agent` 导出，`pi-agent-core` 的正确入口是 `new Agent(...)`；因此本项目用 `Agent + JsonlSessionRepo` 组合，并在 `features/director/pi-session.ts` 内封装项目原生的 `createDirectorSession()`。该工厂只挂载 §3.1 表格中列出的自定义 Tool，不加载任何 Skill/Extension。
 
 仍不用 `@earendil-works/pi-coding-agent`（面向人类终端编码场景，默认工具集 `read/write/edit/bash` 与本项目场景不符）。
 
@@ -92,7 +92,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 ### 3.6 与 `features/director` 现有骨架的关系
 
-现有 `pipeline.ts` 的 `AgentRunner` 接口需要替换为基于 Pi `AgentSession` 的具体实现（不是删除整个文件，是把接口签名对齐 Pi SDK 的 `createAgentSession()` 返回类型）。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
+现有 `pipeline.ts` 的 `AgentRunner` 接口需要替换为项目原生的 `DirectorSession` 最小接口；具体实现由 `pi-session.ts` 组合 Pi `Agent` 与 `JsonlSessionRepo`，但不把 Pi 内部类型泄漏到 `features/director` 外部。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
 
 ---
 
@@ -103,7 +103,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 | 层级 | 节点是什么 | 数量级 | 消费者 | 对应代码位置 |
 |---|---|---|---|---|
 | **L1 画布节点** | 用户在 React Flow 画布上看到的实体：脚本提交、语义拆分、每个分镜的脚本/代码/音效/字幕/验收、配乐、合并导出 | 每项目：4 个全局节点 + N×5 个分镜通道节点（N=分镜数，可达数十） | 最终用户 | `features/canvas`、`src/lib/db/schema.ts` 的 `canvas_nodes`/`canvas_edges` 表 |
-| **L2 技能内部节点** | video-director 8 阶段内部的子步骤（语义解读→recipe 选型→……→QA 抽样） | 每阶段 3~8 个子步骤 | Pi AgentSession 内部的 tool calls | `docs/video-director/` 内部（不在 `src/` 中体现） |
+| **L2 Agent 内部节点** | video-director 8 阶段内部的子步骤（语义解读→recipe 选型→……→QA 抽样） | 每阶段 3~8 个子步骤 | `DirectorSession` 封装的 Pi `Agent` 内部 tool calls | `docs/video-director/` 内部（不在 `src/` 中体现） |
 | **L3 开发任务节点** | 本 Harness 拆出来的、给 Codex 执行的任务卡 | 预计 40~60 张 | Codex（施工方） | `docs/specs/2026-07-23-harness-task-breakdown.md` |
 
 三层是**同构但独立**的：L3 任务卡的边界应当**对齐** L1 节点边界（比如"实现分镜代码生成节点的渲染联动"天然是一张任务卡），但 L3 本身不产出视频，是在造"产出视频的机器"。
@@ -198,7 +198,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 | `pipeline.ts` | 阶段元数据（已存在，阶段命名对齐 §6.3 决策） | 移除现有空 `AgentRunner` 接口定义，改为从 `pi-session.ts` 导入 |
 | `prompts/`（新增子目录） | §3.1 移植映射表中每个阶段的原生 prompt 模板（TS 字符串模板 + 类型化插槽参数），移植自 video-director 的方法论文本 | **不是**运行时读取 `docs/video-director/*.md`；这些文本被移植进代码后独立维护 |
 | `schemas/`（新增子目录） | §3.1 移植映射表中每个阶段的输出 Zod schema（`shot-plan.ts`/`ingest.ts` 等），手写对照 `docs/video-director/schemas/*.json` 移植 | 移植完成后与原 JSON Schema 解耦独立演进，不再同步追更 |
-| `pi-session.ts`（新增） | Pi `AgentSession` 工厂：接入 `pi-ai` Provider（StepFun）、注册 §3.1 移植出的自定义 Tool 列表 | 单一职责：只管"怎么起一个会话"；**不传入任何 Skills/Extensions 配置** |
+| `pi-session.ts`（新增） | `DirectorSession` 工厂：组合 Pi `Agent` + `JsonlSessionRepo`，接入 `pi-ai` StepFun Provider，注册 §3.1 移植出的自定义 Tool | 单一职责：只管"怎么起一个会话"；**不依赖 `pi-coding-agent`，不加载任何 Skills/Extensions** |
 | `tools/`（新增子目录） | 每个自定义 Tool 一个文件（`validate-shot-plan.ts`、`write-artifact.ts`、`trigger-render.ts` 等），内部调用 `schemas/` 做校验 | 每个 Tool 文件只做一件事：校验 + 落库/落盘，不做跨阶段编排 |
 | `stage-runner.ts`（新增） | 编排一次"阶段运行"：起会话 → 跑到该阶段产出 → 落 SQLite/StorageAdapter → 更新画布节点状态 | 被 queue handler 调用；本文件是 `features/director` 唯一允许"跨模块编排"的地方 |
 
@@ -448,3 +448,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 |---|---|
 | 2026-07-23 | 初版发布，与配套的 task-breakdown 文档一并作为 Demo 阶段的操作准绳 |
 | 2026-07-23（修订） | **架构纠正**：video-director 不再作为 Pi Skill 运行时挂载，改为移植进原生代码（新增 §3.0/§3.1 移植映射表，§3 全面重写）；新增 §4.2 画布交互范式对标 Dify/Coze；新增 §5.6 Pencil MCP 组件港口强制约束 + `/playbook` 唯一登记处规则；新增 §5.7 依赖补全（`lucide-react`/`@dagrejs/dagre`）；§7.4 授权范围扩大为允许直接写入 `.env` 真实测试值 |
+| 2026-07-23（修订二） | **Pi SDK 口径纠正**：实测确认 `createAgentSession()` 属于被排除的 `pi-coding-agent`，`pi-agent-core` 正确入口为 `Agent`；Director 改为项目原生 `createDirectorSession()` 组合 `Agent + JsonlSessionRepo`，继续禁止 Skills/Extensions。 |

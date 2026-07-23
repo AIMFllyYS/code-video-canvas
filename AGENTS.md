@@ -19,14 +19,14 @@
 
 - **Framework**: Next.js ≥16.2.0（App Router，**全栈：真实 Node server，非静态导出**）
 - **React**: ≥19.2 · **TypeScript**: strict mode（禁 `any`）
-- **Package Manager**: pnpm · **Node**: 22.11.0
+- **Package Manager**: pnpm · **Node**: ≥22.19.0（`pi-agent-core@0.81.x` 的最低运行时要求）
 - **Styling**: Tailwind CSS + Design Token 体系（见 [设计系统清单](./docs/designs/2026-07-23-design-system-inventory.md)）
 - **图标**: `lucide-react`（白名单制，禁 emoji，见设计系统 §6）
 - **画布**: React Flow（`@xyflow/react`）+ `@dagrejs/dagre`（自动布局）
 - **设计源**: `docs/designs/canvas.pen`，经 Pencil MCP 工具链一比一移植为 `src/components/*`（见 Harness 总纲 §5.6，Track P）
 - **渲染**: HyperFrames 思想 — Playwright（自带 Chromium）逐帧 `seek` + CDP 截帧 → `ffmpeg-static`
 - **动画**: GSAP（`paused` timeline + 每帧 `seek`，确定性）
-- **Agent**: Pi Agent（`@earendil-works/pi-agent-core` + `pi-ai`）仅作裸 tool-calling 循环引擎，**不使用其 Skills/Extensions 加载机制**；`docs/video-director/` 的方法论已移植为 `features/director/prompts/`+`schemas/` 原生代码（见 Harness 总纲 §3），编码 video-director 六阶段（应用层统一口径，见 Harness 总纲 §6.5）
+- **Agent**: Pi Agent（`@earendil-works/pi-agent-core` 的 `Agent + JsonlSessionRepo` + `pi-ai`）仅作裸 tool-calling 循环引擎，由项目原生 `createDirectorSession()` 封装；**不依赖 `pi-coding-agent`，不使用 Skills/Extensions 加载机制**；`docs/video-director/` 的方法论已移植为 `features/director/prompts/`+`schemas/` 原生代码（见 Harness 总纲 §3），编码 video-director 六阶段（应用层统一口径，见 Harness 总纲 §6.5）
 - **AI**: StepFun（阶跃星辰，OpenAI 兼容端点，用户自带 Key）
 - **存储**: SQLite（Drizzle ORM）+ 本地文件系统（经 StorageAdapter）
 - **队列**: 进程内持久队列（状态落 SQLite，可恢复）

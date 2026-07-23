@@ -78,7 +78,7 @@
     - 对应 task-breakdown：D0.2
     - _Requirements: F2、F3、F4_
 
-  - [ ] 3.3 `pi-session.ts`：Agent 会话工厂（裸 tool-calling 引擎，不挂 Skill）
+  - [ ] 3.3 `pi-session.ts`：Director 会话工厂（`Agent + JsonlSessionRepo`，不挂 Skill）
     - 对应 task-breakdown：D1.1
     - _Requirements: F2、F3、F4_
 

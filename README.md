@@ -25,20 +25,20 @@
 | 画布 | React Flow（`@xyflow/react`） | — |
 | 渲染 | HyperFrames 思想（Playwright/Chromium 逐帧 seek → `ffmpeg-static`） | — |
 | 动画 | GSAP | paused + frame seek（确定性） |
-| Agent | Pi Agent（`@earendil-works/pi-agent-core` + `pi-ai`） | 裸 tool-calling 引擎；video-director 方法论已移植为原生代码，不挂载 Skill |
+| Agent | Pi Agent（`Agent + JsonlSessionRepo` + `pi-ai`） | 项目原生 `createDirectorSession()` 封装；不依赖 coding-agent，不挂载 Skill/Extension |
 | AI | StepFun（阶跃星辰，OpenAI 兼容） | 用户自带 Key |
 | 存储 | SQLite（Drizzle）+ 本地文件系统 | — |
 | 样式 | Tailwind CSS + Design Token 体系 | 禁硬编码颜色 |
 | 图标 | `lucide-react`（白名单制） | 禁 emoji |
 | 画布布局 | `@dagrejs/dagre` | 分镜通道自动布局 |
 | 包管理 | pnpm | — |
-| 运行时 | Node.js | 22.11.0 |
+| 运行时 | Node.js | ≥22.19.0 |
 
 ## 快速开始
 
 ### 环境要求
 
-- Node.js 22.11.0 + pnpm
+- Node.js ≥22.19.0 + pnpm
 - 一个 StepFun（阶跃星辰）API Key
 
 ### 安装与运行

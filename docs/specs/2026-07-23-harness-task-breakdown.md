@@ -67,8 +67,9 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
   ```
   目标：编写一个一次性验证脚本，确认 @earendil-works/pi-ai 能否将 StepFun
   （OpenAI 兼容端点，环境变量 STEPFUN_API_KEY / STEPFUN_BASE_URL / STEPFUN_CHAT_MODEL）
-  注册为自定义 Provider，并通过 @earendil-works/pi-agent-core 的
-  createAgentSession() 发起一次最简单的单轮对话（如"回复 OK"）拿到响应。
+  注册为自定义 Provider，并通过 @earendil-works/pi-agent-core 的 `Agent`
+  发起一次最简单的单轮对话（如"回复 OK"）拿到响应；同时核实
+  `JsonlSessionRepo` 的导出与持久会话 API，供 D1.1 组合为项目原生会话工厂。
 
   前置任务：无
 
@@ -595,7 +596,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - 不实现 Tool 或会话编排（D1.x 的范围）
   ```
 
-### D1.1 — `pi-session.ts`：Agent 会话工厂（裸 tool-calling 引擎，不挂 Skill）
+### D1.1 — `pi-session.ts`：Director 会话工厂（`Agent + JsonlSessionRepo`，不挂 Skill）
 
 - 状态：☐
 - 前置任务：F0.1（含结论）
@@ -604,10 +605,11 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 - Task 规格：
   ```
   目标：实现 pi-session.ts，导出 createDirectorSession(stage: PipelineStage):
-  Promise<AgentSession>，内部创建 Pi AgentSession，配置 StepFun Provider
-  （若 F0.1 验证通过则用 pi-ai 原生 Provider；否则回退为包装现有 StepfunAdapter
-  的自定义 Provider 适配层）。本函数只借用 Pi 的会话生命周期与 tool-calling
-  循环机制，不传入任何 --skill/skills/extensions 相关配置，不挂载
+  Promise<DirectorSession>。内部用 `pi-agent-core` 的 `Agent` 运行 tool-calling
+  循环，并用 `JsonlSessionRepo` 持久化会话树；若 F0.1 验证通过则使用 `pi-ai`
+  原生 StepFun Provider，否则回退为包装现有 StepfunAdapter 的 Provider 适配层。
+  `DirectorSession` 是本项目定义的最小接口，不向 features/director 外部泄漏 Pi
+  内部类型。本函数不依赖 `pi-coding-agent`，不加载任何 Skill/Extension，不挂载
   docs/video-director/ 或任何外部技能包；该阶段所需的领域知识完全来自 D0.2
   产出的原生 prompt 模板与 D1.2 即将注册的自定义 Tool。
 
@@ -623,10 +625,10 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit 通过
-  - [ ] 单测：mock Pi SDK，验证 createAgentSession 调用参数中不包含任何
-        skills/extensions 字段，且系统提示词来自 D0.2 的 prompt 模板函数
-        （不发起真实网络请求）
-  - [ ] 函数对每个 stage 返回类型一致的 AgentSession 封装，不泄漏 Pi 内部类型
+  - [ ] 单测：mock Pi SDK，验证 `Agent` 初始状态只包含项目原生 prompt/Tool，
+        未调用 `pi-coding-agent`，未加载任何 Skill/Extension（不发起真实网络请求）
+  - [ ] 单测：`JsonlSessionRepo` 得到的会话文件路径来自 StorageAdapter 管理的目录
+  - [ ] 函数对每个 stage 返回类型一致的 DirectorSession 封装，不泄漏 Pi 内部类型
         到 features/director 外部（对外只暴露必要的最小接口）
   - [ ] 代码或测试中不出现任何对 docs/video-director/ 路径的文件 IO 调用
 
@@ -1553,3 +1555,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23 | 初版发布，32 张任务卡覆盖 Foundation/Canvas/Director/Render/Audio/UI 六条 Track |
 | 2026-07-23（修订） | **架构纠正**：Track D 新增 D0.1/D0.2（video-director 方法论移植为原生 Zod schema + prompt 模板），D1.1/D1.2 措辞改为"裸 tool-calling 引擎，不挂 Skill"；新增 **Track P — Pencil 组件港口**（6 张任务卡，`canvas.pen` 30 个组件通过 Pencil MCP 一比一移植 + 登记 `/playbook`），并设为 Track U 的强制前置；Track U 全部任务卡改为"只 import Track P 组件，禁止重新实现"；任务卡合计 32→40 |
 | 2026-07-23（修订二） | **Goal/Task 粒度纠正**：更正"一张任务卡=一次 Goal"的错误理解为"一个 Track=一次 Goal，Track 内的任务卡是 Codex 在该 Goal 会话内部自主拆解执行的 Task"；每张卡片标签由「Goal 提示词」改为「Task 规格」；为每个 Track 新增独立的「Goal 启动提示词」区块（Track U 因 Task 数较多拆成两个顺序 Goal）；同步更新总纲 §9 |
+| 2026-07-23（修订三） | **Pi SDK 口径纠正**：F0.1 实测确认 `createAgentSession()` 只由 `pi-coding-agent` 导出；F0.1/D1.1 改为 `pi-agent-core Agent + JsonlSessionRepo + createDirectorSession()`，继续禁止 Skills/Extensions。 |
