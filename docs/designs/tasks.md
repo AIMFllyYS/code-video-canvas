@@ -106,7 +106,7 @@
     - 对应 task-breakdown：R1.1
     - _Requirements: F4_
 
-  - [ ] 4.2 磁盘帧序列、有限 session 池与内容哈希缓存
+  - [x] 4.2 磁盘帧序列、有限 session 池与内容哈希缓存
     - 对应 task-breakdown：R1.2
     - _Requirements: F5_
 

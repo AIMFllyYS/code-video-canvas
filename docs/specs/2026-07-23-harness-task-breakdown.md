@@ -892,7 +892,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 ### R1.2 — 帧序列生成与内容哈希缓存
 
-- 状态：☐
+- 状态：☑
 - 前置任务：R1.1
 - 允许改动范围：`src/features/render/cache.ts`（新建）、`frame-sequence.ts`（新建）、测试文件
 - 禁止改动：`frame-capture.ts`
