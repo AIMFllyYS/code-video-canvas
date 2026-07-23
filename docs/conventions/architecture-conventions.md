@@ -57,12 +57,21 @@ app  →  features  →  lib
 
 ## 7. 组件复用与 SSOT（/playbook 组件手册）
 
+> 视觉权威源：[设计系统清单](../designs/2026-07-23-design-system-inventory.md)（Token / 颜色 / 图标 / 组件 / 布局）+ [`canvas.pen`](../designs/canvas.pen)（视觉源稿）。
+
 - **单一真源（SSOT）**：每个前端 UI 组件只有一份权威实现，集中在 `src/components/*`；其他页面 / 功能一律 `import` 复用，**禁止复制粘贴或重复实现视觉原语**。
+- **设计 Token 强制**：颜色 / 阴影 / 圆角 / 间距必须引用设计系统变量，**禁止硬编码 hex / rgba**。关键约束：
+  - 暗色背景 `bg` = `#0F0F0F`、`canvas-bg` = `#0A0A0A`（非纯黑）。
+  - 已删除通用色 `pink`、`indigo` 不得使用。
+  - 阴影统一：卡片/节点 `$shadow-card`，浮层/弹窗 `$shadow-float`。
+  - 阶段色按流水线语义归类（teal / purple / accent / warning / success），不再用彩虹板。
+- **图标体系**：统一 Lucide（`lucide-react`），白名单制（见设计系统 §6.2），禁 emoji；命名用 v0.400+ 标准名（如 `circle-plus`、`loader-circle`、`triangle-alert`）。
 - **组件分层（原子化）**：
   - `components/ui/`：纯展示原语（Button / Card / Input …），无业务逻辑。
-  - `components/icons/`：SVG 图标组件（多源自 Pencil 稿件）。
+  - `components/icons/`：Lucide 图标组件（多源自 Pencil 稿件）。
   - `components/motion/`（可选）：应用内交互动效原语。
   - `features/*/components/`：功能内组件，只能**组合** `components/ui`，不得重定义视觉原语（依赖方向单向：`features/*/components → components/ui`）。
 - **/playbook 组件手册**：应用内「活文档 / 组件画廊」（应用内版 Storybook，零额外构建工具）。新增组件时在 `src/app/playbook/registry.ts` 登记并新建 `*.demo.tsx`；`/playbook` 按分类实时渲染展示。
 - **确定性边界**：`components/*` 与 `/playbook` 属**应用 UI**，允许 hover / CSS transition / 交互动画；确定性红线（禁 rAF / 墙钟 / CSS 动画）**只约束视频 shot 渲染**（见 §5）。
-- **Pencil → 组件工作流**：Pencil 稿（`.pen`）设计 → Pencil MCP（`export_html` / `export_nodes`）取标记 / SVG → 落为 `components/ui|icons/*` 的类型化命名导出组件 → `/playbook` 注册示例 → 各页 `import` 复用。
+- **Pencil → 组件工作流**：Pencil 稿（`.pen`）设计 → Pencil MCP（`export_html` / `export_nodes`）取标记 / SVG → 落为 `components/ui|icons/*` 的类型化命名导出组件 → `/playbook` 注册示例 → 各页 `import` 复用。颜色/间距/圆角均引用 `.pen` 中定义的 Design Token（见设计系统 §3）。
+- **双主题**：所有颜色变量均为 `light | dark` 双值；页面根节点通过 `theme.mode` 切换，组件实现必须同时支持两主题。
