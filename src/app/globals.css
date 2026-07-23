@@ -136,6 +136,7 @@
 @theme inline {
   /* 字体 */
   --font-sans: var(--font-sans);
+  --font-sc: var(--font-sc);
   --font-mono: var(--font-mono);
 
   /* 品牌与语义色 */
