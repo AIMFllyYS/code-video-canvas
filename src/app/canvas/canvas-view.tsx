@@ -61,6 +61,7 @@ export function CanvasView({ projectId, nodes, edges }: CanvasViewProps) {
         nodes={flowNodes}
         edges={flowEdges}
         fitView
+        onlyRenderVisibleElements
         minZoom={0.05}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
@@ -82,7 +83,7 @@ interface LanePanelProps {
 
 function LanePanel({ laneKeys, collapsedLanes, onToggle }: LanePanelProps) {
   return (
-    <aside className="absolute left-4 top-4 max-h-[calc(100%-2rem)] w-56 overflow-auto rounded-md border border-separator bg-glass p-3 shadow-float backdrop-blur-xl">
+    <aside className="absolute left-4 top-4 max-h-[calc(100%-8rem)] w-56 overflow-auto rounded-md border border-separator bg-glass p-3 shadow-float backdrop-blur-xl">
       <p className="mb-2 text-xs font-semibold text-label">分镜通道 · {laneKeys.length}</p>
       <div className="space-y-1">
         {laneKeys.map((laneKey) => {
