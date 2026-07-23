@@ -74,3 +74,18 @@
   SQLite，导致并行测试争用；现改为 enqueue/handler 执行时延迟创建 repository，
   新增“模块导入不得访问 DB”边界测试，全量测试连续两轮稳定通过。
 - 遗留/跳过：无。
+
+## Track A — Audio
+
+- 完成范围：A1.1，状态与代码一致。
+- 静态门禁：`pnpm lint`、`pnpm tsc --noEmit`、`pnpm build` 全部通过。
+- 测试：Audio 定向 4 个测试文件、4 条测试通过；项目全量 38 个测试文件、
+  102 条测试通过。
+- 功能验收：字幕、配音、音效、配乐四个公开异步函数均从 `features/audio`
+  统一入口调用成功，不抛异常，并返回含 `status: placeholder`、
+  `implementation: P1`、`占位实现，P1 补齐` 的结构化结果。
+- 发现并修正：原任务遗漏配乐对应 PRD F12，且允许范围排除了接口定稿所需的
+  `types.ts`、`index.ts` 与强制要求的测试；已修正任务卡并建立稳定对象输入、
+  结构化结果和 barrel export。
+- 遗留/跳过：真实 TTS/ASR/SFX/BGM 生成按任务定义属于 P1，Demo 有意使用
+  明确占位结果，不计为跳过。
