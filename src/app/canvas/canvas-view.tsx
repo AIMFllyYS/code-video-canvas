@@ -1,6 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { Download, Play } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Background,
   Controls,
@@ -8,17 +11,25 @@ import {
   ReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { Button } from '@/components/ui/button'
+import { QueueStatusBar } from '@/components/ui/queue-status-bar'
+import { TopBar } from '@/components/ui/top-bar'
 import type { CanvasGraphEdge, CanvasGraphNode } from '@/features/canvas'
+import { CanvasInspector } from './canvas-inspector'
+import { CanvasSidebar } from './canvas-sidebar'
 import { toFlowEdge, toFlowNode } from './flow-elements'
 
 export interface CanvasViewProps {
   projectId: string
+  projectTitle: string
   nodes: CanvasGraphNode[]
   edges: CanvasGraphEdge[]
 }
 
-export function CanvasView({ projectId, nodes, edges }: CanvasViewProps) {
+export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasViewProps) {
+  const router = useRouter()
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(() => new Set())
+  const [selectedNodeId, setSelectedNodeId] = useState(nodes[0]?.id)
   const laneKeys = useMemo(
     () => [...new Set(nodes.flatMap((node) => (node.laneKey ? [node.laneKey] : [])))].sort(),
     [nodes]
@@ -45,6 +56,14 @@ export function CanvasView({ projectId, nodes, edges }: CanvasViewProps) {
     () => edges.map((edge) => toFlowEdge(edge, hiddenNodeIds)),
     [edges, hiddenNodeIds]
   )
+  const selectedNode = nodes.find(({ id }) => id === selectedNodeId)
+  const completed = nodes.filter(({ status }) => status === 'success').length
+
+  useEffect(() => {
+    if (!nodes.some(({ status }) => status === 'pending' || status === 'running')) return
+    const timeout = window.setTimeout(() => router.refresh(), 1500)
+    return () => window.clearTimeout(timeout)
+  }, [nodes, router])
 
   function toggleLane(laneKey: string): void {
     setCollapsedLanes((current) => {
@@ -56,21 +75,41 @@ export function CanvasView({ projectId, nodes, edges }: CanvasViewProps) {
   }
 
   return (
-    <main className="relative h-full w-full bg-canvas-bg" data-project-id={projectId}>
-      <ReactFlow
-        nodes={flowNodes}
-        edges={flowEdges}
-        fitView
-        onlyRenderVisibleElements
-        minZoom={0.05}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background color="var(--color-canvas-grid)" gap={20} size={1} />
-        <MiniMap pannable zoomable className="!bg-surface !shadow-card" />
-        <Controls className="!border-separator !bg-surface !shadow-card" />
-      </ReactFlow>
-      <LanePanel laneKeys={laneKeys} collapsedLanes={collapsedLanes} onToggle={toggleLane} />
+    <main className="flex h-full w-full bg-canvas-bg" data-project-id={projectId}>
+      <CanvasSidebar projectTitle={projectTitle} />
+      <section className="flex min-w-0 flex-1 flex-col">
+        <TopBar
+          title={projectTitle}
+          meta={`${nodes.length} 节点 · 已自动保存`}
+          actions={
+            <>
+              <Button variant="gray" size="sm" icon={Play} disabled>全部渲染</Button>
+              <Link href={`/canvas/export?projectId=${projectId}`}>
+                <Button size="sm" icon={Download}>导出 MP4</Button>
+              </Link>
+            </>
+          }
+        />
+        <div className="relative min-h-0 flex-1">
+          <ReactFlow
+            nodes={flowNodes}
+            edges={flowEdges}
+            fitView
+            onlyRenderVisibleElements
+            minZoom={0.05}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+          >
+            <Background color="var(--color-canvas-grid)" gap={20} size={1} />
+            <MiniMap pannable zoomable className="!bg-surface !shadow-card" />
+            <Controls className="!border-separator !bg-surface !shadow-card" />
+          </ReactFlow>
+          <LanePanel laneKeys={laneKeys} collapsedLanes={collapsedLanes} onToggle={toggleLane} />
+        </div>
+        <QueueStatusBar completed={completed} total={nodes.length} />
+      </section>
+      <CanvasInspector projectId={projectId} node={selectedNode} onQueued={() => router.refresh()} />
     </main>
   )
 }
@@ -89,16 +128,17 @@ function LanePanel({ laneKeys, collapsedLanes, onToggle }: LanePanelProps) {
         {laneKeys.map((laneKey) => {
           const collapsed = collapsedLanes.has(laneKey)
           return (
-            <button
+            <Button
               key={laneKey}
-              type="button"
+              variant="gray"
+              size="sm"
               aria-pressed={collapsed}
               onClick={() => onToggle(laneKey)}
-              className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-xs text-label hover:bg-fill"
+              className="w-full justify-between"
             >
               <span className="truncate">{laneKey}</span>
               <span className="text-label-secondary">{collapsed ? '展开' : '折叠'}</span>
-            </button>
+            </Button>
           )
         })}
       </div>

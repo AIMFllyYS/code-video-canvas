@@ -86,6 +86,10 @@ src/
   （`idle|pending|running|success|failed|stale`）。UI 不复制状态枚举，也不把
   Agent 的 `PipelineStage` 当作画布节点类型；视觉阶段色由 `CanvasNodeType`
   显式映射。
+- **执行阶段合同**：节点类型与 Director stage 分字段保存；fan-out 在创建
+  `shot-script/codegen/sfx/subtitle/qa` 时分别写入
+  `SHOT_SPEC/FABRICATE/ASSEMBLE/ASSEMBLE/FINALIZE`。画布 Inspector 只消费
+  服务端读模型中的 stage，不在浏览器推导。
 
 ### 渲染执行（本机、服务端）
 
@@ -157,3 +161,4 @@ src/
 | 2026-07-23（修订六） | 重构 Render：显式 shot runtime、磁盘帧序列与 session 池、内容寻址 cache、可信 repository/export service 和统一后台启动。 |
 | 2026-07-24（修订七） | 收口 Node UI 领域合同：九种节点类型与六态状态统一由客户端安全的 canvas types 导出，禁止 UI 复制枚举或混用 Agent 阶段。 |
 | 2026-07-24（修订八） | 项目创建与四个全局 DAG 节点改为单事务；API 返回可信 INGEST 节点 ID，消除无入口半成品项目和客户端猜 ID。 |
+| 2026-07-24（修订九） | 分镜通道节点在 fan-out 时持久化 Director stage，画布读模型与 Inspector 直接消费该字段。 |

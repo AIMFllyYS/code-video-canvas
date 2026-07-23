@@ -9,6 +9,7 @@ export interface CanvasGraphNode {
   id: string
   type: CanvasNodeType
   status: typeof canvasNodes.$inferSelect.status
+  stage: string | null
   position: { x: number; y: number }
   laneKey: string | null
   laneRole: string | null
@@ -38,6 +39,7 @@ export function getCanvasGraph(projectId: string): CanvasGraph {
       id: canvasNodes.id,
       type: canvasNodes.type,
       status: canvasNodes.status,
+      stage: canvasNodes.stage,
       position: canvasNodes.position,
       laneKey: canvasNodes.laneKey,
       laneRole: canvasNodes.laneRole,

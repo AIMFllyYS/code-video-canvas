@@ -1476,9 +1476,10 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
 ### U1.3 — S3 画布主视图整合
 
-- 状态：☐
+- 状态：☑
 - 前置任务：C1.4, C1.5, U1.2
-- 允许改动范围：`src/app/canvas/**`（在 C1.4/C1.5 骨架基础上补齐 Sidebar/Inspector 布局）
+- 允许改动范围：`src/app/canvas/**`（在 C1.4/C1.5 骨架基础上补齐 Sidebar/Inspector 布局）、
+  `src/features/canvas/queries.ts|fan-out.ts` 与对应测试（补齐 Inspector 所需 stage 读模型）
 - Task 规格：
   ```
   目标：按设计交接文档 S3 章节的 Sidebar(240)|Center|Inspector(320) 三栏布局，
@@ -1490,12 +1491,15 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
   允许改动范围：
   - src/app/canvas/**
+  - src/features/canvas/queries.ts、fan-out.ts 与对应测试（仅补齐节点 stage）
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 三栏布局尺寸与设计交接文档一致（240/自适应/320）
   - [ ] Inspector 面板的按钮点击能正确调用对应 API 路由（可用集成测试或手动
         验证描述确认）
+  - [ ] 分镜通道创建时持久化唯一 stage 映射，Inspector 使用服务端返回的 stage，
+        禁止客户端按节点类型猜测
   - [ ] 页面整体文件组织遵循 page.tsx ≤200 行的约束，超出部分拆分子组件
 
   不在本任务范围内：

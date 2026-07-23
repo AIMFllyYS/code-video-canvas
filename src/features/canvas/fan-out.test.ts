@@ -51,6 +51,13 @@ describe('materializeShotLanes', () => {
       'shot-subtitle',
       'shot-qa',
     ])
+    expect(firstLane.map((node) => node.stage)).toEqual([
+      'SHOT_SPEC',
+      'FABRICATE',
+      'ASSEMBLE',
+      'ASSEMBLE',
+      'FINALIZE',
+    ])
   })
 
   it('rolls back every write when a mid-transaction insert fails', () => {

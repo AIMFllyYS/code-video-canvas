@@ -11,7 +11,8 @@ interface CanvasPageProps {
 
 export default async function CanvasPage({ searchParams }: CanvasPageProps) {
   const requestedProjectId = (await searchParams).projectId
-  const projectId = requestedProjectId ?? listProjects()[0]?.id
+  const projects = listProjects()
+  const projectId = requestedProjectId ?? projects[0]?.id
   if (!projectId) return <CanvasEmptyState description="请先创建一个项目，再进入节点画布。" />
 
   const graph = getCanvasGraph(projectId)
@@ -25,7 +26,15 @@ export default async function CanvasPage({ searchParams }: CanvasPageProps) {
     position: positions.get(node.id) ?? node.position,
   }))
 
-  return <CanvasLoader projectId={projectId} nodes={nodes} edges={graph.edges} />
+  const projectTitle = projects.find(({ id }) => id === projectId)?.title ?? 'RAG 十分钟入门'
+  return (
+    <CanvasLoader
+      projectId={projectId}
+      projectTitle={projectTitle}
+      nodes={nodes}
+      edges={graph.edges}
+    />
+  )
 }
 
 function CanvasEmptyState({ description }: { description: string }) {

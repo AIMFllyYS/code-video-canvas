@@ -305,6 +305,11 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 `features/canvas/types.ts`。`status.ts` 只实现服务端状态机；Node UI 根据
 `CanvasNodeType` 显式映射视觉阶段色，不重新引入旧阶段型 taxonomy。
 
+节点类型与 Director stage 是两个正交字段，但每个可执行节点必须在创建时持久化
+stage：`shot-script→SHOT_SPEC`、`shot-codegen→FABRICATE`、
+`shot-sfx/shot-subtitle→ASSEMBLE`、`shot-qa→FINALIZE`。Inspector 只使用
+服务端读模型返回的 stage，禁止在客户端按类型猜测。
+
 ### 6.5 阶段命名统一（PRD vs video-director SKILL.md 的不一致）
 
 - PRD §8：6 阶段（INGEST→DIRECT→SHOT-SPEC→FABRICATE→ASSEMBLE→FINALIZE）
@@ -486,3 +491,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十二） | **Node UI 领域合同收口**：`CanvasNodeType` 与六态 `NodeStatus` 统一定义在客户端安全 types 层；UI 禁止复制四态枚举或把 PipelineStage 当作节点类型，阶段色由节点类型显式派生。 |
 | 2026-07-24（修订十三） | **Pencil 登记口径收口**：30 个 reusable symbols 全部可追溯，四个 Button symbols 合并为一个 variant 组件，故 `/playbook` 登记 27 个 Pencil UI 组件族；图标白名单独立展示。 |
 | 2026-07-24（修订十四） | **项目初始 DAG 原子化**：创建项目必须在同一事务建立 script-import→shot-split 与 score→export 四个全局节点；projects API 返回可信 ingestNodeId，前端禁止猜节点或创建无入口项目。 |
+| 2026-07-24（修订十五） | **可执行节点 stage 持久化**：分镜通道在 fan-out 时写入唯一 stage 映射，画布读模型返回 stage，Inspector 禁止自行推断。 |

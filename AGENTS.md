@@ -122,6 +122,8 @@ docs/  scripts/  public/
 
 - 项目创建必须与 script-import/shot-split/score/export 四个全局节点在同一事务
   完成；API 只向客户端返回服务端确认的 ingestNodeId，禁止客户端猜节点 ID。
+- 分镜通道 fan-out 时必须持久化节点对应的 Director stage；Inspector 只使用
+  服务端读模型返回值，禁止按 CanvasNodeType 在客户端猜 stage。
 - 节点阶段输入持久化在 `canvas_nodes.data.directorInput`；`stage-prompt.ts` 只调用六阶段原生 prompt builder，禁止临时拼无类型 prompt。
 - `enqueueDirectorStage()` 先验证 project/node/stage/可入队状态，再把节点推进到 `pending` 并入队；`runStage()` 只接受 pending 节点，执行 `pending → running → success|failed`。
 - enqueue 持久化失败时必须补偿为 `pending → running → failed` 并记录错误，禁止留下悬挂 pending 节点。

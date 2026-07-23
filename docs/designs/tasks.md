@@ -169,7 +169,7 @@
     - 对应 task-breakdown：U1.2
     - _Requirements: F1_
 
-  - [ ] 7.3 S3 画布主视图整合
+  - [x] 7.3 S3 画布主视图整合
     - 对应 task-breakdown：U1.3
     - _Requirements: F6_
 

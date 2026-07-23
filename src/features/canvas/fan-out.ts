@@ -14,6 +14,14 @@ const LANE_ROLES: ShotLaneNodeType[] = [
   'shot-qa',
 ]
 
+const LANE_STAGES: Record<ShotLaneNodeType, string> = {
+  'shot-script': 'SHOT_SPEC',
+  'shot-codegen': 'FABRICATE',
+  'shot-sfx': 'ASSEMBLE',
+  'shot-subtitle': 'ASSEMBLE',
+  'shot-qa': 'FINALIZE',
+}
+
 type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0]
 type AnchorType = 'shot-split' | 'score'
 
@@ -97,6 +105,7 @@ function insertLaneNodes(tx: Transaction, projectId: string, shotId: string): vo
         id: stableId('node', projectId, shotId, role),
         projectId,
         type: role,
+        stage: LANE_STAGES[role],
         position: { x: 0, y: 0 },
         laneKey: shotId,
         laneRole: role,
