@@ -16,27 +16,27 @@ export default function HomePage() {
         <LogoMark className="h-8 w-8" />
         <h1 className="text-3xl font-bold">code-video-canvas</h1>
       </div>
-      <p className="mt-3 text-gray-600">基于自然语言的节点式 AIGC 短剧视频创作引擎 · 本地优先</p>
+      <p className="mt-3 text-label-secondary">基于自然语言的节点式 AIGC 短剧视频创作引擎 · 本地优先</p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {LINKS.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+            className="rounded-lg border border-separator p-4 hover:bg-fill"
           >
             <div className="font-semibold">{link.title}</div>
-            <div className="mt-1 text-sm text-gray-600">{link.desc}</div>
+            <div className="mt-1 text-sm text-label-secondary">{link.desc}</div>
           </Link>
         ))}
       </div>
 
-      <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-gray-500">Pipeline</h2>
+      <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-label-tertiary">Pipeline</h2>
       <ol className="mt-3 flex flex-wrap gap-2 text-sm">
         {PIPELINE.map((stage) => (
           <li
             key={stage.id}
-            className="rounded-full border border-gray-200 px-3 py-1"
+            className="rounded-full border border-separator px-3 py-1"
             title={stage.description}
           >
             {stage.title}

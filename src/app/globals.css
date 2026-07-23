@@ -1,1 +1,209 @@
 @import "tailwindcss";
+
+/* ─── Dark mode: class-based ─── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Design Tokens（权威源：docs/designs/2026-07-23-design-system-inventory.md）─── */
+
+:root {
+  /* 品牌与语义色 */
+  --color-accent: #007AFF;
+  --color-success: #34C759;
+  --color-warning: #FF9500;
+  --color-danger: #FF3B30;
+  --color-purple: #AF52DE;
+  --color-teal: #30B0C7;
+
+  /* 流水线阶段色 */
+  --color-stage-ingest: #30B0C7;
+  --color-stage-direct: #AF52DE;
+  --color-stage-shotspec: #AF52DE;
+  --color-stage-shot: #007AFF;
+  --color-stage-audio: #30B0C7;
+  --color-stage-assemble: #FF9500;
+  --color-stage-finalize: #34C759;
+
+  /* 中性色与表面 */
+  --color-bg: #FFFFFF;
+  --color-bg-secondary: #F2F2F7;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #FFFFFF;
+  --color-fill: #F2F2F7;
+  --color-fill-strong: #E5E5EA;
+  --color-separator: #3C3C432E;
+  --color-canvas-bg: #F5F5F7;
+  --color-scrim: #00000066;
+
+  /* 文字色 */
+  --color-label: #000000;
+  --color-label-secondary: #3C3C4399;
+  --color-label-tertiary: #3C3C434C;
+  --color-text-inverse: #FFFFFF;
+
+  /* 功能填充 */
+  --color-accent-fill: #007AFF1A;
+  --color-success-fill: #34C7591A;
+  --color-teal-fill: #30B0C71A;
+  --color-danger-fill: #FF3B301A;
+  --color-warning-fill: #FF95001A;
+  --color-overlay: #00000099;
+  --color-canvas-grid: #3C3C4312;
+
+  /* 功能表面 / 效果 */
+  --color-on-accent: #FFFFFF;
+  --color-glass: #FFFFFFCC;
+  --color-glass-sidebar: #F2F2F7CC;
+  --color-tooltip-bg: #1C1C1E;
+  --color-player-bg: #000000;
+  --color-knob: #FFFFFF;
+  --color-transparent: #00000000;
+
+  /* 阴影 */
+  --shadow-card: 0 1px 3px 0 #00000014, 0 1px 2px -1px #00000014;
+  --shadow-float: 0 4px 12px 0 #0000001F, 0 2px 4px -1px #0000001F;
+
+  /* 字体 */
+  --font-sans: 'Inter', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+}
+
+.dark {
+  /* 品牌与语义色 */
+  --color-accent: #0A84FF;
+  --color-success: #30D158;
+  --color-warning: #FF9F0A;
+  --color-danger: #FF453A;
+  --color-purple: #BF5AF2;
+  --color-teal: #40CBE0;
+
+  /* 流水线阶段色 */
+  --color-stage-ingest: #40CBE0;
+  --color-stage-direct: #BF5AF2;
+  --color-stage-shotspec: #BF5AF2;
+  --color-stage-shot: #0A84FF;
+  --color-stage-audio: #40CBE0;
+  --color-stage-assemble: #FF9F0A;
+  --color-stage-finalize: #30D158;
+
+  /* 中性色与表面 */
+  --color-bg: #0F0F0F;
+  --color-bg-secondary: #1C1C1E;
+  --color-surface: #1C1C1E;
+  --color-surface-raised: #252525;
+  --color-fill: #2C2C2E;
+  --color-fill-strong: #3A3A3C;
+  --color-separator: #5454587A;
+  --color-canvas-bg: #0A0A0A;
+  --color-scrim: #00000080;
+
+  /* 文字色 */
+  --color-label: #FFFFFF;
+  --color-label-secondary: #EBEBF599;
+  --color-label-tertiary: #EBEBF54C;
+  --color-text-inverse: #FFFFFF;
+
+  /* 功能填充 */
+  --color-accent-fill: #0A84FF29;
+  --color-success-fill: #30D15829;
+  --color-teal-fill: #40CBE029;
+  --color-danger-fill: #FF453A29;
+  --color-warning-fill: #FF9F0A29;
+  --color-overlay: #00000099;
+  --color-canvas-grid: #EBEBF526;
+
+  /* 功能表面 / 效果 */
+  --color-on-accent: #FFFFFF;
+  --color-glass: #1C1C1ECC;
+  --color-glass-sidebar: #1C1C1ECC;
+  --color-tooltip-bg: #2C2C2E;
+  --color-player-bg: #000000;
+  --color-knob: #FFFFFF;
+  --color-transparent: #00000000;
+
+  /* 阴影 */
+  --shadow-card: 0 1px 3px 0 #00000066, 0 1px 2px -1px #00000066;
+  --shadow-float: 0 4px 12px 0 #00000080, 0 2px 4px -1px #00000080;
+}
+
+/* ─── Tailwind v4 Theme Mapping ─── */
+@theme inline {
+  /* 字体 */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* 品牌与语义色 */
+  --color-accent: var(--color-accent);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-purple: var(--color-purple);
+  --color-teal: var(--color-teal);
+
+  /* 流水线阶段色 */
+  --color-stage-ingest: var(--color-stage-ingest);
+  --color-stage-direct: var(--color-stage-direct);
+  --color-stage-shotspec: var(--color-stage-shotspec);
+  --color-stage-shot: var(--color-stage-shot);
+  --color-stage-audio: var(--color-stage-audio);
+  --color-stage-assemble: var(--color-stage-assemble);
+  --color-stage-finalize: var(--color-stage-finalize);
+
+  /* 中性色与表面 */
+  --color-bg: var(--color-bg);
+  --color-bg-secondary: var(--color-bg-secondary);
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-fill: var(--color-fill);
+  --color-fill-strong: var(--color-fill-strong);
+  --color-separator: var(--color-separator);
+  --color-canvas-bg: var(--color-canvas-bg);
+  --color-scrim: var(--color-scrim);
+
+  /* 文字色 */
+  --color-label: var(--color-label);
+  --color-label-secondary: var(--color-label-secondary);
+  --color-label-tertiary: var(--color-label-tertiary);
+  --color-text-inverse: var(--color-text-inverse);
+
+  /* 功能填充 */
+  --color-accent-fill: var(--color-accent-fill);
+  --color-success-fill: var(--color-success-fill);
+  --color-teal-fill: var(--color-teal-fill);
+  --color-danger-fill: var(--color-danger-fill);
+  --color-warning-fill: var(--color-warning-fill);
+  --color-overlay: var(--color-overlay);
+  --color-canvas-grid: var(--color-canvas-grid);
+
+  /* 功能表面 / 效果 */
+  --color-on-accent: var(--color-on-accent);
+  --color-glass: var(--color-glass);
+  --color-glass-sidebar: var(--color-glass-sidebar);
+  --color-tooltip-bg: var(--color-tooltip-bg);
+  --color-player-bg: var(--color-player-bg);
+  --color-knob: var(--color-knob);
+
+  /* 阴影 */
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
+
+  /* 圆角 */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+}
+
+/* ─── Base ─── */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-label);
+  font-family: var(--font-sans);
+}

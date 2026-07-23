@@ -9,11 +9,11 @@ export default function ProjectsPage() {
   return (
     <main className="mx-auto max-w-4xl p-8">
       <h1 className="text-2xl font-bold">项目</h1>
-      <p className="mt-2 text-sm text-gray-600">共 {projects.length} 个项目（本地 SQLite）。</p>
+      <p className="mt-2 text-sm text-label-secondary">共 {projects.length} 个项目（本地 SQLite）。</p>
 
       {projects.length === 0 ? (
-        <p className="mt-6 text-sm text-gray-500">
-          暂无项目。可通过 <code className="rounded bg-gray-100 px-1">POST /api/projects</code> 创建。
+        <p className="mt-6 text-sm text-label-tertiary">
+          暂无项目。可通过 <code className="rounded bg-fill px-1">POST /api/projects</code> 创建。
         </p>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -27,7 +27,7 @@ export default function ProjectsPage() {
       )}
 
       <div className="mt-6">
-        <Link href="/" className="text-sm text-gray-600 underline">
+        <Link href="/" className="text-sm text-label-secondary underline">
           返回首页
         </Link>
       </div>

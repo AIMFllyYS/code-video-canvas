@@ -51,7 +51,7 @@ export default function SettingsPage() {
   return (
     <main className="mx-auto max-w-lg p-8">
       <h1 className="text-2xl font-bold">设置</h1>
-      <p className="mt-2 text-sm text-gray-600">
+      <p className="mt-2 text-sm text-label-secondary">
         StepFun（阶跃星辰）API Key 仅存本地服务端，永不进前端 bundle。
         {configured && ' 当前已配置。'}
       </p>
@@ -64,11 +64,11 @@ export default function SettingsPage() {
         value={apiKey}
         onChange={(event) => setApiKey(event.target.value)}
         placeholder="填入以更新（sk-...）"
-        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+        className="mt-1 w-full rounded-md border border-separator bg-surface px-3 py-2 text-sm text-label"
       />
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={onSave}>保存并校验</Button>
-        {status && <span className="text-sm text-gray-600">{status}</span>}
+        {status && <span className="text-sm text-label-secondary">{status}</span>}
       </div>
     </main>
   )
