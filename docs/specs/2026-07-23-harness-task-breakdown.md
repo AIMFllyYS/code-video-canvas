@@ -129,7 +129,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
 
 ### F0.3 — 修正 `stepfun-adapter.ts` 默认模型与 base URL
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.2
 - 允许改动范围：`src/features/ai/stepfun-adapter.ts`、`src/features/ai/stepfun-adapter.test.ts`（新建，若不存在）
 - 禁止改动：`src/features/ai/types.ts`（接口不变，只改实现内的默认值）
