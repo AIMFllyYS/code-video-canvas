@@ -703,7 +703,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.3 — `stage-runner.ts`：单阶段运行编排
 
-- 状态：☐
+- 状态：☑
 - 前置任务：D0.1, D0.2, D1.1, D1.2
 - 允许改动范围：`src/features/director/stage-runner.ts`、`stage-prompt.ts`、`runtime-repository.ts`（均新建）、对应测试及 `pipeline.ts`（仅移除空接口）
 - 禁止改动：`src/lib/queue/**`（本卡只消费队列接口，不改队列实现）
@@ -732,6 +732,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - src/features/director/runtime-repository.ts
   - src/features/director/runtime-repository.test.ts
   - src/features/director/pipeline.ts（仅删除已被 DirectorSession 取代的空 AgentRunner）
+  - src/features/director/types.ts（仅把过时的“八阶段”注释纠正为六阶段）
+  - src/features/director/index.ts（仅移除 AgentRunner 的过时 re-export）
 
   禁止改动：
   - src/lib/queue/in-process-queue.ts

@@ -86,7 +86,7 @@
     - 对应 task-breakdown：D1.2
     - _Requirements: F4（确定性红线强制点）_
 
-  - [ ] 3.5 `stage-runner.ts`：持久输入 + 类型化 prompt + 单阶段运行编排
+  - [x] 3.5 `stage-runner.ts`：持久输入 + 类型化 prompt + 单阶段运行编排
     - 对应 task-breakdown：D1.3
     - _Requirements: F2、F3、F4_
 
