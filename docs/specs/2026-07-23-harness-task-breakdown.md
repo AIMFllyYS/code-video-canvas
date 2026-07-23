@@ -1208,9 +1208,9 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
 
 ### P1.1 — B1 基础控件港口（13 个组件）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：P0.1
-- 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
+- 允许改动范围：`src/components/ui/**`（新建/按 Pencil 校正既有实现）、`src/app/playbook/registry.ts`、`src/app/globals.css`（仅补齐 Pencil Token 映射）
 - Task 规格：
   ```
   目标：用 Pencil MCP 读取 canvas.pen 中以下 13 个 reusable 组件的真实结构：
@@ -1226,6 +1226,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
   允许改动范围：
   - src/components/ui/**
   - src/app/playbook/registry.ts
+  - src/app/globals.css（仅补齐 mcp_pencil_get_variables 已确认的 Token 映射）
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过

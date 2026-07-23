@@ -8,12 +8,12 @@ export interface StatusPillProps {
   className?: string
 }
 
-const STYLES: Record<StatusPillVariant, { bg: string; dot: string; defaultLabel: string }> = {
-  pending: { bg: 'bg-fill', dot: 'bg-label-tertiary', defaultLabel: '待生成' },
-  generating: { bg: 'bg-accent-fill', dot: 'bg-accent', defaultLabel: '生成中' },
-  rendered: { bg: 'bg-success-fill', dot: 'bg-success', defaultLabel: '已渲染' },
-  cached: { bg: 'bg-teal-fill', dot: 'bg-teal', defaultLabel: '已缓存' },
-  failed: { bg: 'bg-danger-fill', dot: 'bg-danger', defaultLabel: '失败' },
+const STYLES: Record<StatusPillVariant, { bg: string; color: string; defaultLabel: string }> = {
+  pending: { bg: 'bg-fill', color: 'text-label-tertiary', defaultLabel: '待生成' },
+  generating: { bg: 'bg-accent-fill', color: 'text-accent', defaultLabel: '生成中' },
+  rendered: { bg: 'bg-success-fill', color: 'text-success', defaultLabel: '已渲染' },
+  cached: { bg: 'bg-teal-fill', color: 'text-teal', defaultLabel: '已缓存' },
+  failed: { bg: 'bg-danger-fill', color: 'text-danger', defaultLabel: '失败' },
 }
 
 /**
@@ -30,8 +30,10 @@ export function StatusPill({ variant = 'pending', label, className }: StatusPill
         className,
       )}
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full', style.dot)} />
-      <span className="text-[11px] font-medium font-sc text-label">{label ?? style.defaultLabel}</span>
+      <span className={cn('h-1.5 w-1.5 rounded-full bg-current', style.color)} />
+      <span className={cn('text-[11px] font-medium font-sc', style.color)}>
+        {label ?? style.defaultLabel}
+      </span>
     </div>
   )
 }

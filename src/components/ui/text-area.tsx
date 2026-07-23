@@ -10,7 +10,7 @@ export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
  */
 export function TextArea({ label, className, ...props }: TextAreaProps) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex w-[280px] flex-col gap-1.5', className)}>
       {label && (
         <label className="text-[13px] font-normal text-label-secondary font-sc">
           {label}

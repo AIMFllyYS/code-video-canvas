@@ -130,10 +130,10 @@
   - 对应 Goal：Track P（必须在 Task 6 之前完成）
   - _Requirements: 支撑全部 UI 相关需求（F6、F8~F14 的界面呈现），不直接对应单个功能编号_
 
-  - [ ] 5.1 依赖补全：`lucide-react` + 自动布局库
+  - [x] 5.1 依赖补全：`lucide-react` + 自动布局库
     - 对应 task-breakdown：P0.1
 
-  - [ ] 5.2 B1 基础控件港口（13 个组件）
+  - [x] 5.2 B1 基础控件港口（13 个组件）
     - 对应 task-breakdown：P1.1
 
   - [ ] 5.3 B2 反馈组件港口（Toast / Dialog / EmptyState）

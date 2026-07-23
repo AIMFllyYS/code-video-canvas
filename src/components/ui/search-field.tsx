@@ -12,7 +12,7 @@ export function SearchField({ className, ...props }: SearchFieldProps) {
   return (
     <div
       className={cn(
-        'inline-flex h-7 items-center gap-1.5 rounded-md bg-fill px-2.5 text-label-tertiary',
+        'inline-flex h-7 w-[220px] items-center gap-1.5 rounded-md bg-fill px-2.5 text-label-tertiary',
         className,
       )}
     >
