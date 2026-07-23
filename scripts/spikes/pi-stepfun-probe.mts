@@ -39,7 +39,7 @@ async function runProbe() {
   console.log('Environment configuration detected:');
   console.log(`- STEPFUN_BASE_URL: ${baseUrl}`);
   console.log(`- STEPFUN_CHAT_MODEL: ${chatModel}`);
-  console.log(`- STEPFUN_API_KEY: ${apiKey ? '***' + apiKey.slice(-6) : 'not defined'}`);
+  console.log(`- STEPFUN_API_KEY: ${apiKey ? 'configured' : 'not defined'}`);
 
   if (!apiKey) {
     console.error('Error: STEPFUN_API_KEY is not defined in the environment.');
@@ -137,7 +137,7 @@ async function runProbe() {
     }
   } catch (error) {
     console.error('\nFAILURE: Probe failed with exception:');
-    console.error(error);
+    console.error(error instanceof Error ? error.message : 'Unknown probe error');
     process.exit(1);
   }
 }
