@@ -10,7 +10,9 @@
 
 - **本地优先 / 无服务器**：全部在运行者本机运行，AI 用用户自带 StepFun Key 直连。
 - **Demo 阶段**：标准全栈 Next.js 单应用，快速跑通最小闭环。不做登录/远程存储/限流/安全加固/Electron 打包（均后置，见 PRD §9）。
-- 画布是**运行时动态生成拓扑的 DAG**，不是人工手动拖拽连线的静态工作流：语义拆分节点跑完后，程序化物化出 N 条并行"分镜通道"（每通道 5 个节点：脚本/代码/音效/字幕/验收），最终收敛到配乐 + 合并导出。详见 [Harness 总纲 §4](./docs/specs/2026-07-23-ai-development-harness.md#4-三层节点体系核心心智模型)。
+- 画布是**运行时动态生成拓扑的 DAG**，交互对标 Dify/Coze 一类工作流平台（可平移/缩放/多页面导航），不是人工手动拖拽连线的静态工作流：语义拆分节点跑完后，程序化物化出 N 条并行"分镜通道"（每通道 5 个节点：脚本/代码/音效/字幕/验收），最终收敛到配乐 + 合并导出。详见 [Harness 总纲 §4](./docs/specs/2026-07-23-ai-development-harness.md#4-三层节点体系核心心智模型)。
+- `docs/video-director/` 是**参考语料库，不是运行时依赖**：其方法论已/正被移植为本项目原生代码（`features/director/prompts/`+`schemas/`），应用运行时不读取该目录。**不使用 Pi 的 Skills 机制**挂载它。
+- 所有 UI 视觉组件的唯一来源是 `docs/designs/canvas.pen`（通过 Pencil MCP 一比一移植），唯一登记处是 `/playbook`（`src/app/playbook/registry.ts`）；页面代码只允许 `import` 已登记组件，禁止重复实现视觉原语。
 - 完整需求见 [PRD](./docs/specs/2026-07-23-prd-code-video-canvas.md)，架构见 [平台架构设计](./docs/designs/2026-07-23-platform-architecture-design.md)，施工方法见 [Harness 总纲](./docs/specs/2026-07-23-ai-development-harness.md) 与 [任务拆解清单](./docs/specs/2026-07-23-harness-task-breakdown.md)。
 
 ## Tech Stack
@@ -19,11 +21,12 @@
 - **React**: ≥19.2 · **TypeScript**: strict mode（禁 `any`）
 - **Package Manager**: pnpm · **Node**: 22.11.0
 - **Styling**: Tailwind CSS + Design Token 体系（见 [设计系统清单](./docs/designs/2026-07-23-design-system-inventory.md)）
-- **图标**: Lucide（白名单制，禁 emoji，见设计系统 §6）
-- **画布**: React Flow（`@xyflow/react`）
+- **图标**: `lucide-react`（白名单制，禁 emoji，见设计系统 §6）
+- **画布**: React Flow（`@xyflow/react`）+ `@dagrejs/dagre`（自动布局）
+- **设计源**: `docs/designs/canvas.pen`，经 Pencil MCP 工具链一比一移植为 `src/components/*`（见 Harness 总纲 §5.6，Track P）
 - **渲染**: HyperFrames 思想 — Playwright（自带 Chromium）逐帧 `seek` + CDP 截帧 → `ffmpeg-static`
 - **动画**: GSAP（`paused` timeline + 每帧 `seek`，确定性）
-- **Agent**: Pi Agent（`@earendil-works/pi-agent-core` + `pi-ai`），挂载 `docs/video-director/` 作为 Skill 源，编码 video-director 六阶段（应用层统一口径，见 Harness 总纲 §6.5）
+- **Agent**: Pi Agent（`@earendil-works/pi-agent-core` + `pi-ai`）仅作裸 tool-calling 循环引擎，**不使用其 Skills/Extensions 加载机制**；`docs/video-director/` 的方法论已移植为 `features/director/prompts/`+`schemas/` 原生代码（见 Harness 总纲 §3），编码 video-director 六阶段（应用层统一口径，见 Harness 总纲 §6.5）
 - **AI**: StepFun（阶跃星辰，OpenAI 兼容端点，用户自带 Key）
 - **存储**: SQLite（Drizzle ORM）+ 本地文件系统（经 StorageAdapter）
 - **队列**: 进程内持久队列（状态落 SQLite，可恢复）

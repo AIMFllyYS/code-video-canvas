@@ -25,11 +25,12 @@
 | 画布 | React Flow（`@xyflow/react`） | — |
 | 渲染 | HyperFrames 思想（Playwright/Chromium 逐帧 seek → `ffmpeg-static`） | — |
 | 动画 | GSAP | paused + frame seek（确定性） |
-| Agent | Pi Agent（`@earendil-works/pi-agent-core` + `pi-ai`） | 挂载 video-director 技能包 |
+| Agent | Pi Agent（`@earendil-works/pi-agent-core` + `pi-ai`） | 裸 tool-calling 引擎；video-director 方法论已移植为原生代码，不挂载 Skill |
 | AI | StepFun（阶跃星辰，OpenAI 兼容） | 用户自带 Key |
 | 存储 | SQLite（Drizzle）+ 本地文件系统 | — |
 | 样式 | Tailwind CSS + Design Token 体系 | 禁硬编码颜色 |
-| 图标 | Lucide（白名单制） | 禁 emoji |
+| 图标 | `lucide-react`（白名单制） | 禁 emoji |
+| 画布布局 | `@dagrejs/dagre` | 分镜通道自动布局 |
 | 包管理 | pnpm | — |
 | 运行时 | Node.js | 22.11.0 |
 
