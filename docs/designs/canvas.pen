@@ -3501,8 +3501,8 @@
     {
       "type": "note",
       "id": "h2em9",
-      "x": 336,
-      "y": 3085,
+      "x": 44,
+      "y": 3145,
       "name": "B3 Note",
       "width": 280,
       "height": 32,
@@ -17663,7 +17663,7 @@
     {
       "type": "frame",
       "id": "APP7J",
-      "x": 400,
+      "x": 401,
       "y": 3113,
       "name": "Sidebar",
       "reusable": true,
