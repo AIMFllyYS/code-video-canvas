@@ -14,7 +14,7 @@
 - **Demo 优先、快速跑通**：先做能跑的最小闭环，不做登录、限流、安全加固、远程存储。
 - **AI 统一走 StepFun（阶跃星辰）**：OpenAI 兼容端点，**用户自带 API Key**。
 - **数据本地存储**。
-- 视频渲染沿用 **HyperFrames 思想**：单文件 HTML + `data-*` 时序 + Chromium 逐帧 seek 截图 → FFmpeg。
+- 视频渲染沿用 **HyperFrames 思想**：单文件 HTML 暴露 `window.__CVC_RENDER__@v1` 的 frame/fps seek 合同，Chromium 页面池逐帧截图到磁盘序列 → FFmpeg 流式编码。
 
 ## 方案对比（浓缩关键决策）
 
@@ -78,7 +78,8 @@ src/
 
 ### 渲染执行（本机、服务端）
 
-- 服务端用 Playwright（自带 Chromium）加载 shot HTML，逐帧 `seek` 暂停时间线 → CDP 截帧 → `ffmpeg-static` 编码。
+- 服务端用 Playwright（自带 Chromium）加载 shot HTML；每个 page 串行 seek、有限 page 池有界并发，PNG 落隔离临时目录后由 `ffmpeg-static` 流式编码，避免全片帧 Buffer 常驻内存。
+- Render repository 负责持久输入与 artifact 顺序；renderer/export service 是可信编排层。API 不拼路径、不查 artifact 表，Director/Render handler 由同一 `instrumentation.ts` 注册后启动单例队列。
 - 渲染作业走**进程内队列**（状态持久化到 SQLite，崩溃可恢复），有界并发（≈本机核数），内容哈希缓存 → 只重渲变化节点。
 
 ### 存储
@@ -141,3 +142,4 @@ src/
 | 2026-07-23（修订三） | 收紧 Agent 权限：校验 Tool 只读诊断，artifact 提交由 stage runner 专用服务执行，模型不控制项目归属与路径。 |
 | 2026-07-23（修订四） | 明确 Demo 队列非原子入库的失败补偿：pending 后 enqueue 失败必须转 failed 并记录错误；未来可替换事务 outbox。 |
 | 2026-07-23（修订五） | 领域 enqueue 增加 project/node/stage/状态前置校验，阻止无效异步作业被 API 当作成功接受。 |
+| 2026-07-23（修订六） | 重构 Render：显式 shot runtime、磁盘帧序列与 session 池、内容寻址 cache、可信 repository/export service 和统一后台启动。 |

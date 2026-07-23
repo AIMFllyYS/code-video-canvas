@@ -52,6 +52,11 @@ app  →  features  →  lib
 - 新产物按“复验同一内容 → StorageAdapter → SQLite 索引”提交；索引失败必须补偿删除文件。不得相信调用方传入的“已校验”布尔值。
 - Agent Tool 不得接收并决定 artifact 的 `projectId` / `nodeId` / `key`；这些授权字段只能由 stage runner 的持久执行上下文提供给可信写服务。
 - 每镜以 shot 契约（HTML + `data-*` + token）为唯一视觉合同，可从上游重建。
+- shot HTML 必须暴露 `window.__CVC_RENDER__ = { version: 1, seek(frame, fps) }`；
+  同一页面只允许串行 seek。帧序列落隔离临时目录并显式 cleanup，禁止用
+  `Buffer[]` 常驻整段 1080p 视频。
+- Render/API 遵循与 Director 相同的信任边界：路由只调用领域 enqueue/export
+  service，项目归属、artifact 路径与稳定顺序由 repository/可信服务决定。
 
 ## 6. 演进策略
 

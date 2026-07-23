@@ -218,11 +218,14 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 | 文件 | 职责 | 备注 |
 |---|---|---|
-| `renderer.ts` | 顶层接口（已存在，当前是 throw NotImplemented） | 改为编排 `frame-capture.ts`+`encode.ts`+`cache.ts`，本身不直接操作 Playwright/ffmpeg |
-| `frame-capture.ts`（新增） | 单帧截图：加载 shot HTML → GSAP `seek(frame/fps)` → CDP 截图 | 最小可测试单元，Tier A 验收锚点 |
-| `encode.ts`（新增） | 帧序列 → ffmpeg 编码 mp4 | 独立于截图逻辑，方便未来替换编码参数 |
-| `cache.ts`（新增） | 内容哈希 → 渲染缓存查找/写入 | 依赖 §6 的 `contentHash` 字段，是 F5 的核心 |
-| `concat.ts`（新增） | 终局合并导出：多个已渲染 mp4 按序 + 全局音乐/转场 → 终片 | 只做拼接，不重新逐帧渲染（对齐 §4.1 性能设计） |
+| `frame-capture.ts`（新增） | 实现 `window.__CVC_RENDER__@v1` 合同：页面加载一次，多次 frame/fps seek + CDP 截图 | session 显式 close；同一 page 禁止并发 seek |
+| `frame-sequence.ts`（新增） | 用有限 capture session 池把 PNG 写入隔离临时目录，返回可 cleanup 的磁盘句柄 | 禁止整段 1080p 帧序列常驻 Buffer[] |
+| `encode.ts`（新增） | 从磁盘 pattern 流式读取帧，以固定/bitexact 参数编码 mp4 | 临时输出 + 原子 rename |
+| `cache.ts`（新增） | 版本化内容哈希 → render-mp4 artifact，命中时复核 StorageAdapter.exists | 依赖 §6 的 contentHash，是 F5 核心 |
+| `repository.ts`（新增） | Render context、节点/产物顺序与 artifact 指针的持久化端口 | 封装 Drizzle，不做渲染编排 |
+| `renderer.ts` | 可信顶层编排：HTML 守卫 → cache → frame sequence → encode → Storage/索引 | finally 清理临时资源，不直接暴露给路由 |
+| `queue-handler.ts`（新增） | render-shot 入队/状态机/失败补偿与 handler | 与 Director 共用单例队列和 instrumentation 启动 |
+| `concat.ts` + `export-service.ts`（新增） | 已渲染 mp4 稳定排序后流拷贝拼接，可选混入配乐并提交终片 | 不重新逐帧渲染；未完成节点结构化返回 |
 
 ### 5.5 `features/audio/`（字幕/配音/音效/配乐）
 
@@ -266,8 +269,8 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 | `api/canvas/fan-out` | 物化分镜通道 | `features/canvas/fan-out.ts` |
 | `api/canvas/nodes/[id]/status` | 查询/推进节点状态 | `features/canvas/status.ts` |
 | `api/director/stage` | 触发一次阶段运行 | `features/director/queue-handler.ts` 的 `enqueueDirectorStage()` |
-| `api/render` | 触发单镜渲染 | `features/render/renderer.ts` |
-| `api/render/export` | 触发合并导出 | `features/render/concat.ts` |
+| `api/render` | 触发单镜渲染 | `features/render/queue-handler.ts` 的 `enqueueRenderShot()` |
+| `api/render/export` | 触发合并导出 | `features/render/export-service.ts` |
 | `api/projects` | 项目 CRUD（已存在） | `features/canvas/actions.ts`/`queries.ts` |
 | `api/settings` | StepFun Key 等设置（已存在） | `features/ai/stepfun-adapter.ts` |
 
@@ -468,3 +471,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订六） | **Agent 写权限收口**：`write-artifact.ts` 从 Pi Tool 调整为 stage runner 专用可信应用服务；Agent 只保留诊断 Tool，避免模型决定业务归属、路径或造成双写。 |
 | 2026-07-23（修订七） | **入队失败补偿**：明确节点置 pending 与队列 enqueue 非原子时的补偿路径，失败节点必须落 failed + error，禁止永久悬挂 pending。 |
 | 2026-07-23（修订八） | **入队前置校验**：领域 enqueue 在改状态前校验 project/node/stage/状态组合，API 返回 jobId 才表示作业已被领域规则接受。 |
+| 2026-07-23（修订九） | **Render 资源与边界重构**：定义 `__CVC_RENDER__@v1`、磁盘 FrameSequence、可信 Render repository/export service、统一后台启动与内容寻址缓存，替代全帧内存和路由查库方案。 |

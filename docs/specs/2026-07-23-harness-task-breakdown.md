@@ -858,9 +858,12 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 - 禁止改动：`renderer.ts`（顶层编排留到 R1.5）
 - Task 规格：
   ```
-  目标：实现 frame-capture.ts，导出 captureFrame(htmlPath, frame, fps):
-  Promise<Buffer>：用 Playwright 打开该 HTML，在 page 上执行对应 GSAP 时间轴的
-  seek(frame/fps)，通过 CDP 截图返回 PNG buffer。
+  目标：实现 frame-capture.ts，定义唯一 shot runtime 合同
+  window.__CVC_RENDER__ = { version: 1, seek(frame, fps) }。导出
+  openFrameCapture(htmlPath, viewport?)（页面加载一次、可多次 seek/capture、
+  显式 close）与便捷函数 captureFrame(htmlPath, frame, fps): Promise<Buffer>
+  （内部打开/关闭 session）。用 Playwright 等待 runtime 就绪，调用 seek 后通过
+  CDP 截图返回 PNG；缺少/版本不匹配的 runtime 必须明确失败。
 
   前置任务：F0.6, F0.7
 
@@ -878,6 +881,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
         （确定性验证）
   - [ ] 单测：frame=0 与 frame=N（N 足够大）截图哈希不同（确实随帧变化）
   - [ ] 截图函数使用后正确关闭 Playwright browser/page，不残留进程
+  - [ ] 单测：缺少 `window.__CVC_RENDER__` 或 version 不匹配时明确失败
   - [ ] lib/determinism 的规则扫描对 fixture HTML 本身应为零违规（用它验证
         F0.7 产出的 checkSource 函数）
 
@@ -894,10 +898,12 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 - 禁止改动：`frame-capture.ts`
 - Task 规格：
   ```
-  目标：实现 cache.ts（导出 lookupCache(hash)/writeCache(hash, result) 基于
-  artifacts 表按 contentHash 查找/写入已渲染产物）与 frame-sequence.ts（导出
-  captureSequence(htmlPath, totalFrames, fps): 循环调用 captureFrame 产出帧
-  Buffer 数组，支持有界并发）。
+  目标：实现 cache.ts（按 artifacts.contentHash 查找/登记 render-mp4，命中时
+  还要用 StorageAdapter.exists 排除陈旧指针）与 frame-sequence.ts。后者导出
+  captureSequence(htmlPath, totalFrames, fps, options?)，使用有限数量的
+  FrameCaptureSession（每个 page 串行 seek，多个 page 有界并发），把 PNG
+  按 frame-%08d.png 写入隔离临时目录，返回 FrameSequence 句柄
+  { directory, pattern, totalFrames, cleanup() }，禁止把整段 1080p 帧序列常驻内存。
 
   前置任务：R1.1
 
@@ -911,11 +917,11 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit 通过
-  - [ ] 单测：相同 contentHash 第二次查找命中缓存，不重新截图（mock 验证
-        captureFrame 未被调用）
+  - [ ] 单测：相同 contentHash 命中有效 artifact；文件已丢失时视为 cache miss
   - [ ] 单测：captureSequence 并发数受限（不超过配置的上限，验证方式可用计数器
         mock）
   - [ ] 单测：中途某一帧截图失败时，整体操作失败并给出是第几帧失败的明确信息
+  - [ ] 成功/失败都可调用 cleanup 清理精确临时目录，不遗留帧文件
 
   不在本任务范围内：
   - 不实现 ffmpeg 编码（R1.3 的范围）
@@ -929,9 +935,10 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 - 禁止改动：`frame-sequence.ts`、`cache.ts`
 - Task 规格：
   ```
-  目标：实现 encode.ts，导出 encodeToMp4(frames: Buffer[], fps, outputPath):
-  Promise<string>：调用 ffmpeg-static 二进制，将帧序列编码为确定性参数的 mp4
-  （固定 CRF/预设，不使用任何随机化编码参数），写入 outputPath 并返回该路径。
+  目标：实现 encode.ts，导出 encodeToMp4(sequence: FrameSequence, fps,
+  outputPath): Promise<string>：调用 ffmpeg-static 从磁盘 pattern 流式读取帧，
+  以固定 CRF/预设/单线程/bitexact/剥离元数据参数编码 mp4，写入 outputPath
+  并返回该路径；不得重新把全部帧读回 Buffer[]。
 
   前置任务：R1.2
 
@@ -959,20 +966,26 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 - 状态：☐
 - 前置任务：R1.3
-- 允许改动范围：`src/features/render/concat.ts`（新建）、测试文件
+- 允许改动范围：`src/features/render/concat.ts`、`repository.ts`、`export-service.ts`（均新建）及对应测试
 - 禁止改动：`encode.ts`（复用而非重写编码逻辑）
 - Task 规格：
   ```
-  目标：实现 concat.ts，导出 concatExport(mp4Paths: string[], musicPath, 
-  outputPath): Promise<string>：用 ffmpeg 的 concat 模式按序拼接已渲染的分镜
-  mp4，叠加全局配乐轨，不重新逐帧渲染任何分镜内容（只做流拷贝级拼接 + 音频
-  混流）。
+  目标：实现 concat.ts，导出 concatExport(mp4Paths: string[], musicPath:
+  string | null, outputPath): Promise<string>：用 ffmpeg concat demuxer 按序
+  流拷贝已渲染分镜视频；有配乐才混入音轨（视频仍 copy），无配乐也可导出。
+  同时实现 repository.ts + export-service.ts：按项目画布顺序收集已完成分镜的
+  render-mp4 artifact，发现任一分镜通道未 success 则返回结构化 incomplete IDs；
+  完整时调用 concat、经 StorageAdapter 提交终片并登记 artifact。路由不查数据库。
 
   前置任务：R1.3
 
   允许改动范围：
   - src/features/render/concat.ts
   - src/features/render/concat.test.ts
+  - src/features/render/repository.ts
+  - src/features/render/repository.test.ts
+  - src/features/render/export-service.ts
+  - src/features/render/export-service.test.ts
 
   禁止改动：
   - src/features/render/encode.ts
@@ -983,6 +996,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
         （允许合理误差范围，需在测试中说明误差容忍逻辑）
   - [ ] 单测：拼接函数不重新调用任何逐帧截图/单镜编码相关函数（mock 验证零调用）
   - [ ] 拼接失败时给出明确的失败分镜索引或阶段信息
+  - [ ] export service 按 laneKey 稳定排序；未完成节点返回完整 ID 列表且不调用 ffmpeg
 
   不在本任务范围内：
   - 不实现转场特效的编排逻辑（若 PRD F13 需要转场，作为 Track A 音频/合成
@@ -993,14 +1007,19 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 - 状态：☐
 - 前置任务：R1.2, R1.3
-- 允许改动范围：`src/features/render/renderer.ts`（替换现有 throw NotImplemented 实现）、`queue-handler.ts`（新建）
+- 允许改动范围：`src/features/render/renderer.ts`（替换占位）、`queue-handler.ts`（新建）、`repository.ts`、`types.ts`、`index.ts`、`src/instrumentation.ts` 及对应测试
 - 禁止改动：`frame-sequence.ts`、`encode.ts`、`cache.ts`（本卡只编排，不重写底层）
 - Task 规格：
   ```
-  目标：将 renderer.ts 的 HyperframesRenderer.render() 从 throw NotImplemented
-  改为真实编排：查缓存（cache.ts）→ 未命中则截帧序列（frame-sequence.ts）→
-  编码（encode.ts）→ 写 artifact + 更新节点状态（复用 features/canvas/status.ts）。
-  同时新建 queue-handler.ts 注册 kind='render-shot' 处理器。
+  目标：扩展 RenderJob 为可信内部合同
+  { projectId,nodeId,shotId,htmlKey,frames,seed? }（Renderer 方法签名仍为
+  render(job): Promise<RenderResult>）。renderer.ts 编排：读取 StorageAdapter
+  HTML → checkSource 强制扫描 → 计算版本化内容哈希 → 查 cache → 未命中则
+  captureSequence → encode 临时 mp4 → StorageAdapter 提交 → cache 登记；
+  finally 清理帧序列/临时文件。queue-handler.ts 负责 render-shot 入队前校验、
+  pending 状态、处理器加载持久 render context、running→success|failed 与
+  enqueue 失败补偿。根 instrumentation.ts 同时注册 Director/Render handler
+  后只启动同一个队列。
 
   前置任务：R1.2, R1.3
 
@@ -1008,6 +1027,11 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
   - src/features/render/renderer.ts
   - src/features/render/queue-handler.ts
   - src/features/render/renderer.test.ts
+  - src/features/render/queue-handler.test.ts
+  - src/features/render/repository.ts（补充 render context 查询）
+  - src/features/render/types.ts
+  - src/features/render/index.ts
+  - src/instrumentation.ts
 
   禁止改动：
   - src/features/render/frame-sequence.ts
@@ -1021,6 +1045,8 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
         正确回退节点状态为 failed
   - [ ] Renderer 接口签名保持不变（render(job): Promise<RenderResult>），不破坏
         既有调用方类型契约
+  - [ ] 确定性守卫在截图前执行；失败时零截图、零编码、零 artifact
+  - [ ] 成功/失败均清理临时帧目录；enqueue/handler 状态机不留下 pending/running
 
   不在本任务范围内：
   - 不实现触发渲染的 API 路由（R1.6 的范围）
@@ -1030,7 +1056,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 - 状态：☐
 - 前置任务：R1.5, R1.4
-- 允许改动范围：`src/app/api/render/route.ts`（新建）、`src/app/api/render/export/route.ts`（新建）
+- 允许改动范围：`src/app/api/render/route.ts`、`src/app/api/render/export/route.ts` 及对应测试（均新建）
 - 禁止改动：`src/features/render/**`
 - Task 规格：
   ```
@@ -1044,6 +1070,8 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
   允许改动范围：
   - src/app/api/render/route.ts
   - src/app/api/render/export/route.ts
+  - src/app/api/render/route.test.ts
+  - src/app/api/render/export/route.test.ts
 
   禁止改动：
   - src/features/render/**
@@ -1052,8 +1080,8 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] /api/render 请求体校验失败返回 400，节点不存在返回 404
-  - [ ] /api/render/export 在存在未完成通道节点时返回 409 + 节点 ID 列表，不
-        静默跳过未完成分镜
+  - [ ] /api/render/export 调用可信 export service；存在未完成通道节点时返回
+        409 + 完整节点 ID 列表，不静默跳过未完成分镜
   - [ ] 两个路由文件均不超过 50 行
 
   不在本任务范围内：
@@ -1617,3 +1645,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订九） | **Agent 写权限收口**：D1.2 的 write-artifact 改为 stage runner 专用应用服务，Pi 仅获得诊断 Tool，消除模型决定归属/路径与重复落盘风险。 |
 | 2026-07-23（修订十） | **入队非原子补偿**：D1.4 明确 enqueue 失败必须把已 pending 节点补偿到 failed 并记录错误，避免不可恢复的悬挂状态。 |
 | 2026-07-23（修订十一） | **入队前置校验**：D1.4 在改状态前验证 project/node/stage/可入队状态，确保 API 的 jobId 表示领域规则已接受。 |
+| 2026-07-23（修订十二） | **Render 链路重构**：R1.1–R1.6 增加显式 shot runtime、复用 capture session、磁盘帧序列、可信 Render repository/export service、统一 instrumentation 与内容寻址提交，消除内存爆炸和 API 无输入来源问题。 |

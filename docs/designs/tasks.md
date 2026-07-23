@@ -102,11 +102,11 @@
   - 对应 Goal：Track R（前置：F0.6、F0.7 完成）
   - _Requirements: F4、F5、F9_
 
-  - [ ] 4.1 `frame-capture.ts`：单帧截图
+  - [ ] 4.1 `frame-capture.ts`：shot runtime 合同 + 可复用截图 session
     - 对应 task-breakdown：R1.1
     - _Requirements: F4_
 
-  - [ ] 4.2 帧序列生成与内容哈希缓存
+  - [ ] 4.2 磁盘帧序列、有限 session 池与内容哈希缓存
     - 对应 task-breakdown：R1.2
     - _Requirements: F5_
 
@@ -114,11 +114,11 @@
     - 对应 task-breakdown：R1.3
     - _Requirements: F4_
 
-  - [ ] 4.4 `concat.ts`：终局合并导出
+  - [ ] 4.4 `concat.ts` + 可信 export service：终局合并导出
     - 对应 task-breakdown：R1.4
     - _Requirements: F9、F13（转场/剪辑）_
 
-  - [ ] 4.5 `renderer.ts`：顶层编排 + 队列接入
+  - [ ] 4.5 `renderer.ts`：可信顶层编排 + 单例队列接入
     - 对应 task-breakdown：R1.5
     - _Requirements: F4、F5_
 
