@@ -6,6 +6,7 @@ import { getDb } from '@/lib/db/client'
 import type { Db } from '@/lib/db/migrate'
 import { artifacts, canvasNodes, projects } from '@/lib/db/schema'
 import type { PipelineStage } from './types'
+import type { PreparedStageResult } from './stage-result'
 
 const storageKeySchema = z
   .string()
@@ -129,6 +130,30 @@ export class DirectorRuntimeRepository {
     this.db
       .update(canvasNodes)
       .set({ data: { ...node.data, directorError: { stage, message } } })
+      .where(eq(canvasNodes.id, nodeId))
+      .run()
+  }
+
+  recordStageOutput(
+    nodeId: string,
+    result: PreparedStageResult,
+    artifactId: string
+  ): void {
+    const node = this.db
+      .select({ data: canvasNodes.data })
+      .from(canvasNodes)
+      .where(eq(canvasNodes.id, nodeId))
+      .get()
+    if (!node) throw new Error(`节点不存在：${nodeId}`)
+    this.db
+      .update(canvasNodes)
+      .set({
+        data: {
+          ...node.data,
+          directorArtifactId: artifactId,
+          ...(result.renderSpec ? { renderSpec: result.renderSpec } : {}),
+        },
+      })
       .where(eq(canvasNodes.id, nodeId))
       .run()
   }

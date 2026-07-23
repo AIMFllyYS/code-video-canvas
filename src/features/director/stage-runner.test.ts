@@ -42,6 +42,7 @@ function createHarness(
     recordStageError: vi.fn(() => {
       calls.push('error')
     }),
+    recordStageOutput: vi.fn(),
   }
   const transitionNodeStatus = vi.fn((_nodeId: string, status: string) => {
     calls.push(status)
@@ -50,14 +51,29 @@ function createHarness(
     calls.push('artifact')
     return { id: 'artifact-1', storageKey: 'director/output.txt', contentHash: 'hash' }
   })
+  const prepareResult = vi.fn((_context, content: string) => ({ content }))
+  const commitResult = vi.fn(() => {
+    calls.push('commit')
+  })
   const runner = createStageRunner({
     repository,
     transitionNodeStatus,
     createSession: vi.fn(async () => session),
     buildPrompt: vi.fn(() => '类型化阶段提示词'),
     writeArtifact,
+    prepareResult,
+    commitResult,
   })
-  return { calls, repository, transitionNodeStatus, session, writeArtifact, runner }
+  return {
+    calls,
+    repository,
+    transitionNodeStatus,
+    session,
+    writeArtifact,
+    prepareResult,
+    commitResult,
+    runner,
+  }
 }
 
 describe('createStageRunner', () => {
@@ -71,6 +87,7 @@ describe('createStageRunner', () => {
       'pointer',
       'run',
       'artifact',
+      'commit',
       'close',
       'success',
     ])
@@ -123,6 +140,8 @@ describe('createStageRunner', () => {
         throw inputError
       }),
       writeArtifact: harness.writeArtifact,
+      prepareResult: harness.prepareResult,
+      commitResult: harness.commitResult,
     })
 
     await expect(runner('project-1', 'node-1', 'INGEST')).rejects.toBe(inputError)
@@ -145,6 +164,8 @@ describe('createStageRunner', () => {
       createSession,
       buildPrompt: vi.fn(() => '不会构建'),
       writeArtifact: harness.writeArtifact,
+      prepareResult: harness.prepareResult,
+      commitResult: harness.commitResult,
     })
 
     await expect(runner('project-1', 'node-1', 'INGEST')).rejects.toThrow('pending')

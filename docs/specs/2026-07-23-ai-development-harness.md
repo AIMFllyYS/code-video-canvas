@@ -99,6 +99,15 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 - `runStage()` 只接受状态已经为 `pending` 的节点并执行 `pending → running → success|failed`；`enqueueDirectorStage()` 必须先验证 project/node 归属、stage 一致且状态属于 `idle|failed|stale`，再把节点置为 `pending`，不得绕过 C1.3 状态机直接 `idle → running`。Demo 的队列入库与节点状态暂非同一事务：若置 pending 后 enqueue 失败，入口必须补偿为 `pending → running → failed` 并记录错误，使节点可重试而不永久悬挂；未来可在不改领域 API 的前提下换成事务 outbox。
 - `runtime-repository.ts` 是 Director 的持久化端口：负责读取项目/节点执行上下文、登记既有 artifact 指针及记录结构化错误；`stage-runner.ts` 负责跨模块编排但不直接操作 Drizzle。阶段输出仍必须经过 D1.2 的写入门禁后才可登记。
 
+#### 3.5.1 阶段结果提交协议（U1.8 前置架构纠正）
+
+模型回复不是业务状态，必须依次经过“**类型化归一 → 产物门禁 → 应用副作用提交 → 节点 success**”：
+
+- Demo `INGEST` 只允许返回严格的 `{scriptUnits}` JSON。音频 manifest/allocation 必须由音频领域依据实测媒体产生，禁止模型虚构时长。归一化后由可信应用层生成稳定的 `S001...` 分镜 ID，并调用 Canvas fan-out 在事务内物化 `N×5` 通道；源 unit 同步写入通道节点作为可追溯输入。
+- `FABRICATE` 只提供经确定性守卫验证的 HTML。`renderSpec` 不接受模型自由输出：应用层从已校验的 `audioAllocation` 派生 fps/帧数，以固定 Demo 画幅和 project/node/shot 派生 seed，随后写入 `canvas_nodes.data.renderSpec`。
+- 任一归一化、产物写入或副作用提交失败，节点都必须进入 failed，不得先标 success。副作用提交后才能关闭会话并推进 success。
+- `stage-result.ts` 只做纯归一化与可信元数据派生；`stage-result-committer.ts` 通过 Canvas 公开入口和 Director repository 提交业务状态。stage runner 继续不直接操作 Drizzle。
+
 ### 3.6 与 `features/director` 现有骨架的关系
 
 `pipeline.ts` 只保留阶段元数据，不再声明一套平行的 `AgentRunner` 抽象；运行契约以 `pi-session.ts` 的项目原生 `DirectorSession` 为唯一来源。具体实现由 `pi-session.ts` 组合 Pi `Agent` 与 `JsonlSessionRepo`，但不把 Pi 内部类型泄漏到 `features/director` 外部。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
@@ -482,6 +491,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订三） | **会话边界细化**：新增 `DirectorSessionStore`，明确 StorageAdapter 分配根目录、JsonlSessionRepo 提供追加式文件语义、Agent `message_end` 单写入点、恢复注入与 SQLite 相对指针规则。 |
 | 2026-07-23（修订四） | **Tool 注入边界补齐**：`DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，在 pi-session 内适配 Pi Tool，供 stage-runner 挂载阶段工具且不向领域外泄漏 Pi 类型。 |
 | 2026-07-23（修订五） | **D1.3 执行契约补齐**：新增 `canvas_nodes.data.directorInput`、`stage-prompt.ts` 与 `runtime-repository.ts` 边界；明确 enqueue 负责 pending、runner 只执行 pending→running；Next 启动改用根 `instrumentation.ts`。 |
+| 2026-07-24（修订九） | **阶段结果提交缺口**：新增类型化归一与副作用提交协议；Demo INGEST 不再让模型猜音频数据，成功结果必须物化分镜通道；FABRICATE 的 renderSpec 改由可信应用层从 allocation 确定性派生。 |
 | 2026-07-23（修订六） | **Agent 写权限收口**：`write-artifact.ts` 从 Pi Tool 调整为 stage runner 专用可信应用服务；Agent 只保留诊断 Tool，避免模型决定业务归属、路径或造成双写。 |
 | 2026-07-23（修订七） | **入队失败补偿**：明确节点置 pending 与队列 enqueue 非原子时的补偿路径，失败节点必须落 failed + error，禁止永久悬挂 pending。 |
 | 2026-07-23（修订八） | **入队前置校验**：领域 enqueue 在改状态前校验 project/node/stage/状态组合，API 返回 jobId 才表示作业已被领域规则接受。 |

@@ -1660,6 +1660,11 @@ Goal 2：完成 Track U 的 U1.5~U1.8（含 U1.6a 全局主题补充卡；导出
   Key 完成一次真实 AI 调用的功能性验证（不要求视觉效果好，只验证链路不报错、
   产物格式正确）。
 
+  U1.8 前置架构校正：若走查发现 INGEST 成功结果没有物化分镜，或 FABRICATE
+  成功结果没有形成 Render 可消费的可信 renderSpec，应先修正阶段结果提交协议，
+  并同步总纲、平台架构与 AGENTS.md。校正后的顺序必须是“类型化归一→artifact
+  门禁→应用副作用提交→success”；Demo INGEST 禁止让模型猜测音频数据。
+
   前置任务：U1.1, U1.2, U1.3, U1.4, U1.5, U1.6, U1.7
 
   完成条件：
@@ -1705,3 +1710,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（含 U1.6a 全局主题补充卡；导出
 | 2026-07-23（修订十） | **入队非原子补偿**：D1.4 明确 enqueue 失败必须把已 pending 节点补偿到 failed 并记录错误，避免不可恢复的悬挂状态。 |
 | 2026-07-23（修订十一） | **入队前置校验**：D1.4 在改状态前验证 project/node/stage/可入队状态，确保 API 的 jobId 表示领域规则已接受。 |
 | 2026-07-23（修订十二） | **Render 链路重构**：R1.1–R1.6 增加显式 shot runtime、复用 capture session、磁盘帧序列、可信 Render repository/export service、统一 instrumentation 与内容寻址提交，消除内存爆炸和 API 无输入来源问题。 |
+| 2026-07-24（修订十三） | **U1.8 暴露的阶段提交断点**：补充类型化阶段结果协议；INGEST 成功必须事务性物化分镜通道，FABRICATE renderSpec 必须由可信 allocation 与上下文派生，禁止“模型返回即 success”。 |

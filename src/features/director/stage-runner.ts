@@ -4,6 +4,11 @@ import { transitionNodeStatus } from '@/features/canvas/status'
 import { createDirectorSession, type DirectorSession, type DirectorTool } from './pi-session'
 import { DirectorRuntimeRepository, type DirectorStageContext } from './runtime-repository'
 import { buildStagePrompt } from './stage-prompt'
+import { commitStageResult } from './stage-result-committer'
+import {
+  prepareStageResult,
+  type PreparedStageResult,
+} from './stage-result'
 import { createCheckDeterminismTool } from './tools/check-determinism'
 import { createValidateShotPlanTool } from './tools/validate-shot-plan'
 import {
@@ -26,6 +31,11 @@ interface StageRepository {
     storageKey: string
   }): string | void
   recordStageError(nodeId: string, stage: PipelineStage, error: unknown): void
+  recordStageOutput(
+    nodeId: string,
+    result: PreparedStageResult,
+    artifactId: string
+  ): void
 }
 
 interface StageRunnerDependencies {
@@ -34,6 +44,12 @@ interface StageRunnerDependencies {
   createSession: typeof createDirectorSession
   buildPrompt: typeof buildStagePrompt
   writeArtifact: (input: WriteArtifactInput) => Promise<ArtifactCommitResult>
+  prepareResult: typeof prepareStageResult
+  commitResult: (
+    context: DirectorStageContext,
+    result: PreparedStageResult,
+    artifact: ArtifactCommitResult
+  ) => void
 }
 
 type StageRunner = (
@@ -46,14 +62,22 @@ let defaultRunner: StageRunner | undefined
 
 /** 首次真正执行作业时才打开 SQLite，模块导入保持无副作用。 */
 export const runStage: StageRunner = (projectId, nodeId, stage) => {
-  defaultRunner ??= createStageRunner({
-    repository: new DirectorRuntimeRepository(),
+  defaultRunner ??= createDefaultRunner()
+  return defaultRunner(projectId, nodeId, stage)
+}
+
+function createDefaultRunner(): StageRunner {
+  const repository = new DirectorRuntimeRepository()
+  return createStageRunner({
+    repository,
     transitionNodeStatus,
     createSession: createDirectorSession,
     buildPrompt: buildStagePrompt,
     writeArtifact: writeValidatedArtifact,
+    prepareResult: prepareStageResult,
+    commitResult: (context, result, artifact) =>
+      commitStageResult(repository, context, result, artifact),
   })
-  return defaultRunner(projectId, nodeId, stage)
 }
 
 export function createStageRunner(
@@ -79,7 +103,11 @@ export function createStageRunner(
         storageKey: session.storageKey,
       })
       const result = await session.run({ prompt, tools: toolsForStage(stage) })
-      await dependencies.writeArtifact(outputArtifact(context, result.text))
+      const prepared = dependencies.prepareResult(context, result.text)
+      const artifact = await dependencies.writeArtifact(
+        outputArtifact(context, prepared.content)
+      )
+      dependencies.commitResult(context, prepared, artifact)
       await session.close()
       closed = true
       dependencies.transitionNodeStatus(nodeId, 'success')

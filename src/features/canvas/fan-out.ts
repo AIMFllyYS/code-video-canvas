@@ -6,6 +6,16 @@ import { canvasEdges, canvasNodes } from '@/lib/db/schema'
 import type { Db } from '@/lib/db/migrate'
 import type { ShotLaneNodeType } from './types'
 
+export interface ShotLaneSeed {
+  shotId: string
+  sourceUnit?: {
+    unitId: string
+    text: string
+    order?: number
+    speaker?: string
+  }
+}
+
 const LANE_ROLES: ShotLaneNodeType[] = [
   'shot-script',
   'shot-codegen',
@@ -26,22 +36,30 @@ type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0]
 type AnchorType = 'shot-split' | 'score'
 
 /** 在单个事务内幂等物化分镜通道及其首尾锚点连线。 */
-export function materializeShotLanes(projectId: string, shotIds: string[]): void {
-  const uniqueShotIds = [...new Set(shotIds)]
-  if (uniqueShotIds.length === 0) return
+export function materializeShotLanes(
+  projectId: string,
+  shots: readonly (string | ShotLaneSeed)[]
+): void {
+  const uniqueShots = deduplicateShots(shots)
+  if (uniqueShots.length === 0) return
 
   getDb().transaction((tx) => {
     const anchors = findAnchors(tx, projectId)
-    const existingKeys = findExistingLaneKeys(tx, projectId, uniqueShotIds)
+    const existingKeys = findExistingLaneKeys(
+      tx,
+      projectId,
+      uniqueShots.map((shot) => shot.shotId)
+    )
 
-    for (const shotId of uniqueShotIds) {
+    for (const shot of uniqueShots) {
+      const shotId = shot.shotId
       const existingCount = LANE_ROLES.filter((role) =>
         existingKeys.has(laneKey(shotId, role))
       ).length
       if (existingCount !== 0 && existingCount !== LANE_ROLES.length) {
         throw new Error(`分镜通道数据不完整，拒绝继续物化：${shotId}`)
       }
-      if (existingCount === 0) insertLaneNodes(tx, projectId, shotId)
+      if (existingCount === 0) insertLaneNodes(tx, projectId, shot)
       insertLaneEdges(tx, projectId, shotId, anchors)
     }
   })
@@ -98,20 +116,41 @@ function findExistingLaneKeys(
   )
 }
 
-function insertLaneNodes(tx: Transaction, projectId: string, shotId: string): void {
+function insertLaneNodes(
+  tx: Transaction,
+  projectId: string,
+  shot: ShotLaneSeed
+): void {
   tx.insert(canvasNodes)
     .values(
       LANE_ROLES.map((role) => ({
-        id: stableId('node', projectId, shotId, role),
+        id: stableId('node', projectId, shot.shotId, role),
         projectId,
         type: role,
         stage: LANE_STAGES[role],
         position: { x: 0, y: 0 },
-        laneKey: shotId,
+        laneKey: shot.shotId,
         laneRole: role,
+        data: shot.sourceUnit
+          ? {
+              sourceUnit: shot.sourceUnit,
+              sourceUnitId: shot.sourceUnit.unitId,
+            }
+          : {},
       }))
     )
     .run()
+}
+
+function deduplicateShots(
+  shots: readonly (string | ShotLaneSeed)[]
+): ShotLaneSeed[] {
+  const unique = new Map<string, ShotLaneSeed>()
+  for (const shot of shots) {
+    const normalized = typeof shot === 'string' ? { shotId: shot } : shot
+    if (!unique.has(normalized.shotId)) unique.set(normalized.shotId, normalized)
+  }
+  return [...unique.values()]
 }
 
 function insertLaneEdges(

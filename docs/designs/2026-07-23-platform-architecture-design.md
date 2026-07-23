@@ -106,6 +106,7 @@ src/
 - **Agent 会话 JSONL**：`StorageAdapter.localPath('pi-sessions')` 分配受控根目录，`DirectorSessionStore` 在该根内封装 `JsonlSessionRepo + NodeExecutionEnv`；SQLite 仅保存相对 `storageKey` 指针（`artifacts.kind='pi-session'`）。
 - **Director 可恢复输入**：节点的阶段输入持久化在 `canvas_nodes.data.directorInput`，由 `stage-prompt.ts` 路由到六个原生 prompt builder；Director repository 读取上下文与登记 artifact，stage runner 不直接操作 Drizzle。
 - **产物提交协议**：Agent 只获得只读诊断 Tool；`write-artifact.ts` 是 stage runner 专用应用服务，归属/路径来自可信上下文。写入端对同一内容复验后按“Storage → SQLite 索引”提交，索引失败补偿删除文件。既有 Pi JSONL 仅登记受控相对指针。
+- **阶段结果协议**：模型文本先由 `stage-result.ts` 类型化归一，再写产物并由 `stage-result-committer.ts` 提交应用副作用，最后才允许节点 success。Demo INGEST 只产出 script units，应用生成稳定分镜 ID 并事务性 fan-out；音频 manifest/allocation 禁止模型猜测。FABRICATE 的 fps/帧数取自已校验 allocation，画幅使用 Demo 固定配置，seed 由可信上下文派生后写入 `renderSpec`。
 
 ### AI（StepFun）
 
@@ -156,6 +157,7 @@ src/
 | 2026-07-23 | Demo 基线发布。 |
 | 2026-07-23（修订） | 对齐 Harness：video-director 改为原生移植；画布改为动态 fan-out；Agent 改为 `Agent + JsonlSessionRepo + DirectorSessionStore`，明确 JSONL/SQLite/StorageAdapter 边界并排除 coding-agent/Skills/Extensions。 |
 | 2026-07-23（修订二） | 补齐 Director 执行契约：节点持久化 `directorInput`，新增类型化 prompt 路由与 repository 端口，状态机由 enqueue/runner 分工，队列通过 Next `instrumentation.ts` 启动。 |
+| 2026-07-24（修订三） | 修复阶段“产物已写但业务状态未提交”的架构缺口：增加结果归一/提交层，INGEST 成功物化分镜，FABRICATE renderSpec 由可信 allocation 确定性派生。 |
 | 2026-07-23（修订三） | 收紧 Agent 权限：校验 Tool 只读诊断，artifact 提交由 stage runner 专用服务执行，模型不控制项目归属与路径。 |
 | 2026-07-23（修订四） | 明确 Demo 队列非原子入库的失败补偿：pending 后 enqueue 失败必须转 failed 并记录错误；未来可替换事务 outbox。 |
 | 2026-07-24（修订五） | 收口服务端启动副作用：Director/Render queue 与 runner 模块导入不得打开 SQLite，持久依赖延迟到作业入口执行。 |

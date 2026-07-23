@@ -103,4 +103,34 @@ describe('DirectorRuntimeRepository', () => {
       directorError: { stage: 'INGEST', message: '模型失败' },
     })
   })
+
+  it('records only trusted stage metadata alongside existing node data', () => {
+    repository.recordStageOutput(
+      'node-1',
+      {
+        content: '<!doctype html>',
+        renderSpec: {
+          fps: 30,
+          durationInFrames: 45,
+          width: 1080,
+          height: 1920,
+          seed: 42,
+        },
+      },
+      'artifact-1'
+    )
+
+    const node = db.select().from(canvasNodes).where(eq(canvasNodes.id, 'node-1')).get()
+    expect(node?.data).toMatchObject({
+      directorInput: { rawScript: '节点脚本' },
+      directorArtifactId: 'artifact-1',
+      renderSpec: {
+        fps: 30,
+        durationInFrames: 45,
+        width: 1080,
+        height: 1920,
+        seed: 42,
+      },
+    })
+  })
 })

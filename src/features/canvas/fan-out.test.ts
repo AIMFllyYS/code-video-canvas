@@ -97,6 +97,28 @@ describe('materializeShotLanes', () => {
     ).toHaveLength(15)
     expect(database.db.select().from(canvasEdges).all()).toHaveLength(18)
   })
+
+  it('persists validated INGEST source units on every lane node', () => {
+    materializeShotLanes(projectId, [
+      {
+        shotId: 'S001',
+        sourceUnit: { unitId: 'U001', text: '第一段原稿', order: 0 },
+      },
+    ])
+
+    const laneNodes = database.db
+      .select()
+      .from(canvasNodes)
+      .all()
+      .filter((node) => node.laneKey === 'S001')
+    expect(laneNodes).toHaveLength(5)
+    for (const node of laneNodes) {
+      expect(node.data).toMatchObject({
+        sourceUnitId: 'U001',
+        sourceUnit: { unitId: 'U001', text: '第一段原稿', order: 0 },
+      })
+    }
+  })
 })
 
 function globalNode(

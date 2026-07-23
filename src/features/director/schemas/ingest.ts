@@ -24,6 +24,17 @@ export const scriptUnitSchema = z
 
 export const scriptUnitsSchema = z.array(scriptUnitSchema).min(1)
 
+/**
+ * Demo INGEST 的模型输出边界。
+ *
+ * 音频 manifest/allocation 由音频领域根据实测媒体生成，不能由语言模型猜测。
+ */
+export const ingestStageResultSchema = z
+  .object({
+    scriptUnits: scriptUnitsSchema,
+  })
+  .strict()
+
 const alignmentSchema = z
   .object({
     mode: z.enum([
@@ -161,5 +172,6 @@ function requireVnextField(
 
 export type ScriptUnit = z.infer<typeof scriptUnitSchema>
 export type ScriptUnits = z.infer<typeof scriptUnitsSchema>
+export type IngestStageResult = z.infer<typeof ingestStageResultSchema>
 export type AudioManifest = z.infer<typeof audioManifestSchema>
 export type AudioAllocation = z.infer<typeof audioAllocationSchema>

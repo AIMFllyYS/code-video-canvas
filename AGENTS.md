@@ -131,6 +131,8 @@ docs/  scripts/  public/
 - `enqueueDirectorStage()` 先验证 project/node/stage/可入队状态，再把节点推进到 `pending` 并入队；`runStage()` 只接受 pending 节点，执行 `pending → running → success|failed`。
 - enqueue 持久化失败时必须补偿为 `pending → running → failed` 并记录错误，禁止留下悬挂 pending 节点。
 - `stage-runner.ts` 是显式应用编排器，可通过各领域公开入口组合 canvas/AI/storage；Drizzle 细节收口在 `runtime-repository.ts`，不得散落到 runner。
+- 模型回复必须按“类型化归一 → artifact 门禁 → 应用副作用提交 → success”处理。Demo INGEST 只接受 `{scriptUnits}`，音频 manifest/allocation 禁止由模型猜测；成功后由应用生成稳定 shot ID 并事务性 fan-out。
+- FABRICATE 的 HTML 由确定性门禁校验；`renderSpec` 必须由可信的 audio allocation + 固定 Demo 画幅 + 上下文派生 seed 生成，禁止采信模型自报的 fps/帧数/seed。
 - Pi Agent 只挂只读诊断 Tool；artifact 的 project/node/path 必须由 stage runner 的可信上下文交给 `write-artifact.ts`，禁止让模型自行选择归属或路径。
 - 进程内队列通过根 `src/instrumentation.ts` 在 Node runtime 幂等注册和启动，不假设 `src/server/` 文件会被 Next.js 自动执行。queue/runner 模块导入不得打开 SQLite；默认 repository 必须延迟到 enqueue 或 handler 真正执行时创建。
 
