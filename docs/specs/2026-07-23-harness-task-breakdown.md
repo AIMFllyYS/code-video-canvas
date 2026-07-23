@@ -361,7 +361,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 ### C1.2 — `layout.ts`：自动布局算法
 
-- 状态：☐
+- 状态：☑
 - 前置任务：C1.1
 - 允许改动范围：`src/features/canvas/layout.ts`（新建）、`layout.test.ts`、`package.json`（新增 dagre 或等价轻量布局库依赖）
 - 禁止改动：`fan-out.ts`（布局是独立后处理步骤，不要合并进物化事务）
