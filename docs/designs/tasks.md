@@ -173,7 +173,7 @@
     - 对应 task-breakdown：U1.3
     - _Requirements: F6_
 
-  - [ ] 7.4 S4 分镜详情页（预览 + 单独导出）
+  - [x] 7.4 S4 分镜详情页（预览 + 单独导出）
     - 对应 task-breakdown：U1.4
     - _Requirements: F4、F5_
 

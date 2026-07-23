@@ -98,6 +98,8 @@ docs/  scripts/  public/
 - shot HTML 必须是可搬运的自包含 artifact，不得依赖工作区相对路径或运行时读取 `docs/`/`node_modules/`；唯一 seek 接口是 `window.__CVC_RENDER__@v1`。同一 Playwright page 串行 seek，允许有限 page 池并发。
 - PNG 帧必须写入可显式 cleanup 的隔离临时目录，由 ffmpeg 从 pattern 流式读取；禁止以 `Buffer[]` 常驻完整帧序列。
 - Render 路由不得自行查表/拼 artifact 路径，只调用可信 enqueue/export service；Director/Render 共用根 `instrumentation.ts` 启动的单例队列。
+- UI 作业轮询必须按 projectId 隔离；浏览器只使用 artifact id 下载 URL，不得
+  暴露 StorageAdapter key、本机绝对路径或让页面自行拼 artifact 路径。
 
 ### Next.js 16.2+
 

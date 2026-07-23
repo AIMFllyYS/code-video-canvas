@@ -95,6 +95,8 @@ src/
 
 - 服务端用 Playwright（自带 Chromium）加载 shot HTML；每个 page 串行 seek、有限 page 池有界并发，PNG 落隔离临时目录后由 `ffmpeg-static` 流式编码，避免全片帧 Buffer 常驻内存。
 - Render repository 负责持久输入与 artifact 顺序；renderer/export service 是可信编排层。API 不拼路径、不查 artifact 表，Director/Render handler 由同一 `instrumentation.ts` 注册后启动单例队列。queue/runner 模块导入保持无 SQLite 副作用，默认 repository 只在真实 enqueue/handler 执行时延迟创建。
+- UI 只通过按 projectId 隔离的 job snapshot 轮询作业；HTML/MP4 下载由 artifact
+  id 解析并返回，浏览器永不接触 StorageAdapter key 或本机绝对路径。
 - 渲染作业走**进程内队列**（状态持久化到 SQLite，崩溃可恢复），有界并发（≈本机核数），内容哈希缓存 → 只重渲变化节点。
 
 ### 存储
@@ -162,3 +164,4 @@ src/
 | 2026-07-24（修订七） | 收口 Node UI 领域合同：九种节点类型与六态状态统一由客户端安全的 canvas types 导出，禁止 UI 复制枚举或混用 Agent 阶段。 |
 | 2026-07-24（修订八） | 项目创建与四个全局 DAG 节点改为单事务；API 返回可信 INGEST 节点 ID，消除无入口半成品项目和客户端猜 ID。 |
 | 2026-07-24（修订九） | 分镜通道节点在 fan-out 时持久化 Director stage，画布读模型与 Inspector 直接消费该字段。 |
+| 2026-07-24（修订十） | 增加 project-scoped job snapshot 与 artifact-id 下载边界，支持 UI 安全轮询与预览。 |

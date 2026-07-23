@@ -492,3 +492,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十三） | **Pencil 登记口径收口**：30 个 reusable symbols 全部可追溯，四个 Button symbols 合并为一个 variant 组件，故 `/playbook` 登记 27 个 Pencil UI 组件族；图标白名单独立展示。 |
 | 2026-07-24（修订十四） | **项目初始 DAG 原子化**：创建项目必须在同一事务建立 script-import→shot-split 与 score→export 四个全局节点；projects API 返回可信 ingestNodeId，前端禁止猜节点或创建无入口项目。 |
 | 2026-07-24（修订十五） | **可执行节点 stage 持久化**：分镜通道在 fan-out 时写入唯一 stage 映射，画布读模型返回 stage，Inspector 禁止自行推断。 |
+| 2026-07-24（修订十六） | **作业与产物只读边界**：UI 通过 project-scoped job snapshot 轮询；HTML/MP4 仅由 artifact id 受控读取，浏览器不接触 StorageAdapter key 或本机路径。 |

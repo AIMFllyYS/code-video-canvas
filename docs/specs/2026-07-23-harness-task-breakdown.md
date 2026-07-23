@@ -1508,9 +1508,11 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
 ### U1.4 — S4 分镜详情页（预览 + 单独导出）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：R1.6, U1.3
-- 允许改动范围：`src/app/canvas/shot/[id]/**`（新建路由，路径需与设计稿路由意图核对，若设计稿另有约定的路径以设计稿为准并在完成汇报中说明）
+- 允许改动范围：`src/app/canvas/shot/[id]/**`、`src/app/api/jobs/[id]/**`、
+  `src/app/api/artifacts/[id]/**`、`src/features/artifacts/**`、
+  `src/lib/queue/query.ts|index.ts`（补齐真实轮询与安全产物读取边界）
 - Task 规格：
   ```
   目标：按设计交接文档 S4 章节实装分镜详情页：展示该分镜的代码生成结果预览
@@ -1522,12 +1524,16 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
   允许改动范围：
   - src/app/canvas/shot/[id]/**（若设计稿路由路径不同，以设计稿为准并说明调整
     理由）
+  - src/app/api/jobs/[id]/**、src/app/api/artifacts/[id]/**
+  - src/features/artifacts/**、src/lib/queue/query.ts|index.ts
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 预览区域不触发确定性违规（预览渲染路径与正式渲染路径复用同一套确定性
         约束）
   - [ ] 单独导出按钮点击后正确触发单镜渲染并展示状态轮询
+  - [ ] 作业查询按 projectId 隔离；产物通过 artifact id 受控读取，页面不接触
+        StorageAdapter 裸路径或本机绝对路径
   - [ ] page.tsx ≤200 行
 
   不在本任务范围内：
