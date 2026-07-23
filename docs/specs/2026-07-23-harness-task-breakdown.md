@@ -767,6 +767,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   API 路由不得自行拼装队列细节。在 Next.js 根 instrumentation.ts 的 Node
   runtime register() 中幂等接入处理器注册与队列启动。若 enqueue 持久化失败，
   必须补偿推进 pending→running→failed 并记录错误，禁止留下悬挂 pending 节点。
+  改状态前必须由 Director repository 校验 project/node 归属、stage 一致且
+  当前状态属于 idle|failed|stale，拒绝无效作业伪装成成功入队。
 
   前置任务：D1.3
 
@@ -783,6 +785,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - [ ] 单测：enqueue 一个 director-stage 作业后（mock stage-runner），处理器被
         正确调用且参数传递正确
   - [ ] 单测：enqueueDirectorStage() 先合法推进节点到 pending，再写入队列
+  - [ ] 单测：project/node/stage/状态不匹配时，在状态变化和写 job 前拒绝
   - [ ] 单测：enqueue 抛错时节点补偿为 failed 且错误已记录，可从 failed 重试
   - [ ] 应用启动时队列被启动且处理器已注册（可通过一次集成性测试或手动验证描述）
 
@@ -1612,3 +1615,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订八） | **Director 执行链重构**：D1.3–D1.5 增加持久 `directorInput`、类型化 prompt 路由、repository 端口与 pending 前置；队列启动改用 Next 根 `instrumentation.ts`，API 只调用领域 enqueue。 |
 | 2026-07-23（修订九） | **Agent 写权限收口**：D1.2 的 write-artifact 改为 stage runner 专用应用服务，Pi 仅获得诊断 Tool，消除模型决定归属/路径与重复落盘风险。 |
 | 2026-07-23（修订十） | **入队非原子补偿**：D1.4 明确 enqueue 失败必须把已 pending 节点补偿到 failed 并记录错误，避免不可恢复的悬挂状态。 |
+| 2026-07-23（修订十一） | **入队前置校验**：D1.4 在改状态前验证 project/node/stage/可入队状态，确保 API 的 jobId 表示领域规则已接受。 |

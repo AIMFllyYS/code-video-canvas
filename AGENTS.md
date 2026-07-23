@@ -118,7 +118,7 @@ docs/  scripts/  public/
 ### Director 执行边界
 
 - 节点阶段输入持久化在 `canvas_nodes.data.directorInput`；`stage-prompt.ts` 只调用六阶段原生 prompt builder，禁止临时拼无类型 prompt。
-- `enqueueDirectorStage()` 负责把节点推进到 `pending` 并入队；`runStage()` 只接受 pending 节点，执行 `pending → running → success|failed`。
+- `enqueueDirectorStage()` 先验证 project/node/stage/可入队状态，再把节点推进到 `pending` 并入队；`runStage()` 只接受 pending 节点，执行 `pending → running → success|failed`。
 - enqueue 持久化失败时必须补偿为 `pending → running → failed` 并记录错误，禁止留下悬挂 pending 节点。
 - `stage-runner.ts` 是显式应用编排器，可通过各领域公开入口组合 canvas/AI/storage；Drizzle 细节收口在 `runtime-repository.ts`，不得散落到 runner。
 - Pi Agent 只挂只读诊断 Tool；artifact 的 project/node/path 必须由 stage runner 的可信上下文交给 `write-artifact.ts`，禁止让模型自行选择归属或路径。

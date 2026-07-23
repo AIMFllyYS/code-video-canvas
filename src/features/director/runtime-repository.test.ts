@@ -64,6 +64,22 @@ describe('DirectorRuntimeRepository', () => {
     )
   })
 
+  it('checks ownership, stage, and status before enqueueing', () => {
+    db.update(canvasNodes)
+      .set({ status: 'idle' })
+      .where(eq(canvasNodes.id, 'node-1'))
+      .run()
+    expect(() =>
+      repository.assertEnqueueable('project-1', 'node-1', 'INGEST')
+    ).not.toThrow()
+    expect(() =>
+      repository.assertEnqueueable('project-1', 'node-1', 'DIRECT')
+    ).toThrow('阶段不匹配')
+    expect(() =>
+      repository.assertEnqueueable('other-project', 'node-1', 'INGEST')
+    ).toThrow('不属于项目')
+  })
+
   it('registers only relative artifact pointers and records structured errors', () => {
     repository.registerArtifactPointer({
       projectId: 'project-1',

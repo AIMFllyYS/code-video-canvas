@@ -96,7 +96,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 - `createDirectorSession()` 必须接收 `{ projectId, nodeId, stage, resumeSessionKey? }`，以便会话元数据与画布节点一一追溯。对外最小接口只暴露 `id`、`storageKey`、`run({ prompt, tools })` 与 `close()`；`tools` 使用项目自有 `DirectorTool` 契约，由 `pi-session.ts` 内部适配为 Pi `AgentTool`，不暴露 Pi `Agent`/`Session` 实例或 Pi 类型。
 - `stage-runner.ts` 在第一次模型调用前把 `storageKey` 登记为 `artifacts.kind='pi-session'`；失败路径也保留该指针用于复盘。
 - Director 节点的可恢复输入统一存放在 `canvas_nodes.data.directorInput`；`stage-prompt.ts` 按 `stage` 调用 D0.2 的类型化 prompt builder。`INGEST` 可从项目 `script` 补齐 `rawScript`，其余阶段缺少或不符合对应 schema 时直接失败，不允许临时拼接无类型 prompt。
-- `runStage()` 只接受状态已经为 `pending` 的节点并执行 `pending → running → success|failed`；把节点置为 `pending` 是 `enqueueDirectorStage()` 的职责，不得绕过 C1.3 状态机直接 `idle → running`。Demo 的队列入库与节点状态暂非同一事务：若置 pending 后 enqueue 失败，入口必须补偿为 `pending → running → failed` 并记录错误，使节点可重试而不永久悬挂；未来可在不改领域 API 的前提下换成事务 outbox。
+- `runStage()` 只接受状态已经为 `pending` 的节点并执行 `pending → running → success|failed`；`enqueueDirectorStage()` 必须先验证 project/node 归属、stage 一致且状态属于 `idle|failed|stale`，再把节点置为 `pending`，不得绕过 C1.3 状态机直接 `idle → running`。Demo 的队列入库与节点状态暂非同一事务：若置 pending 后 enqueue 失败，入口必须补偿为 `pending → running → failed` 并记录错误，使节点可重试而不永久悬挂；未来可在不改领域 API 的前提下换成事务 outbox。
 - `runtime-repository.ts` 是 Director 的持久化端口：负责读取项目/节点执行上下文、登记既有 artifact 指针及记录结构化错误；`stage-runner.ts` 负责跨模块编排但不直接操作 Drizzle。阶段输出仍必须经过 D1.2 的写入门禁后才可登记。
 
 ### 3.6 与 `features/director` 现有骨架的关系
@@ -467,3 +467,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订五） | **D1.3 执行契约补齐**：新增 `canvas_nodes.data.directorInput`、`stage-prompt.ts` 与 `runtime-repository.ts` 边界；明确 enqueue 负责 pending、runner 只执行 pending→running；Next 启动改用根 `instrumentation.ts`。 |
 | 2026-07-23（修订六） | **Agent 写权限收口**：`write-artifact.ts` 从 Pi Tool 调整为 stage runner 专用可信应用服务；Agent 只保留诊断 Tool，避免模型决定业务归属、路径或造成双写。 |
 | 2026-07-23（修订七） | **入队失败补偿**：明确节点置 pending 与队列 enqueue 非原子时的补偿路径，失败节点必须落 failed + error，禁止永久悬挂 pending。 |
+| 2026-07-23（修订八） | **入队前置校验**：领域 enqueue 在改状态前校验 project/node/stage/状态组合，API 返回 jobId 才表示作业已被领域规则接受。 |

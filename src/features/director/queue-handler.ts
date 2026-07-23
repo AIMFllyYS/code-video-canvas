@@ -24,6 +24,7 @@ type RunStage = (
 
 interface EnqueueDependencies {
   queue: QueueAdapter
+  assertEnqueueable(input: DirectorStageJobInput): void
   transitionNodeStatus: typeof transitionNodeStatus
   recordStageError(nodeId: string, stage: PipelineStage, error: unknown): void
 }
@@ -31,6 +32,8 @@ interface EnqueueDependencies {
 const defaultRepository = new DirectorRuntimeRepository()
 const defaultEnqueueDependencies: EnqueueDependencies = {
   queue: defaultQueue,
+  assertEnqueueable: (input) =>
+    defaultRepository.assertEnqueueable(input.projectId, input.nodeId, input.stage),
   transitionNodeStatus,
   recordStageError: (nodeId, stage, error) =>
     defaultRepository.recordStageError(nodeId, stage, error),
@@ -59,6 +62,7 @@ export function enqueueDirectorStage(
   dependencies: EnqueueDependencies = defaultEnqueueDependencies
 ): string {
   const payload = directorStageJobSchema.parse(input)
+  dependencies.assertEnqueueable(payload)
   dependencies.transitionNodeStatus(payload.nodeId, 'pending')
   try {
     return dependencies.queue.enqueue('director-stage', payload, {

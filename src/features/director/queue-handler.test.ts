@@ -30,6 +30,7 @@ describe('director queue handler', () => {
       { projectId: 'project-1', nodeId: 'node-1', stage: 'INGEST' },
       {
         queue: harness.queue,
+        assertEnqueueable: vi.fn(),
         transitionNodeStatus: vi.fn(),
         recordStageError: vi.fn(),
       }
@@ -66,13 +67,14 @@ describe('director queue handler', () => {
       { projectId: 'project-1', nodeId: 'node-1', stage: 'INGEST' },
       {
         queue: harness.queue,
+        assertEnqueueable: vi.fn(() => order.push('validate')),
         transitionNodeStatus,
         recordStageError: vi.fn(),
       }
     )
 
     expect(jobId).toBe('job-1')
-    expect(order).toEqual(['pending', 'enqueue'])
+    expect(order).toEqual(['validate', 'pending', 'enqueue'])
     expect(harness.queue.enqueue).toHaveBeenCalledWith(
       'director-stage',
       { projectId: 'project-1', nodeId: 'node-1', stage: 'INGEST' },
@@ -92,7 +94,12 @@ describe('director queue handler', () => {
     expect(() =>
       enqueueDirectorStage(
         { projectId: 'project-1', nodeId: 'node-1', stage: 'INGEST' },
-        { queue: harness.queue, transitionNodeStatus, recordStageError }
+        {
+          queue: harness.queue,
+          assertEnqueueable: vi.fn(),
+          transitionNodeStatus,
+          recordStageError,
+        }
       )
     ).toThrow(failure)
 
@@ -113,5 +120,28 @@ describe('director queue handler', () => {
     expect(
       vi.mocked(harness.queue.register).mock.invocationCallOrder[0]
     ).toBeLessThan(vi.mocked(harness.queue.start).mock.invocationCallOrder[0]!)
+  })
+
+  it('rejects a mismatched stage before changing state or writing a job', () => {
+    const harness = createQueue()
+    const transitionNodeStatus = vi.fn()
+    const mismatch = new Error('Director 节点阶段不匹配')
+
+    expect(() =>
+      enqueueDirectorStage(
+        { projectId: 'project-1', nodeId: 'node-1', stage: 'DIRECT' },
+        {
+          queue: harness.queue,
+          assertEnqueueable: vi.fn(() => {
+            throw mismatch
+          }),
+          transitionNodeStatus,
+          recordStageError: vi.fn(),
+        }
+      )
+    ).toThrow(mismatch)
+
+    expect(transitionNodeStatus).not.toHaveBeenCalled()
+    expect(harness.queue.enqueue).not.toHaveBeenCalled()
   })
 })

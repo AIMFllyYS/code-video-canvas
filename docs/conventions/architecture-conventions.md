@@ -61,7 +61,7 @@ app  →  features  →  lib
 
 ### 6.1 后台执行与状态机
 
-- 入队入口负责合法推进 `idle|failed|stale → pending`，runner 只执行 `pending → running → success|failed`；禁止为了省步骤直接写状态。
+- 入队入口先验证 project/node/stage/状态组合，再合法推进 `idle|failed|stale → pending`；runner 只执行 `pending → running → success|failed`。禁止为了省步骤直接写状态或让无效作业先入队后失败。
 - 当前 enqueue 与节点状态不是同一事务；enqueue 失败必须把已 pending 节点补偿到 failed 并记录错误。未来替换事务 outbox 时保持 `enqueueDirectorStage()` 领域 API 不变。
 - Director 作业统一由 `enqueueDirectorStage()` 创建；Next 应用在根 `src/instrumentation.ts` 的 Node runtime 中幂等注册 handler 并启动队列。
 - 阶段 prompt 必须从持久输入经原生 builder 构建；恢复执行不得依赖请求内临时对象或 Pi JSONL 反推业务输入。

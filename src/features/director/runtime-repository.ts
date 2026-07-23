@@ -37,6 +37,29 @@ export interface ArtifactPointerInput {
 export class DirectorRuntimeRepository {
   constructor(private readonly db: Db = getDb()) {}
 
+  assertEnqueueable(
+    projectId: string,
+    nodeId: string,
+    stage: PipelineStage
+  ): void {
+    const node = this.db
+      .select({
+        projectId: canvasNodes.projectId,
+        stage: canvasNodes.stage,
+        status: canvasNodes.status,
+      })
+      .from(canvasNodes)
+      .where(and(eq(canvasNodes.id, nodeId), eq(canvasNodes.projectId, projectId)))
+      .get()
+    if (!node) throw new Error(`Director 节点不存在或不属于项目：${nodeId}`)
+    if (node.stage !== stage) {
+      throw new Error(`Director 节点阶段不匹配：${node.stage ?? 'null'} != ${stage}`)
+    }
+    if (!['idle', 'failed', 'stale'].includes(node.status)) {
+      throw new Error(`Director 节点当前不可入队：${node.status}`)
+    }
+  }
+
   loadStageContext(
     projectId: string,
     nodeId: string,
