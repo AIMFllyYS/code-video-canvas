@@ -1,15 +1,17 @@
 import type { ComponentType } from 'react'
 import { Film } from 'lucide-react'
+import type { NodeStatus } from '@/features/canvas/types'
 import { cn } from '@/lib/utils'
 import { StatusPill } from '@/components/ui/status-pill'
-import { stageColorToken } from './stage-colors'
-import type { NodeStatus } from './types'
+import { nodeTypeColorToken } from './stage-colors'
 
-const STATUS_MAP: Record<NodeStatus, 'pending' | 'generating' | 'rendered' | 'failed'> = {
+const STATUS_MAP: Record<NodeStatus, 'pending' | 'generating' | 'rendered' | 'stale' | 'failed'> = {
+  idle: 'pending',
   pending: 'pending',
   running: 'generating',
   success: 'rendered',
   failed: 'failed',
+  stale: 'stale',
 }
 
 export interface ExportNodeProps {
@@ -32,7 +34,7 @@ export function ExportNode({
   status = 'pending',
   className,
 }: ExportNodeProps) {
-  const color = stageColorToken('finalize')
+  const color = nodeTypeColorToken('export')
   return (
     <div
       className={cn(

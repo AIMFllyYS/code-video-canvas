@@ -1,10 +1,15 @@
 import type { ComponentType } from 'react'
+import type { CanvasNodeType, NodeStatus } from '@/features/canvas/types'
 import { cn } from '@/lib/utils'
-import { stageColorToken } from './stage-colors'
-import type { NodeStage, NodeStatus } from './types'
+import { nodeTypeColorToken, nodeTypeFillClass } from './stage-colors'
+
+type AudioNodeType = Extract<
+  CanvasNodeType,
+  'shot-sfx' | 'shot-subtitle' | 'score'
+>
 
 export interface AudioNodeProps {
-  stage?: NodeStage
+  nodeType?: AudioNodeType
   title: string
   icon: ComponentType<{ className?: string }>
   status?: NodeStatus
@@ -13,10 +18,12 @@ export interface AudioNodeProps {
 }
 
 const STATUS_DOT: Record<NodeStatus, string> = {
+  idle: 'bg-label-tertiary',
   pending: 'bg-label-tertiary',
   running: 'bg-accent',
   success: 'bg-success',
   failed: 'bg-danger',
+  stale: 'bg-warning',
 }
 
 /**
@@ -25,14 +32,15 @@ const STATUS_DOT: Record<NodeStatus, string> = {
  * 头部 + 音浪条。
  */
 export function AudioNode({
-  stage = 'audio',
+  nodeType = 'shot-subtitle',
   title,
   icon: Icon,
   status = 'pending',
   bars = [12, 22, 8, 28, 16, 24, 10, 20, 14, 26, 6, 18],
   className,
 }: AudioNodeProps) {
-  const color = stageColorToken(stage)
+  const color = nodeTypeColorToken(nodeType)
+  const fill = nodeTypeFillClass(nodeType)
   return (
     <div
       className={cn(
@@ -52,7 +60,7 @@ export function AudioNode({
         {bars.map((h, i) => (
           <div
             key={i}
-            className={cn('w-[3px] rounded-sm', stage === 'audio' ? 'bg-stage-audio' : 'bg-stage-finalize')}
+            className={cn('w-[3px] rounded-sm', fill)}
             style={{ height: `${h}px` }}
           />
         ))}

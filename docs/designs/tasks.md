@@ -142,7 +142,7 @@
   - [x] 5.4 B3 导航组件港口（NavItem / TopBar / Sidebar）
     - 对应 task-breakdown：P1.3
 
-  - [ ] 5.5 B4 业务/节点组件港口（11 个组件）
+  - [x] 5.5 B4 业务/节点组件港口（11 个组件）
     - 对应 task-breakdown：P1.4
     - _Requirements: F4、F6（节点视觉呈现）_
 

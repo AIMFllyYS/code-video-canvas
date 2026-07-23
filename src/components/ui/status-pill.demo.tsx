@@ -8,6 +8,7 @@ export function StatusPillDemo() {
       <StatusPill variant="generating" />
       <StatusPill variant="rendered" />
       <StatusPill variant="cached" />
+      <StatusPill variant="stale" />
       <StatusPill variant="failed" />
     </div>
   )

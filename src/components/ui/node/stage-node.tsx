@@ -1,10 +1,10 @@
 import type { ComponentType, ReactNode } from 'react'
+import type { CanvasNodeType, NodeStatus } from '@/features/canvas/types'
 import { cn } from '@/lib/utils'
-import { stageColorToken } from './stage-colors'
-import type { NodeStage, NodeStatus } from './types'
+import { nodeTypeColorToken } from './stage-colors'
 
 export interface StageNodeProps {
-  stage: NodeStage
+  nodeType: CanvasNodeType
   name: string
   icon: ComponentType<{ className?: string }>
   status?: NodeStatus
@@ -13,10 +13,12 @@ export interface StageNodeProps {
 }
 
 const STATUS_DOT: Record<NodeStatus, string> = {
+  idle: 'bg-label-tertiary',
   pending: 'bg-label-tertiary',
   running: 'bg-accent',
   success: 'bg-success',
   failed: 'bg-danger',
+  stale: 'bg-warning',
 }
 
 /**
@@ -24,8 +26,8 @@ const STATUS_DOT: Record<NodeStatus, string> = {
  * canvas.pen: 200×120、surface 底、rounded-md、1.5px 阶段色描边、shadow-card；
  * 左右各一个连接端口。
  */
-export function StageNode({ stage, name, icon: Icon, status = 'pending', chips, className }: StageNodeProps) {
-  const color = stageColorToken(stage)
+export function StageNode({ nodeType, name, icon: Icon, status = 'idle', chips, className }: StageNodeProps) {
+  const color = nodeTypeColorToken(nodeType)
   return (
     <div
       className={cn(

@@ -17,6 +17,14 @@ export type ShotLaneNodeType =
 
 export type CanvasNodeType = GlobalCanvasNodeType | ShotLaneNodeType
 
+export type NodeStatus =
+  | 'idle'
+  | 'pending'
+  | 'running'
+  | 'success'
+  | 'failed'
+  | 'stale'
+
 export interface CanvasNode {
   id: string
   projectId: string

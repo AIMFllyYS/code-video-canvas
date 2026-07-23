@@ -1,6 +1,12 @@
 import { cn } from '@/lib/utils'
 
-export type StatusPillVariant = 'pending' | 'generating' | 'rendered' | 'cached' | 'failed'
+export type StatusPillVariant =
+  | 'pending'
+  | 'generating'
+  | 'rendered'
+  | 'cached'
+  | 'stale'
+  | 'failed'
 
 export interface StatusPillProps {
   variant?: StatusPillVariant
@@ -13,6 +19,7 @@ const STYLES: Record<StatusPillVariant, { bg: string; color: string; defaultLabe
   generating: { bg: 'bg-accent-fill', color: 'text-accent', defaultLabel: '生成中' },
   rendered: { bg: 'bg-success-fill', color: 'text-success', defaultLabel: '已渲染' },
   cached: { bg: 'bg-teal-fill', color: 'text-teal', defaultLabel: '已缓存' },
+  stale: { bg: 'bg-warning-fill', color: 'text-warning', defaultLabel: '需重渲' },
   failed: { bg: 'bg-danger-fill', color: 'text-danger', defaultLabel: '失败' },
 }
 

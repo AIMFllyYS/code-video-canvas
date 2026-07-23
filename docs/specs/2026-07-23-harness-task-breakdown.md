@@ -1301,9 +1301,9 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
 
 ### P1.4 — B4 业务/节点组件港口（11 个组件，产品灵魂）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：P0.1, F0.5（节点类型 taxonomy 已定稿，命名需与组件对齐）
-- 允许改动范围：`src/components/ui/**`（新建，节点类组件可单独放 `src/components/ui/node/` 子目录）、`src/app/playbook/registry.ts`
+- 允许改动范围：`src/components/ui/**`（新建/按 Pencil 校正既有实现，节点类组件可单独放 `src/components/ui/node/` 子目录）、`src/app/playbook/registry.ts`、`src/features/canvas/types.ts|index.ts|status.ts`（仅收口客户端安全的 canonical NodeStatus）
 - Task 规格：
   ```
   目标：用 Pencil MCP 读取并移植 11 个业务组件：ProjectCard、ArtifactChip、
@@ -1319,14 +1319,16 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
   允许改动范围：
   - src/components/ui/** （节点类组件可放 src/components/ui/node/ 子目录）
   - src/app/playbook/registry.ts
+  - src/features/canvas/types.ts、index.ts、status.ts（仅将 canonical NodeStatus
+    收口到客户端安全类型层，禁止 UI 重复定义）
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 11 个组件均可在 /playbook 查看且样式核对一致
   - [ ] 均已登记 registry.ts + 配 demo，Node/* 组件的 demo 展示至少两种不同
         状态（如 pending 与 success）以证明状态可配置而非硬编码
-  - [ ] Node/* 组件的 props 类型与 F0.5 定稿的节点类型/状态枚举对齐（可直接
-        复用该枚举类型，不重复定义）
+  - [ ] Node/* 组件直接复用 F0.5 定稿的 CanvasNodeType 与 canonical NodeStatus；
+        PipelineStage 不得再次冒充节点类型，视觉阶段色由 CanvasNodeType 显式派生
 
   不在本任务范围内：
   - 不实现节点在真实画布（React Flow）中的挂载逻辑（C1.4 的范围，本卡只做

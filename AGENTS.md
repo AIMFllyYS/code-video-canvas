@@ -138,6 +138,9 @@ docs/  scripts/  public/
 - 新功能必须写测试；改动后跑 `pnpm lint`。
 - 调试/原型放 `src/app/_dev/`，完成后迁回正式路由并清理。
 - UI 组件复用（SSOT）：视觉原语只在 `components/*` 定义一份，页面 `import` 复用、禁重复实现；新组件在 `src/app/playbook/registry.ts` 登记并加 `*.demo.tsx`。
+- Node/* UI 组件直接复用客户端安全的 `features/canvas/types.ts` 中
+  `CanvasNodeType`/`NodeStatus`；禁止在 UI 内复制状态枚举，禁止用 PipelineStage
+  代替节点类型，视觉阶段色由 CanvasNodeType 显式映射。
 
 ## When Reviewing Code
 

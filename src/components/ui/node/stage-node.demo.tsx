@@ -7,7 +7,7 @@ export function StageNodeDemo() {
   return (
     <div className="flex flex-wrap gap-4">
       <StageNode
-        stage="ingest"
+        nodeType="script-import"
         name="文稿提交 Ingest"
         icon={FileInput}
         status="success"
@@ -19,13 +19,13 @@ export function StageNodeDemo() {
         }
       />
       <StageNode
-        stage="direct"
+        nodeType="shot-split"
         name="语义拆分 Split"
         icon={GitBranch}
         status="running"
       />
       <StageNode
-        stage="finalize"
+        nodeType="shot-qa"
         name="抽帧验收 QA"
         icon={ShieldCheck}
         status="pending"

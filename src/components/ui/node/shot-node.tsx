@@ -1,24 +1,31 @@
 import type { ReactNode } from 'react'
-import { Play } from 'lucide-react'
+import { Ellipsis, Play, RefreshCw } from 'lucide-react'
+import type { CanvasNodeType, NodeStatus } from '@/features/canvas/types'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { StatusPill } from '@/components/ui/status-pill'
-import { stageColorToken } from './stage-colors'
-import type { NodeStage, NodeStatus } from './types'
+import { nodeTypeColorToken } from './stage-colors'
 
-const STATUS_MAP: Record<NodeStatus, 'pending' | 'generating' | 'rendered' | 'failed'> = {
+const STATUS_MAP: Record<NodeStatus, 'pending' | 'generating' | 'rendered' | 'stale' | 'failed'> = {
+  idle: 'pending',
   pending: 'pending',
   running: 'generating',
   success: 'rendered',
   failed: 'failed',
+  stale: 'stale',
 }
 
+type ShotNodeType = Extract<CanvasNodeType, 'shot-script' | 'shot-codegen'>
+
 export interface ShotNodeProps {
-  stage?: NodeStage
+  nodeType?: ShotNodeType
   title: string
   meta: string
   duration: string
   status?: NodeStatus
   ops?: ReactNode
+  cachedLabel?: string
+  onRerender?: () => void
   className?: string
 }
 
@@ -28,15 +35,30 @@ export interface ShotNodeProps {
  * 上半 128px 预览区 + 信息区。
  */
 export function ShotNode({
-  stage = 'shot',
+  nodeType = 'shot-codegen',
   title,
   meta,
   duration,
   status = 'pending',
   ops,
+  cachedLabel = '已缓存',
+  onRerender,
   className,
 }: ShotNodeProps) {
-  const color = stageColorToken(stage)
+  const color = nodeTypeColorToken(nodeType)
+  const actions = ops === undefined ? (
+    <>
+      <Button
+        type="button"
+        variant="tinted"
+        icon={RefreshCw}
+        onClick={onRerender}
+      >
+        重渲此镜
+      </Button>
+      <span className="text-xs font-sc text-label-tertiary">{cachedLabel}</span>
+    </>
+  ) : ops
   return (
     <div
       className={cn(
@@ -59,9 +81,10 @@ export function ShotNode({
           <span className="min-w-0 flex-1 truncate text-[13px] font-semibold font-sc text-label">
             {title}
           </span>
+          <Ellipsis className="h-4 w-4 text-label-tertiary" />
         </div>
         <span className="text-xs font-mono text-label-tertiary">{meta}</span>
-        {ops && <div className="mt-auto flex items-center gap-2">{ops}</div>}
+        {actions && <div className="mt-auto flex items-center gap-2">{actions}</div>}
       </div>
       <div
         className={cn(

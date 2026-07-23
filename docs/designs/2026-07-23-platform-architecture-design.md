@@ -76,6 +76,12 @@ src/
 
 语义拆分完成后程序化 fan-out 出 N×5 个通道节点，用户不手工连线。应用层 Agent 阶段统一为 INGEST/DIRECT/SHOT-SPEC/FABRICATE/ASSEMBLE/FINALIZE；video-director 的 INIT 并入 INGEST，CALIBRATE 并入 FABRICATE 内部 QA。每个 `shot-codegen` 节点单向对应一份可独立渲染的 HTML。
 
+- **Node UI 合同**：`features/canvas/types.ts` 是客户端与服务端共享的唯一
+  节点类型来源，统一导出九种 `CanvasNodeType` 与六态 `NodeStatus`
+  （`idle|pending|running|success|failed|stale`）。UI 不复制状态枚举，也不把
+  Agent 的 `PipelineStage` 当作画布节点类型；视觉阶段色由 `CanvasNodeType`
+  显式映射。
+
 ### 渲染执行（本机、服务端）
 
 - 服务端用 Playwright（自带 Chromium）加载 shot HTML；每个 page 串行 seek、有限 page 池有界并发，PNG 落隔离临时目录后由 `ffmpeg-static` 流式编码，避免全片帧 Buffer 常驻内存。
@@ -144,3 +150,4 @@ src/
 | 2026-07-24（修订五） | 收口服务端启动副作用：Director/Render queue 与 runner 模块导入不得打开 SQLite，持久依赖延迟到作业入口执行。 |
 | 2026-07-23（修订五） | 领域 enqueue 增加 project/node/stage/状态前置校验，阻止无效异步作业被 API 当作成功接受。 |
 | 2026-07-23（修订六） | 重构 Render：显式 shot runtime、磁盘帧序列与 session 池、内容寻址 cache、可信 repository/export service 和统一后台启动。 |
+| 2026-07-24（修订七） | 收口 Node UI 领域合同：九种节点类型与六态状态统一由客户端安全的 canvas types 导出，禁止 UI 复制枚举或混用 Agent 阶段。 |

@@ -191,7 +191,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 
 | 文件 | 职责 | 备注 |
 |---|---|---|
-| `types.ts` | 节点类型taxonomy：全局单例类型（`script-import`/`shot-split`/`score`/`export`）+ 分镜通道类型（`shot-script`/`shot-codegen`/`shot-sfx`/`shot-subtitle`/`shot-qa`） | 替换现有的 `ingest/direct/shot-spec/shot/assemble/finalize`（那是"阶段"不是"节点类型"，命名需要重新设计，见 §6.2） |
+| `types.ts` | 客户端安全的 canonical 节点合同：全局单例类型（`script-import`/`shot-split`/`score`/`export`）+ 分镜通道类型（`shot-script`/`shot-codegen`/`shot-sfx`/`shot-subtitle`/`shot-qa`）+ 六态 `NodeStatus` | UI/React Flow 直接 import type；禁止复制状态枚举，禁止用 `PipelineStage` 冒充节点类型 |
 | `schemas.ts` | 每种节点 `data` payload 的 Zod schema | 现有仅有 `createProjectSchema`，需要按节点类型逐一补 |
 | `queries.ts` | 读：按项目取节点/边、按 `laneKey` 分组取通道 | 现有骨架已存在，扩展查询方法 |
 | `actions.ts` | 写：单节点 CRUD、节点状态转移 | 不放 fan-out 批量物化逻辑（那是独立职责） |
@@ -295,6 +295,11 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 ### 6.4 节点类型 taxonomy 重新设计
 
 现有 `CanvasNodeType`（`ingest/direct/shot-spec/shot/assemble/finalize`）把"阶段"和"节点类型"混为一谈，需替换为 §5.2 定义的类型集合。这是一次破坏性变更，需要同步更新 `types.ts`/`schemas.ts` 及所有引用点，作为单独任务卡执行，不能和字段新增混在一次迁移里（保持每次 migration 单一职责，方便回滚定位）。
+
+`NodeStatus` 同样属于跨服务端/客户端共享的领域合同，固定为
+`idle|pending|running|success|failed|stale` 并定义在客户端安全的
+`features/canvas/types.ts`。`status.ts` 只实现服务端状态机；Node UI 根据
+`CanvasNodeType` 显式映射视觉阶段色，不重新引入旧阶段型 taxonomy。
 
 ### 6.5 阶段命名统一（PRD vs video-director SKILL.md 的不一致）
 
@@ -474,3 +479,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订九） | **Render 资源与边界重构**：定义 `__CVC_RENDER__@v1`、磁盘 FrameSequence、可信 Render repository/export service、统一后台启动与内容寻址缓存，替代全帧内存和路由查库方案。 |
 | 2026-07-24（修订十） | **Shot artifact 可搬运性**：明确 Director 生成的 HTML 必须自包含且位置无关，禁止依赖工作区相对 `node_modules`/`docs` 资源；真实渲染验收从 StorageAdapter 路径加载 artifact。 |
 | 2026-07-24（修订十一） | **启动副作用收口**：Director/Render queue 与 runner 的模块导入不得实例化 SQLite repository；默认依赖延迟到真实 enqueue/handler 执行，避免构建和并行测试争用默认数据库。 |
+| 2026-07-24（修订十二） | **Node UI 领域合同收口**：`CanvasNodeType` 与六态 `NodeStatus` 统一定义在客户端安全 types 层；UI 禁止复制四态枚举或把 PipelineStage 当作节点类型，阶段色由节点类型显式派生。 |

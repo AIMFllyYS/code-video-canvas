@@ -1,27 +1,31 @@
-import type { NodeStage } from './types'
+import type { CanvasNodeType } from '@/features/canvas/types'
 
-export function stageColorToken(stage: NodeStage): string {
-  const map: Record<NodeStage, string> = {
-    ingest: 'text-stage-ingest border-stage-ingest',
-    direct: 'text-stage-direct border-stage-direct',
-    shotspec: 'text-stage-shotspec border-stage-shotspec',
-    shot: 'text-stage-shot border-stage-shot',
-    audio: 'text-stage-audio border-stage-audio',
-    assemble: 'text-stage-assemble border-stage-assemble',
-    finalize: 'text-stage-finalize border-stage-finalize',
+export function nodeTypeColorToken(nodeType: CanvasNodeType): string {
+  const map: Record<CanvasNodeType, string> = {
+    'script-import': 'text-stage-ingest border-stage-ingest',
+    'shot-split': 'text-stage-direct border-stage-direct',
+    score: 'text-stage-audio border-stage-audio',
+    export: 'text-stage-finalize border-stage-finalize',
+    'shot-script': 'text-stage-shot border-stage-shot',
+    'shot-codegen': 'text-stage-shot border-stage-shot',
+    'shot-sfx': 'text-stage-audio border-stage-audio',
+    'shot-subtitle': 'text-stage-audio border-stage-audio',
+    'shot-qa': 'text-stage-finalize border-stage-finalize',
   }
-  return map[stage]
+  return map[nodeType]
 }
 
-export function stageFillClass(stage: NodeStage): string {
-  const map: Record<NodeStage, string> = {
-    ingest: 'bg-stage-ingest',
-    direct: 'bg-stage-direct',
-    shotspec: 'bg-stage-shotspec',
-    shot: 'bg-stage-shot',
-    audio: 'bg-stage-audio',
-    assemble: 'bg-stage-assemble',
-    finalize: 'bg-stage-finalize',
+export function nodeTypeFillClass(nodeType: CanvasNodeType): string {
+  const map: Record<CanvasNodeType, string> = {
+    'script-import': 'bg-stage-ingest',
+    'shot-split': 'bg-stage-direct',
+    score: 'bg-stage-audio',
+    export: 'bg-stage-finalize',
+    'shot-script': 'bg-stage-shot',
+    'shot-codegen': 'bg-stage-shot',
+    'shot-sfx': 'bg-stage-audio',
+    'shot-subtitle': 'bg-stage-audio',
+    'shot-qa': 'bg-stage-finalize',
   }
-  return map[stage]
+  return map[nodeType]
 }

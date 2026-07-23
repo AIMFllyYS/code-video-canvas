@@ -5,6 +5,7 @@ export type {
   CanvasNodeType,
   GlobalCanvasNodeType,
   ShotLaneNodeType,
+  NodeStatus,
 } from './types'
 export { createProjectSchema, type CreateProjectInput } from './schemas'
 export {

@@ -4,8 +4,9 @@ import { eq, inArray } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import type { Db } from '@/lib/db/migrate'
 import { canvasEdges, canvasNodes } from '@/lib/db/schema'
+import type { NodeStatus } from './types'
 
-export type NodeStatus = NonNullable<typeof canvasNodes.$inferSelect.status>
+export type { NodeStatus } from './types'
 
 type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0]
 
