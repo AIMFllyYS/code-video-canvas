@@ -610,7 +610,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.1 — `pi-session.ts`：Director 会话工厂（`Agent + JsonlSessionRepo`，不挂 Skill）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.1（含结论）
 - 允许改动范围：`src/features/director/pi-session.ts`、`session-store.ts`（均新建）及对应测试
 - 禁止改动：`src/features/director/pipeline.ts`（本卡先不改现有阶段元数据文件）
