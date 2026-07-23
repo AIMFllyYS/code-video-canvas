@@ -588,6 +588,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - src/features/director/prompts/direct.ts
   - src/features/director/prompts/shot-spec.ts
   - src/features/director/prompts/fabricate.ts
+  - src/features/director/prompts/assemble.ts
+  - src/features/director/prompts/finalize.ts
   - src/features/director/prompts/*.test.ts
 
   禁止改动：
@@ -1578,3 +1580,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订三） | **Pi SDK 口径纠正**：F0.1 实测确认 `createAgentSession()` 只由 `pi-coding-agent` 导出；F0.1/D1.1 改为 `pi-agent-core Agent + JsonlSessionRepo + createDirectorSession()`，继续禁止 Skills/Extensions。 |
 | 2026-07-23（修订四） | **DirectorSession 持久化边界**：D1.1 新增 session-store.ts，采用 Agent 事件单写入 + JSONL 恢复注入；D1.3 要求成功/失败路径均登记相对 pi-session storageKey。 |
 | 2026-07-23（修订五） | **Canvas 读模型缺口**：C1.4 补充 `queries.ts#getCanvasGraph(projectId)` 与隔离测试，页面经 features 读模型取节点/边，禁止在 `page.tsx` 直接访问数据库。 |
+| 2026-07-23（修订六） | **六阶段 prompt 文件漏项**：D0.2 允许范围补齐 `assemble.ts` 与 `finalize.ts`，使文件清单与任务目标中的 INGEST/DIRECT/SHOT-SPEC/FABRICATE/ASSEMBLE/FINALIZE 一致。 |
