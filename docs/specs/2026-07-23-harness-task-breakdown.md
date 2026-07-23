@@ -663,7 +663,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.2 — `tools/`：阶段自定义 Tool 集
 
-- 状态：☐
+- 状态：☑
 - 前置任务：D0.1, D1.1, F0.7
 - 允许改动范围：`src/features/director/tools/**`（新建目录及文件）
 - 禁止改动：`pi-session.ts`（Tool 定义与会话工厂分离）
