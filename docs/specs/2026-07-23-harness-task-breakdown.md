@@ -669,12 +669,13 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 - 禁止改动：`pi-session.ts`（Tool 定义与会话工厂分离）
 - Task 规格：
   ```
-  目标：在 tools/ 下为每个阶段边界实现一个自定义 Pi Tool：
+  目标：在 tools/ 下实现两个只读诊断 Pi Tool 与一个可信写入应用服务：
   validate-shot-plan.ts（用 D0.1 产出的原生 Zod schema 校验模型输出，不依赖
   运行时读取任何 JSON Schema 文件）、check-determinism.ts（调用 F0.7 的
   checkSource，对 FABRICATE 阶段产出的 HTML 强制扫描，违规则 Tool 返回失败
-  结果而不是抛异常，让 Agent 收到结构化失败反馈）、write-artifact.ts（校验
-  通过后落 StorageAdapter + 更新 artifacts 表）。每个文件只做一件事。
+  结果而不是抛异常，让 Agent 收到结构化失败反馈）、write-artifact.ts（不暴露
+  给 Agent，只由可信 stage runner 传入项目/节点/路径；复验同一内容后落
+  StorageAdapter + 更新 artifacts 表）。每个文件只做一件事。
 
   前置任务：D0.1, D1.1, F0.7
 
@@ -687,12 +688,14 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit 通过
-  - [ ] 每个 Tool 有对应单测，覆盖"校验通过"与"校验失败"两条路径
+  - [ ] 两个诊断 Tool 与写入服务均有单测，覆盖"校验通过"与"校验失败"两条路径
   - [ ] validate-shot-plan.ts 内部导入 D0.1 的 schemas/shot-plan.ts，不重复
         定义校验逻辑
   - [ ] check-determinism.ts 的失败路径不抛出未捕获异常，而是返回结构化错误
         供 Agent 感知并重试
   - [ ] write-artifact.ts 写入前必须已通过前置校验，代码路径上体现这个先后顺序
+  - [ ] write-artifact.ts 不导出 DirectorTool，projectId/nodeId/key 只能由
+        stage runner 的可信执行上下文传入，禁止模型决定业务归属或写入路径
 
   不在本任务范围内：
   - 不实现 stage-runner.ts 的整体编排（D1.3 的范围）
@@ -1603,3 +1606,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订六） | **六阶段 prompt 文件漏项**：D0.2 允许范围补齐 `assemble.ts` 与 `finalize.ts`，使文件清单与任务目标中的 INGEST/DIRECT/SHOT-SPEC/FABRICATE/ASSEMBLE/FINALIZE 一致。 |
 | 2026-07-23（修订七） | **阶段 Tool 注入缺口**：D1.1 明确 `DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，由会话适配层转换为 Pi Tool，D1.3 无需越界操作 Agent。 |
 | 2026-07-23（修订八） | **Director 执行链重构**：D1.3–D1.5 增加持久 `directorInput`、类型化 prompt 路由、repository 端口与 pending 前置；队列启动改用 Next 根 `instrumentation.ts`，API 只调用领域 enqueue。 |
+| 2026-07-23（修订九） | **Agent 写权限收口**：D1.2 的 write-artifact 改为 stage runner 专用应用服务，Pi 仅获得诊断 Tool，消除模型决定归属/路径与重复落盘风险。 |

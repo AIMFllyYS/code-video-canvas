@@ -2,7 +2,6 @@ import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { artifacts, getDb } from '@/lib/db'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
-import type { DirectorTool, DirectorToolResult } from '../pi-session'
 import { inspectDeterminism } from './check-determinism'
 import { validateShotPlanValue } from './validate-shot-plan'
 
@@ -21,7 +20,7 @@ const inputSchema = z
   })
   .strict()
 
-type WriteArtifactInput = z.infer<typeof inputSchema>
+export type WriteArtifactInput = z.infer<typeof inputSchema>
 
 export type ArtifactPrevalidation =
   | { ok: true }
@@ -42,62 +41,56 @@ interface WriteArtifactDependencies {
   insertArtifact?: (record: ArtifactIndexRecord) => Promise<void>
 }
 
-export function createWriteArtifactTool(
+export interface ArtifactCommitResult {
+  id: string
+  storageKey: string
+  contentHash: string
+}
+
+export class ArtifactValidationError extends Error {
+  constructor(readonly errors: string[]) {
+    super(`产物校验失败：${errors.join('；')}`)
+    this.name = 'ArtifactValidationError'
+  }
+}
+
+/**
+ * 可信应用写服务。projectId/nodeId/key 必须来自 stage runner 的持久执行上下文，
+ * 本函数不会被注册为 Pi Agent Tool。
+ */
+export async function writeValidatedArtifact(
+  input: WriteArtifactInput,
   dependencies: WriteArtifactDependencies = {}
-): DirectorTool {
+): Promise<ArtifactCommitResult> {
   const storage = dependencies.storage ?? defaultStorage
   const validate = dependencies.validate ?? validateArtifact
   const insertArtifact = dependencies.insertArtifact ?? insertArtifactRecord
-  return {
-    name: 'write_artifact',
-    label: '写入产物',
-    description: '先按指定门禁复验内容，再写入 StorageAdapter 并登记 artifact 索引。',
-    parameters: {
-      type: 'object',
-      properties: {
-        projectId: { type: 'string', minLength: 1 },
-        nodeId: { type: 'string', minLength: 1 },
-        kind: { type: 'string', minLength: 1 },
-        key: { type: 'string', minLength: 1 },
-        content: { type: 'string' },
-        validation: {
-          type: 'string',
-          enum: validationSchema.options,
-        },
-      },
-      required: ['projectId', 'kind', 'key', 'content', 'validation'],
-      additionalProperties: false,
-    },
-    async execute(input): Promise<DirectorToolResult> {
-      const parsed = inputSchema.safeParse(input)
-      if (!parsed.success) {
-        return validationFailure(
-          parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-        )
-      }
-      const prevalidation = validate(parsed.data)
-      if (!prevalidation.ok) return validationFailure(prevalidation.errors)
-
-      const contentHash = createHash('sha256').update(parsed.data.content).digest('hex')
-      const id = randomUUID()
-      const storageKey = await storage.put(parsed.data.key, parsed.data.content)
-      try {
-        await insertArtifact({
-          id,
-          projectId: parsed.data.projectId,
-          nodeId: parsed.data.nodeId,
-          kind: parsed.data.kind,
-          path: storageKey,
-          contentHash,
-        })
-      } catch (error) {
-        await storage.delete(storageKey)
-        throw error
-      }
-      const details = { ok: true as const, id, storageKey, contentHash }
-      return { content: JSON.stringify(details), details }
-    },
+  const parsed = inputSchema.safeParse(input)
+  if (!parsed.success) {
+    throw new ArtifactValidationError(
+      parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+    )
   }
+  const prevalidation = validate(parsed.data)
+  if (!prevalidation.ok) throw new ArtifactValidationError(prevalidation.errors)
+
+  const contentHash = createHash('sha256').update(parsed.data.content).digest('hex')
+  const id = randomUUID()
+  const storageKey = await storage.put(parsed.data.key, parsed.data.content)
+  try {
+    await insertArtifact({
+      id,
+      projectId: parsed.data.projectId,
+      nodeId: parsed.data.nodeId,
+      kind: parsed.data.kind,
+      path: storageKey,
+      contentHash,
+    })
+  } catch (error) {
+    await storage.delete(storageKey)
+    throw error
+  }
+  return { id, storageKey, contentHash }
 }
 
 function validateArtifact(input: WriteArtifactInput): ArtifactPrevalidation {
@@ -127,14 +120,6 @@ function validateArtifact(input: WriteArtifactInput): ArtifactPrevalidation {
 
 async function insertArtifactRecord(record: ArtifactIndexRecord): Promise<void> {
   getDb().insert(artifacts).values(record).run()
-}
-
-function validationFailure(errors: string[]): DirectorToolResult {
-  return {
-    content: JSON.stringify({ ok: false, errors }),
-    details: { ok: false, errors },
-    terminate: false,
-  }
 }
 
 function isSafeStorageKey(key: string): boolean {

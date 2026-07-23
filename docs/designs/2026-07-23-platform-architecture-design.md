@@ -87,7 +87,7 @@ src/
 - **本地文件系统**：mp4 / 帧 / 音频（经 StorageAdapter，未来可换对象存储）。
 - **Agent 会话 JSONL**：`StorageAdapter.localPath('pi-sessions')` 分配受控根目录，`DirectorSessionStore` 在该根内封装 `JsonlSessionRepo + NodeExecutionEnv`；SQLite 仅保存相对 `storageKey` 指针（`artifacts.kind='pi-session'`）。
 - **Director 可恢复输入**：节点的阶段输入持久化在 `canvas_nodes.data.directorInput`，由 `stage-prompt.ts` 路由到六个原生 prompt builder；Director repository 读取上下文与登记 artifact，stage runner 不直接操作 Drizzle。
-- **产物提交协议**：Agent 的校验 Tool 只提供诊断；写入端对同一内容复验后按“Storage → SQLite 索引”提交，索引失败补偿删除文件。既有 Pi JSONL 仅登记受控相对指针。
+- **产物提交协议**：Agent 只获得只读诊断 Tool；`write-artifact.ts` 是 stage runner 专用应用服务，归属/路径来自可信上下文。写入端对同一内容复验后按“Storage → SQLite 索引”提交，索引失败补偿删除文件。既有 Pi JSONL 仅登记受控相对指针。
 
 ### AI（StepFun）
 
@@ -138,3 +138,4 @@ src/
 | 2026-07-23 | Demo 基线发布。 |
 | 2026-07-23（修订） | 对齐 Harness：video-director 改为原生移植；画布改为动态 fan-out；Agent 改为 `Agent + JsonlSessionRepo + DirectorSessionStore`，明确 JSONL/SQLite/StorageAdapter 边界并排除 coding-agent/Skills/Extensions。 |
 | 2026-07-23（修订二） | 补齐 Director 执行契约：节点持久化 `directorInput`，新增类型化 prompt 路由与 repository 端口，状态机由 enqueue/runner 分工，队列通过 Next `instrumentation.ts` 启动。 |
+| 2026-07-23（修订三） | 收紧 Agent 权限：校验 Tool 只读诊断，artifact 提交由 stage runner 专用服务执行，模型不控制项目归属与路径。 |

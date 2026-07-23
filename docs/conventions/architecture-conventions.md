@@ -50,6 +50,7 @@ app  →  features  →  lib
 - **音频是唯一时间地基**；锁定帧只来自音频实测，业务不得手改。
 - 结构化数据以 Drizzle+SQLite 为单一真源；二进制产物经 `StorageAdapter`。
 - 新产物按“复验同一内容 → StorageAdapter → SQLite 索引”提交；索引失败必须补偿删除文件。不得相信调用方传入的“已校验”布尔值。
+- Agent Tool 不得接收并决定 artifact 的 `projectId` / `nodeId` / `key`；这些授权字段只能由 stage runner 的持久执行上下文提供给可信写服务。
 - 每镜以 shot 契约（HTML + `data-*` + token）为唯一视觉合同，可从上游重建。
 
 ## 6. 演进策略

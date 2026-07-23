@@ -68,7 +68,7 @@
 
 ### 3.2 依赖选型（修正：仅作裸 tool-calling 循环引擎）
 
-仍使用 **`@earendil-works/pi-agent-core`**（Agent runtime，tool calling + state management）+ **`pi-ai`**（底层多 Provider LLM 客户端），**但用途收窄**：只借用它的 `Agent`、会话存储与工具调用循环机制，**不使用其 Skills/Extensions 加载体系**。经 F0.1 核查，`createAgentSession()` 只由 `@earendil-works/pi-coding-agent` 导出，`pi-agent-core` 的正确入口是 `new Agent(...)`；因此本项目用 `Agent + JsonlSessionRepo` 组合，并在 `features/director/pi-session.ts` 内封装项目原生的 `createDirectorSession()`。该工厂只挂载 §3.1 表格中列出的自定义 Tool，不加载任何 Skill/Extension。
+仍使用 **`@earendil-works/pi-agent-core`**（Agent runtime，tool calling + state management）+ **`pi-ai`**（底层多 Provider LLM 客户端），**但用途收窄**：只借用它的 `Agent`、会话存储与工具调用循环机制，**不使用其 Skills/Extensions 加载体系**。经 F0.1 核查，`createAgentSession()` 只由 `@earendil-works/pi-coding-agent` 导出，`pi-agent-core` 的正确入口是 `new Agent(...)`；因此本项目用 `Agent + JsonlSessionRepo` 组合，并在 `features/director/pi-session.ts` 内封装项目原生的 `createDirectorSession()`。该工厂只挂载项目原生的只读/诊断 Tool，不加载任何 Skill/Extension；业务归属与写入路径由可信应用层决定，不交给模型。
 
 仍不用 `@earendil-works/pi-coding-agent`（面向人类终端编码场景，默认工具集 `read/write/edit/bash` 与本项目场景不符）。
 
@@ -82,7 +82,7 @@ F0.1 还确认 Pi 包是 ESM-only，而当前仓库根脚本语境为 CommonJS�
 
 `lib/determinism` 的 lint 守卫必须挂在"HTML 生成 Tool 返回结果之后、进入渲染队列之前"这个必经关卡上——这是我们自己的 Tool 实现内部的强制调用，不是靠 Skill 里的一句"不可绕过"文字指令约束模型。任何违规直接判定该次生成失败，Tool 返回结构化错误，让 Pi Agent 的 tool-calling 循环收到失败反馈后自行重试或升级为人工介入。
 
-`validate-shot-plan` / `check-determinism` 是给 Agent 的诊断反馈，不构成可伪造的“已校验”声明；`write-artifact` 必须对**即将写入的同一份内容**再次调用原生 schema/确定性守卫。写入顺序固定为“校验 → StorageAdapter → artifacts 索引”，若索引失败则删除刚写入的文件作补偿，避免产生无法查询的孤儿产物。`pi-session` 属于已由 SessionStore 创建的既有文件，只登记相对指针，不重复写内容。
+`validate-shot-plan` / `check-determinism` 是给 Agent 的只读诊断 Tool，不构成可伪造的“已校验”声明。`write-artifact.ts` **不是 Pi Tool**，而是只由可信 stage runner 调用的应用服务：项目/节点/路径来自持久执行上下文，不接受模型决定业务归属；它对**即将写入的同一份内容**再次调用原生 schema/确定性守卫。写入顺序固定为“校验 → StorageAdapter → artifacts 索引”，若索引失败则删除刚写入的文件作补偿，避免产生无法查询的孤儿产物。`pi-session` 属于已由 SessionStore 创建的既有文件，只登记相对指针，不重复写内容。
 
 ### 3.5 会话状态归属与适配边界（已决策）
 
@@ -208,7 +208,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 | `prompts/`（新增子目录） | §3.1 移植映射表中每个阶段的原生 prompt 模板（TS 字符串模板 + 类型化插槽参数），移植自 video-director 的方法论文本 | **不是**运行时读取 `docs/video-director/*.md`；这些文本被移植进代码后独立维护 |
 | `schemas/`（新增子目录） | §3.1 移植映射表中每个阶段的输出 Zod schema（`shot-plan.ts`/`ingest.ts` 等），手写对照 `docs/video-director/schemas/*.json` 移植 | 移植完成后与原 JSON Schema 解耦独立演进，不再同步追更 |
 | `pi-session.ts`（新增） | `DirectorSession` 工厂：组合 Pi `Agent` + `JsonlSessionRepo`，接入 `pi-ai` StepFun Provider，注册 §3.1 移植出的自定义 Tool | 单一职责：只管"怎么起一个会话"；**不依赖 `pi-coding-agent`，不加载任何 Skills/Extensions** |
-| `tools/`（新增子目录） | 每个自定义 Tool 一个文件（`validate-shot-plan.ts`、`write-artifact.ts`、`trigger-render.ts` 等），内部调用 `schemas/` 做校验 | 每个 Tool 文件只做一件事：校验 + 落库/落盘，不做跨阶段编排 |
+| `tools/`（新增子目录） | Agent 只读诊断 Tool（`validate-shot-plan.ts`、`check-determinism.ts`）+ 可信应用写服务（`write-artifact.ts`） | 模型不决定 project/node/path；写服务由 stage runner 调用并复验同一内容 |
 | `stage-prompt.ts`（新增） | 从项目/节点持久输入构建六阶段类型化 prompt | 只路由 D0.2 builder，不读数据库 |
 | `runtime-repository.ts`（新增） | Director 执行上下文、artifact 指针与错误记录的持久化端口 | 封装 Drizzle；不做阶段编排 |
 | `stage-runner.ts`（新增） | 编排一次"阶段运行"：读取持久输入 → 起会话 → 登记会话指针 → 跑到产出 → 经 Tool 门禁落盘 → 更新节点状态 | 被 queue handler 调用；本文件是 `features/director` 唯一允许"跨模块编排"的地方 |
@@ -465,3 +465,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订三） | **会话边界细化**：新增 `DirectorSessionStore`，明确 StorageAdapter 分配根目录、JsonlSessionRepo 提供追加式文件语义、Agent `message_end` 单写入点、恢复注入与 SQLite 相对指针规则。 |
 | 2026-07-23（修订四） | **Tool 注入边界补齐**：`DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，在 pi-session 内适配 Pi Tool，供 stage-runner 挂载阶段工具且不向领域外泄漏 Pi 类型。 |
 | 2026-07-23（修订五） | **D1.3 执行契约补齐**：新增 `canvas_nodes.data.directorInput`、`stage-prompt.ts` 与 `runtime-repository.ts` 边界；明确 enqueue 负责 pending、runner 只执行 pending→running；Next 启动改用根 `instrumentation.ts`。 |
+| 2026-07-23（修订六） | **Agent 写权限收口**：`write-artifact.ts` 从 Pi Tool 调整为 stage runner 专用可信应用服务；Agent 只保留诊断 Tool，避免模型决定业务归属、路径或造成双写。 |
