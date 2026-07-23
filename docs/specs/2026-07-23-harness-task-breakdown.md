@@ -755,7 +755,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.4 — 队列接入：`director` 作业处理器注册
 
-- 状态：☐
+- 状态：☑
 - 前置任务：D1.3
 - 允许改动范围：`src/features/director/queue-handler.ts`（新建）、对应测试、`src/instrumentation.ts`（新建）
 - 禁止改动：`src/lib/queue/in-process-queue.ts` 的核心实现（只调用 `register()` 方法）
@@ -765,7 +765,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   InProcessQueue，处理器内部调用 stage-runner.ts 的 runStage。导出
   enqueueDirectorStage()，先用 C1.3 状态机把节点置 pending，再 enqueue，
   API 路由不得自行拼装队列细节。在 Next.js 根 instrumentation.ts 的 Node
-  runtime register() 中幂等接入处理器注册与队列启动。
+  runtime register() 中幂等接入处理器注册与队列启动。若 enqueue 持久化失败，
+  必须补偿推进 pending→running→failed 并记录错误，禁止留下悬挂 pending 节点。
 
   前置任务：D1.3
 
@@ -782,6 +783,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   - [ ] 单测：enqueue 一个 director-stage 作业后（mock stage-runner），处理器被
         正确调用且参数传递正确
   - [ ] 单测：enqueueDirectorStage() 先合法推进节点到 pending，再写入队列
+  - [ ] 单测：enqueue 抛错时节点补偿为 failed 且错误已记录，可从 failed 重试
   - [ ] 应用启动时队列被启动且处理器已注册（可通过一次集成性测试或手动验证描述）
 
   不在本任务范围内：
@@ -1609,3 +1611,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订七） | **阶段 Tool 注入缺口**：D1.1 明确 `DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，由会话适配层转换为 Pi Tool，D1.3 无需越界操作 Agent。 |
 | 2026-07-23（修订八） | **Director 执行链重构**：D1.3–D1.5 增加持久 `directorInput`、类型化 prompt 路由、repository 端口与 pending 前置；队列启动改用 Next 根 `instrumentation.ts`，API 只调用领域 enqueue。 |
 | 2026-07-23（修订九） | **Agent 写权限收口**：D1.2 的 write-artifact 改为 stage runner 专用应用服务，Pi 仅获得诊断 Tool，消除模型决定归属/路径与重复落盘风险。 |
+| 2026-07-23（修订十） | **入队非原子补偿**：D1.4 明确 enqueue 失败必须把已 pending 节点补偿到 failed 并记录错误，避免不可恢复的悬挂状态。 |

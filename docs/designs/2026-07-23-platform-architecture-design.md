@@ -94,7 +94,7 @@ src/
 - 服务端 `LlmAdapter` 指向 `https://api.stepfun.com/v1`（OpenAI 兼容）。
 - 需要多轮 Tool 调用的 Director 阶段走 `pi-ai` 原生 StepFun Provider；F0.1 已真实验证 `Agent` 单轮调用与 JSONL 会话创建。
 - 项目原生 `createDirectorSession({ projectId, nodeId, stage, resumeSessionKey? })` 负责 Agent 运行、消息事件持久化与恢复；不依赖 `pi-coding-agent`，不加载 Skill/Extension。
-- `enqueueDirectorStage()` 先把节点合法推进到 `pending` 再入队，`runStage()` 只执行 `pending → running → success|failed`；应用在 Next.js 根 `instrumentation.ts` 的 Node runtime 注册并启动进程内队列。
+- `enqueueDirectorStage()` 先把节点合法推进到 `pending` 再入队，`runStage()` 只执行 `pending → running → success|failed`；enqueue 失败时补偿到 failed 并记录错误，避免悬挂 pending。应用在 Next.js 根 `instrumentation.ts` 的 Node runtime 注册并启动进程内队列。
 - **用户在设置页填自己的 Key**，存本地配置；永不进前端 bundle。
 
 ## 满足核心技术诉求
@@ -139,3 +139,4 @@ src/
 | 2026-07-23（修订） | 对齐 Harness：video-director 改为原生移植；画布改为动态 fan-out；Agent 改为 `Agent + JsonlSessionRepo + DirectorSessionStore`，明确 JSONL/SQLite/StorageAdapter 边界并排除 coding-agent/Skills/Extensions。 |
 | 2026-07-23（修订二） | 补齐 Director 执行契约：节点持久化 `directorInput`，新增类型化 prompt 路由与 repository 端口，状态机由 enqueue/runner 分工，队列通过 Next `instrumentation.ts` 启动。 |
 | 2026-07-23（修订三） | 收紧 Agent 权限：校验 Tool 只读诊断，artifact 提交由 stage runner 专用服务执行，模型不控制项目归属与路径。 |
+| 2026-07-23（修订四） | 明确 Demo 队列非原子入库的失败补偿：pending 后 enqueue 失败必须转 failed 并记录错误；未来可替换事务 outbox。 |

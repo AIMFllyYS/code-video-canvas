@@ -90,7 +90,7 @@
     - 对应 task-breakdown：D1.3
     - _Requirements: F2、F3、F4_
 
-  - [ ] 3.6 队列接入：`director` 作业处理器注册（`instrumentation.ts` 启动）
+  - [x] 3.6 队列接入：`director` 作业处理器注册（`instrumentation.ts` 启动）
     - 对应 task-breakdown：D1.4
     - _Requirements: F2、F3、F4_
 
