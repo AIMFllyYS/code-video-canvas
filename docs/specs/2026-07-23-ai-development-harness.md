@@ -495,3 +495,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十六） | **作业与产物只读边界**：UI 通过 project-scoped job snapshot 轮询；HTML/MP4 仅由 artifact id 受控读取，浏览器不接触 StorageAdapter key 或本机路径。 |
 | 2026-07-24（修订十七） | **导出 readiness 与结果收口**：导出页先查询服务端完整性计划，未完成时禁用并列出节点；成功响应只返回 artifact URL，不泄露 outputKey。 |
 | 2026-07-24（修订十八） | **StepFun Key 写入顺序**：设置 API 必须先远端 validate，成功后才覆盖 SQLite；失败响应不落盘且客户端只显示规范化错误。 |
+| 2026-07-24（修订十九） | **主题启动合同**：light/dark/system 写入本机 localStorage；根布局在 hydration 前按显式值或系统偏好应用 `.dark`，设置页复用 SegmentedControl。 |

@@ -165,3 +165,4 @@ src/
 | 2026-07-24（修订八） | 项目创建与四个全局 DAG 节点改为单事务；API 返回可信 INGEST 节点 ID，消除无入口半成品项目和客户端猜 ID。 |
 | 2026-07-24（修订九） | 分镜通道节点在 fan-out 时持久化 Director stage，画布读模型与 Inspector 直接消费该字段。 |
 | 2026-07-24（修订十） | 增加 project-scoped job snapshot 与 artifact-id 下载边界，支持 UI 安全轮询与预览。 |
+| 2026-07-24（修订十一） | 主题状态统一为 light/dark/system 本机值，根布局在 hydration 前应用暗色类，避免首屏闪烁。 |

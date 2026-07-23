@@ -1394,7 +1394,8 @@ Goal 1：完成 Track U 的 U1.1~U1.4（首页/新建项目对话框/画布主�
 - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
 ```
 ```
-Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到端 UI 走查），
+Goal 2：完成 Track U 的 U1.5~U1.8（含 U1.6a 全局主题补充卡；导出页/设置页/
+暗色主题/端到端 UI 走查），
 前置条件：Goal 1（U1.1~U1.4）已完成。
 
 执行要求：
@@ -1601,10 +1602,28 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
     单列一张后续任务卡，本卡只做设置页表单本身）
   ```
 
+### U1.6a — 全局主题状态（U1.7 前置补充卡）
+
+- 状态：☑
+- 前置任务：U1.6
+- 允许改动范围：`src/app/layout.tsx`、`src/app/settings/theme-control.tsx`
+  与测试、`src/app/settings/settings-form.tsx`（仅接入）
+- Task 规格：
+  ```
+  目标：补齐 U1.7 明确要求“缺失则先提出补充任务卡”的全局主题机制。三段控件
+  使用 light/dark/system 稳定值，写入本机 localStorage；根布局首屏脚本在 React
+  hydration 前应用 .dark，system 正确跟随 prefers-color-scheme，避免闪屏。
+
+  完成条件：
+  - [x] light/dark/system 解析有单元测试
+  - [x] 设置页只复用已登记 SegmentedControl，不实现新视觉原语
+  - [x] 不改业务数据或服务端设置表
+  ```
+
 ### U1.7 — 暗色主题（Zone D 页面镜像）
 
 - 状态：☐
-- 前置任务：U1.1~U1.6 全部完成
+- 前置任务：U1.1~U1.6a 全部完成
 - 允许改动范围：全部已实装页面的样式层（Tailwind class / Design Token 引用），不改业务逻辑
 - Task 规格：
   ```
@@ -1666,7 +1685,7 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | R（渲染） | 6 | 依赖 F0.6/F0.7 |
 | P（Pencil 组件港口，SSOT 强制） | 6 | 必须排在 Track U 之前完成 |
 | A（音频，Demo 占位） | 1 | P1 真实实现延后 |
-| U（UI） | 8 | 依赖 Track P + C/D/R 对应 API |
+| U（UI） | 9 | 依赖 Track P + C/D/R 对应 API；含 U1.6a 主题状态补充卡 |
 | **合计** | **40** | 另有 Tier B 里程碑验收穿插在每个 Track 完成后触发，不单独计入任务数 |
 
 ## 变更记录

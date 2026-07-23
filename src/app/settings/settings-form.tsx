@@ -5,13 +5,13 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { NavItem } from '@/components/ui/nav-item'
-import { SegmentedControl } from '@/components/ui/segmented-control'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
 import { SettingsRow } from '@/components/ui/settings-row'
 import { StatusPill } from '@/components/ui/status-pill'
 import { TextField } from '@/components/ui/text-field'
 import { Toggle } from '@/components/ui/toggle'
 import { Toast } from '@/components/ui/toast'
+import { ThemeControl } from './theme-control'
 
 type ValidationState = 'unconfigured' | 'validating' | 'valid' | 'invalid'
 
@@ -103,15 +103,7 @@ export function SettingsForm() {
         </SettingsSection>
         <SettingsSection title="外观">
           <SettingsRow label="主题">
-            <SegmentedControl
-              options={[
-                { value: 'light', label: '浅色' },
-                { value: 'dark', label: '深色' },
-                { value: 'system', label: '跟随系统' },
-              ]}
-              value="light"
-              onChange={() => undefined}
-            />
+            <ThemeControl />
           </SettingsRow>
         </SettingsSection>
         <SettingsSection title="关于">

@@ -185,6 +185,9 @@
     - 对应 task-breakdown：U1.6
     - _Requirements: F8_
 
+  - [x] 7.6a 全局主题状态
+    - 对应 task-breakdown：U1.6a
+
   - [ ] 7.7 暗色主题（Zone D 页面镜像）
     - 对应 task-breakdown：U1.7
 
