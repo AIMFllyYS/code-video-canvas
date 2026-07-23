@@ -434,26 +434,35 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 - 状态：☐
 - 前置任务：C1.1, C1.2, C1.3
-- 允许改动范围：`src/app/canvas/**`、`src/components/ui/**`（若需新增纯展示原语，需先确认 `/playbook` 无同类组件）
-- 禁止改动：`src/features/canvas/**`（本卡只消费已完成的 features 层函数，不新增业务逻辑）
+- 允许改动范围：`src/app/canvas/**`、`src/features/canvas/queries.ts`、
+  `src/features/canvas/queries.test.ts`、`src/components/ui/**`（若需新增纯展示原语，
+  需先确认 `/playbook` 无同类组件）
+- 禁止改动：`src/features/canvas/fan-out.ts`、`layout.ts`、`status.ts`
 - Task 规格：
   ```
   目标：在 canvas 路由下实现 React Flow 画布视图，渲染 features/canvas 已提供的
   节点/边数据；按 laneKey 对分镜通道分组，提供折叠/展开交互；节点按 §设计系统
   清单 的 stage-* 配色与节点类型对应展示状态徽章（依据 C1.3 的 status 字段）。
+  现有 queries.ts 仅能读取项目，需在本卡补充 getCanvasGraph(projectId) 只读投影，
+  由 Server Component 调用；page.tsx 不得直接访问数据库。
 
   前置任务：C1.1, C1.2, C1.3
 
   允许改动范围：
   - src/app/canvas/**
+  - src/features/canvas/queries.ts
+  - src/features/canvas/queries.test.ts
   - src/components/ui/**（仅新增缺失的纯展示原语，且必须登记 playbook）
 
   禁止改动：
-  - src/features/canvas/**（发现缺口只能在完成汇报中提出，不能自行加逻辑）
+  - src/features/canvas/fan-out.ts
+  - src/features/canvas/layout.ts
+  - src/features/canvas/status.ts
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 页面文件不超过 200 行（超出拆分到 features 或本地子组件）
+  - [ ] 单测：getCanvasGraph 仅返回指定项目的节点/边，不泄漏其他项目数据
   - [ ] 新增纯展示组件已在 src/app/playbook/registry.ts 登记并配 *.demo.tsx
   - [ ] 手动验证：50 个分镜通道的模拟数据下页面可交互折叠，不崩溃（记录截图或
         描述验证过程于完成汇报）
@@ -1567,3 +1576,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订二） | **Goal/Task 粒度纠正**：更正"一张任务卡=一次 Goal"的错误理解为"一个 Track=一次 Goal，Track 内的任务卡是 Codex 在该 Goal 会话内部自主拆解执行的 Task"；每张卡片标签由「Goal 提示词」改为「Task 规格」；为每个 Track 新增独立的「Goal 启动提示词」区块（Track U 因 Task 数较多拆成两个顺序 Goal）；同步更新总纲 §9 |
 | 2026-07-23（修订三） | **Pi SDK 口径纠正**：F0.1 实测确认 `createAgentSession()` 只由 `pi-coding-agent` 导出；F0.1/D1.1 改为 `pi-agent-core Agent + JsonlSessionRepo + createDirectorSession()`，继续禁止 Skills/Extensions。 |
 | 2026-07-23（修订四） | **DirectorSession 持久化边界**：D1.1 新增 session-store.ts，采用 Agent 事件单写入 + JSONL 恢复注入；D1.3 要求成功/失败路径均登记相对 pi-session storageKey。 |
+| 2026-07-23（修订五） | **Canvas 读模型缺口**：C1.4 补充 `queries.ts#getCanvasGraph(projectId)` 与隔离测试，页面经 features 读模型取节点/边，禁止在 `page.tsx` 直接访问数据库。 |
