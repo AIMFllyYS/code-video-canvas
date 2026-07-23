@@ -6,18 +6,21 @@ export interface Project {
   updatedAt: Date
 }
 
-export type CanvasNodeType =
-  | 'ingest'
-  | 'direct'
-  | 'shot-spec'
-  | 'shot'
-  | 'assemble'
-  | 'finalize'
+export type GlobalCanvasNodeType = 'script-import' | 'shot-split' | 'score' | 'export'
+
+export type ShotLaneNodeType =
+  | 'shot-script'
+  | 'shot-codegen'
+  | 'shot-sfx'
+  | 'shot-subtitle'
+  | 'shot-qa'
+
+export type CanvasNodeType = GlobalCanvasNodeType | ShotLaneNodeType
 
 export interface CanvasNode {
   id: string
   projectId: string
-  type: CanvasNodeType | string
+  type: CanvasNodeType
   stage?: string | null
   position: { x: number; y: number }
   data: Record<string, unknown>

@@ -197,7 +197,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
 
 ### F0.5 — 节点类型 taxonomy 重新设计（破坏性变更）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.4
 - 允许改动范围：`src/features/canvas/types.ts`、`src/features/canvas/schemas.ts`、所有引用 `CanvasNodeType` 的现有文件（先用 grep 全项目定位引用点后逐一更新）
 - 禁止改动：数据库 schema（本卡只改 TS 类型层，不再动 DB；`type` 列本身是自由 text，不需要迁移）
