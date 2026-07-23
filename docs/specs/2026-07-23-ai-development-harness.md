@@ -91,7 +91,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 - 任何"业务真相"（分镜内容、渲染产物路径、节点状态）必须落在 SQLite / StorageAdapter，Pi 会话文件只是可追溯的执行留痕，重放/调试用，绝不作为业务查询的数据源。
 - `DirectorSession` 是运行层与持久层的唯一桥：新会话先创建 JSONL 并返回相对 `storageKey`；恢复会话时先由 `Session.buildContext()` 重建消息，再作为 `Agent.initialState.messages` 注入。
 - 会话写入由 `Agent` 的 `message_end` 生命周期事件驱动，按事件顺序 append 用户、助手与 ToolResult 消息；不得在 stage runner 与 Tool 内重复写同一条消息。
-- `createDirectorSession()` 必须接收 `{ projectId, nodeId, stage, resumeSessionKey? }`，以便会话元数据与画布节点一一追溯。对外最小接口只暴露 `id`、`storageKey`、`run()` 与 `close()`，不暴露 Pi `Agent`/`Session` 实例。
+- `createDirectorSession()` 必须接收 `{ projectId, nodeId, stage, resumeSessionKey? }`，以便会话元数据与画布节点一一追溯。对外最小接口只暴露 `id`、`storageKey`、`run({ prompt, tools })` 与 `close()`；`tools` 使用项目自有 `DirectorTool` 契约，由 `pi-session.ts` 内部适配为 Pi `AgentTool`，不暴露 Pi `Agent`/`Session` 实例或 Pi 类型。
 - `stage-runner.ts` 在第一次模型调用前把 `storageKey` 登记为 `artifacts.kind='pi-session'`；失败路径也保留该指针用于复盘。
 
 ### 3.6 与 `features/director` 现有骨架的关系
@@ -455,3 +455,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-23（修订） | **架构纠正**：video-director 不再作为 Pi Skill 运行时挂载，改为移植进原生代码（新增 §3.0/§3.1 移植映射表，§3 全面重写）；新增 §4.2 画布交互范式对标 Dify/Coze；新增 §5.6 Pencil MCP 组件港口强制约束 + `/playbook` 唯一登记处规则；新增 §5.7 依赖补全（`lucide-react`/`@dagrejs/dagre`）；§7.4 授权范围扩大为允许直接写入 `.env` 真实测试值 |
 | 2026-07-23（修订二） | **Pi SDK 口径纠正**：实测确认 `createAgentSession()` 属于被排除的 `pi-coding-agent`，`pi-agent-core` 正确入口为 `Agent`；Director 改为项目原生 `createDirectorSession()` 组合 `Agent + JsonlSessionRepo`，继续禁止 Skills/Extensions。 |
 | 2026-07-23（修订三） | **会话边界细化**：新增 `DirectorSessionStore`，明确 StorageAdapter 分配根目录、JsonlSessionRepo 提供追加式文件语义、Agent `message_end` 单写入点、恢复注入与 SQLite 相对指针规则。 |
+| 2026-07-23（修订四） | **Tool 注入边界补齐**：`DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，在 pi-session 内适配 Pi Tool，供 stage-runner 挂载阶段工具且不向领域外泄漏 Pi 类型。 |

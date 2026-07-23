@@ -626,6 +626,9 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
   内部类型。本函数不依赖 `pi-coding-agent`，不加载任何 Skill/Extension，不挂载
   docs/video-director/ 或任何外部技能包；该阶段所需的领域知识完全来自 D0.2
   产出的原生 prompt 模板与 D1.2 即将注册的自定义 Tool。
+  `DirectorSession.run({ prompt, tools })` 的 tools 使用项目自有 `DirectorTool`
+  契约，并在 pi-session.ts 内部适配为 Pi AgentTool；不得让 D1.3 或其他领域代码
+  直接操作 Agent.state.tools。
 
   前置任务：F0.1
 
@@ -649,6 +652,8 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
         `Session.buildContext()` 的消息被注入新 Agent
   - [ ] 函数对每个 stage 返回类型一致的 DirectorSession 封装；对外只暴露
         id/storageKey/run/close，不泄漏 Pi 内部类型
+  - [ ] 单测：run() 可接收项目自有 DirectorTool，适配后挂入 Agent，但
+        DirectorSession/DirectorTool 的公开类型签名中不出现 Pi SDK 类型
   - [ ] 代码或测试中不出现任何对 docs/video-director/ 路径的文件 IO 调用
 
   不在本任务范围内：
@@ -1581,3 +1586,4 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 | 2026-07-23（修订四） | **DirectorSession 持久化边界**：D1.1 新增 session-store.ts，采用 Agent 事件单写入 + JSONL 恢复注入；D1.3 要求成功/失败路径均登记相对 pi-session storageKey。 |
 | 2026-07-23（修订五） | **Canvas 读模型缺口**：C1.4 补充 `queries.ts#getCanvasGraph(projectId)` 与隔离测试，页面经 features 读模型取节点/边，禁止在 `page.tsx` 直接访问数据库。 |
 | 2026-07-23（修订六） | **六阶段 prompt 文件漏项**：D0.2 允许范围补齐 `assemble.ts` 与 `finalize.ts`，使文件清单与任务目标中的 INGEST/DIRECT/SHOT-SPEC/FABRICATE/ASSEMBLE/FINALIZE 一致。 |
+| 2026-07-23（修订七） | **阶段 Tool 注入缺口**：D1.1 明确 `DirectorSession.run({prompt, tools})` 接受项目自有 `DirectorTool`，由会话适配层转换为 Pi Tool，D1.3 无需越界操作 Agent。 |
