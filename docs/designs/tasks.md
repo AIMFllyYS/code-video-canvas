@@ -139,7 +139,7 @@
   - [x] 5.3 B2 反馈组件港口（Toast / Dialog / EmptyState）
     - 对应 task-breakdown：P1.2
 
-  - [ ] 5.4 B3 导航组件港口（NavItem / TopBar / Sidebar）
+  - [x] 5.4 B3 导航组件港口（NavItem / TopBar / Sidebar）
     - 对应 task-breakdown：P1.3
 
   - [ ] 5.5 B4 业务/节点组件港口（11 个组件）

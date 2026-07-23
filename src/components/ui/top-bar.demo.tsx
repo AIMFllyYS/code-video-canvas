@@ -10,10 +10,10 @@ export function TopBarDemo() {
       meta="8 节点 · 已自动保存"
       actions={
         <>
-          <Button variant="gray" size="sm" icon={Play}>
+          <Button variant="gray" icon={Play} className="text-[13px]">
             全部渲染
           </Button>
-          <Button size="sm" icon={Download}>
+          <Button icon={Download} className="text-[13px]">
             导出 MP4
           </Button>
         </>

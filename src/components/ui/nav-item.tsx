@@ -1,10 +1,12 @@
 import type { ComponentType, ReactNode } from 'react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 export interface NavItemProps {
   icon: ComponentType<{ className?: string }>
   children: ReactNode
   active?: boolean
+  href?: string
   className?: string
 }
 
@@ -13,15 +15,9 @@ export interface NavItemProps {
  * canvas.pen: 32px 高、rounded-sm、gap-2、px-2.5 py-1.5；
  * active 时 fill-strong 底 + accent 图标 + label 加粗字。
  */
-export function NavItem({ icon: Icon, children, active, className }: NavItemProps) {
-  return (
-    <div
-      className={cn(
-        'flex h-8 items-center gap-2 rounded-sm px-2.5 py-1.5',
-        active ? 'bg-fill-strong' : 'bg-transparent',
-        className,
-      )}
-    >
+export function NavItem({ icon: Icon, children, active, href, className }: NavItemProps) {
+  const content = (
+    <>
       <Icon className={cn('h-4 w-4', active ? 'text-accent' : 'text-label-secondary')} />
       <span
         className={cn(
@@ -31,6 +27,19 @@ export function NavItem({ icon: Icon, children, active, className }: NavItemProp
       >
         {children}
       </span>
-    </div>
+    </>
   )
+  const classes = cn(
+    'flex h-8 items-center gap-2 rounded-sm px-2.5 py-1.5',
+    active ? 'bg-fill-strong' : 'bg-transparent',
+    className,
+  )
+  if (href) {
+    return (
+      <Link href={href} aria-current={active ? 'page' : undefined} className={classes}>
+        {content}
+      </Link>
+    )
+  }
+  return <div className={classes}>{content}</div>
 }

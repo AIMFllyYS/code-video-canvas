@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { InputHTMLAttributes, ReactNode } from 'react'
 import { Search } from 'lucide-react'
 import { Clapperboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -39,12 +39,13 @@ export function SidebarBrand({ className }: SidebarBrandProps) {
   )
 }
 
-export interface SidebarSearchProps {
-  placeholder?: string
-  className?: string
-}
+export type SidebarSearchProps = InputHTMLAttributes<HTMLInputElement>
 
-export function SidebarSearch({ placeholder = '搜索项目', className }: SidebarSearchProps) {
+export function SidebarSearch({
+  placeholder = '搜索项目',
+  className,
+  ...props
+}: SidebarSearchProps) {
   return (
     <div
       className={cn(
@@ -53,7 +54,11 @@ export function SidebarSearch({ placeholder = '搜索项目', className }: Sideb
       )}
     >
       <Search className="h-3.5 w-3.5 shrink-0" />
-      <span className="text-[13px] font-sc">{placeholder}</span>
+      <input
+        className="h-full min-w-0 flex-1 bg-transparent text-[13px] font-sc text-label outline-none placeholder:text-label-tertiary"
+        placeholder={placeholder}
+        {...props}
+      />
     </div>
   )
 }
