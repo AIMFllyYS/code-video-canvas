@@ -25,9 +25,11 @@
 | 画布 | React Flow（`@xyflow/react`） | — |
 | 渲染 | HyperFrames 思想（Playwright/Chromium 逐帧 seek → `ffmpeg-static`） | — |
 | 动画 | GSAP | paused + frame seek（确定性） |
-| Agent | Pi(TS) harness（OpenClaw 内核） | — |
+| Agent | Pi Agent（`@earendil-works/pi-agent-core` + `pi-ai`） | 挂载 video-director 技能包 |
 | AI | StepFun（阶跃星辰，OpenAI 兼容） | 用户自带 Key |
 | 存储 | SQLite（Drizzle）+ 本地文件系统 | — |
+| 样式 | Tailwind CSS + Design Token 体系 | 禁硬编码颜色 |
+| 图标 | Lucide（白名单制） | 禁 emoji |
 | 包管理 | pnpm | — |
 | 运行时 | Node.js | 22.11.0 |
 
@@ -71,14 +73,30 @@ scripts/            辅助脚本
 
 ## 组件复用（/playbook）
 
-所有前端 UI 组件遵循单一真源（SSOT）：在 `src/components/*` 定义一份，其他页面 `import` 复用、不重复实现。运行后访问 [/playbook](http://localhost:3000/playbook) 查看组件手册（应用内「活文档 / 组件画廊」）；新增组件在 `src/app/playbook/registry.ts` 登记并加 `*.demo.tsx`。详见 [架构规范](./docs/conventions/architecture-conventions.md)。
+所有前端 UI 组件遵循单一真源（SSOT）：在 `src/components/*` 定义一份，其他页面 `import` 复用、不重复实现。运行后访问 [/playbook](http://localhost:3000/playbook) 查看组件手册（应用内「活文档 / 组件画廊」）；新增组件在 `src/app/playbook/registry.ts` 登记并加 `*.demo.tsx`。
+
+视觉语言以 [设计系统清单](./docs/designs/2026-07-23-design-system-inventory.md) 为权威：颜色/阴影/圆角/间距均引用 Design Token，图标统一 Lucide 白名单，禁止硬编码 hex。详见 [架构规范](./docs/conventions/architecture-conventions.md)。
 
 ## 文档
 
 - [产品需求 PRD](./docs/specs/2026-07-23-prd-code-video-canvas.md)
 - [平台架构设计](./docs/designs/2026-07-23-platform-architecture-design.md)
+- [设计系统清单](./docs/designs/2026-07-23-design-system-inventory.md)（Token / 颜色 / 图标 / 组件 / 布局）
+- [UI 设计交接](./docs/designs/2026-07-23-ui-design-handoff.md)
 - [规范体系 docs/conventions/](./docs/conventions/)
+- [AI 开发 Harness 总纲](./docs/specs/2026-07-23-ai-development-harness.md) — 三层节点体系 / Pi Agent 落地方案 / 模块职责地图 / 验收框架
+- [任务拆解与 Goal 模式执行清单](./docs/specs/2026-07-23-harness-task-breakdown.md) — 32 张可独立执行的开发任务卡
 - [AGENTS.md](./AGENTS.md) — AI 编码代理操作策略
+
+## 开发方式：Spec 驱动 + Codex Goal 模式
+
+本项目采用 **Spec 驱动开发**：所有实施工作先在 `docs/specs/` 中拆解为结构化任务卡，再交给 AI（Codex Goal 模式或人类工程师）逐张执行。核心原则：
+
+- 每张任务卡对应一次 Codex `/goal` 生命周期：一句话可判定完成的目标 + 明确的允许/禁止改动范围 + 机器可判定的完成条件。
+- 任务卡按 Track（Foundation/Canvas/Director/Render/Audio/UI）分组，Track 内严格顺序执行，Track 之间尽量解耦以支持并行。
+- 验收分两级：Tier A（单卡级，lint/tsc/单测/确定性扫描）与 Tier B（里程碑级，全量 build + 功能性端到端集成测试）；视觉/内容质量层面的端到端验收始终由人工完成，不自动化。
+
+详见 [AI 开发 Harness 总纲](./docs/specs/2026-07-23-ai-development-harness.md)。
 
 ## 路线图
 
