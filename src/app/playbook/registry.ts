@@ -1,8 +1,7 @@
 import type { ComponentType } from 'react'
-import { LogoMarkDemo } from '@/components/icons/logo-mark.demo'
+import { LucideCatalogDemo } from '@/components/icons/lucide-catalog.demo'
 import { ArtifactChipDemo } from '@/components/ui/artifact-chip.demo'
 import { ButtonDemo } from '@/components/ui/button.demo'
-import { CardDemo } from '@/components/ui/card.demo'
 import { DialogDemo } from '@/components/ui/dialog.demo'
 import { EmptyStateDemo } from '@/components/ui/empty-state.demo'
 import { IconButtonDemo } from '@/components/ui/icon-button.demo'
@@ -38,15 +37,19 @@ export interface PlaybookEntry {
   Demo: ComponentType
 }
 
+export const PENCIL_REUSABLE_SYMBOL_COUNT = 30
+export const PENCIL_COMPONENT_FAMILY_COUNT = 27
+export const PENCIL_CONSOLIDATION_NOTE =
+  'Button/Primary、Tinted、Gray、Destructive 四个 Pencil symbols 由一个 Button 组件的 variant 承载。'
+
 /**
- * 组件手册登记表：新增组件只需加一条（并新建对应 *.demo.tsx）。
- * 这是「活文档」的单一来源，页面据此聚合渲染。
+ * Track P 组件手册登记表。UI 分类只登记可追溯到 canvas.pen reusable symbol
+ * 的组件族；Icons 分类是 Pencil A4 白名单目录，不是额外视觉原语。
  */
 export const PLAYBOOK_ENTRIES: PlaybookEntry[] = [
   { id: 'artifact-chip', name: 'ArtifactChip', category: 'ui', Demo: ArtifactChipDemo },
   { id: 'audio-node', name: 'AudioNode', category: 'ui', Demo: AudioNodeDemo },
   { id: 'button', name: 'Button', category: 'ui', Demo: ButtonDemo },
-  { id: 'card', name: 'Card', category: 'ui', Demo: CardDemo },
   { id: 'contact-sheet-thumb', name: 'ContactSheetThumb', category: 'ui', Demo: ContactSheetThumbDemo },
   { id: 'export-node', name: 'ExportNode', category: 'ui', Demo: ExportNodeDemo },
   { id: 'dialog', name: 'Dialog', category: 'ui', Demo: DialogDemo },
@@ -71,7 +74,7 @@ export const PLAYBOOK_ENTRIES: PlaybookEntry[] = [
   { id: 'toast', name: 'Toast', category: 'ui', Demo: ToastDemo },
   { id: 'toggle', name: 'Toggle', category: 'ui', Demo: ToggleDemo },
   { id: 'tooltip', name: 'Tooltip', category: 'ui', Demo: TooltipDemo },
-  { id: 'logo-mark', name: 'LogoMark', category: 'icons', Demo: LogoMarkDemo },
+  { id: 'lucide-catalog', name: 'Lucide 白名单', category: 'icons', Demo: LucideCatalogDemo },
 ]
 
 export function entriesByCategory(category: PlaybookCategory): PlaybookEntry[] {

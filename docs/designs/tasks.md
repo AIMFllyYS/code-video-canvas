@@ -126,7 +126,7 @@
     - 对应 task-breakdown：R1.6
     - _Requirements: F4、F9_
 
-- [ ] 5. Pencil 组件港口 — `canvas.pen` → 真实前端组件（SSOT 强制）
+- [x] 5. Pencil 组件港口 — `canvas.pen` → 真实前端组件（SSOT 强制）
   - 对应 Goal：Track P（必须在 Task 6 之前完成）
   - _Requirements: 支撑全部 UI 相关需求（F6、F8~F14 的界面呈现），不直接对应单个功能编号_
 
@@ -146,7 +146,7 @@
     - 对应 task-breakdown：P1.4
     - _Requirements: F4、F6（节点视觉呈现）_
 
-  - [ ] 5.6 图标白名单核查 + Playbook 完整性收口
+  - [x] 5.6 图标白名单核查 + Playbook 完整性收口
     - 对应 task-breakdown：P1.5
 
 - [ ] 6. Audio — 字幕/配音/音效/配乐（P1 优先级，Demo 阶段占位）

@@ -243,7 +243,11 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 这是本次修正新增的**强制约束**，直接回应"不要重复撰写冗余代码"的要求：
 
 - **`docs/designs/canvas.pen` 是唯一的视觉真源**。该设计稿共 52 个顶层节点、其中 **30 个标记为 `reusable:true` 的可复用组件**（Button 系列/IconButton/SegmentedControl/TextField/TextArea/SearchField/Toggle/ProgressBar/StatusPill/Tooltip/Toast/Dialog/EmptyState/NavItem/TopBar/ProjectCard/ArtifactChip/Node 系列四种/QueueStatusBar/TimelineTrack/ContactSheetThumb/SettingsRow/SettingsGroup/Sidebar）。这 30 个组件**必须逐一通过 Pencil MCP 工具链（`mcp_pencil_*`）读取其结构与样式，一比一还原为 `src/components/ui/*.tsx` 或 `src/components/icons/*.tsx` 下的真实 React 组件**，禁止凭记忆/凭空实现替代读取。
-- **`/playbook` 是唯一的组件登记处**。这 30 个组件港口完成后必须**逐一**在 `src/app/playbook/registry.ts` 登记 + 配 `*.demo.tsx`，作为"活文档"。
+- **`/playbook` 是唯一的组件登记处**。30 个 Pencil reusable symbols 必须全部
+  可追溯；其中 Button/Primary、Tinted、Gray、Destructive 由一个带 `variant`
+  的 Button 组件承载，因此登记口径为 **27 个 Pencil UI 组件族**，每族在
+  `src/app/playbook/registry.ts` 登记并配 `*.demo.tsx`。非 Pencil 视觉原语
+  不得冒充 Track P 登记项；Lucide 白名单单独作为图标目录展示。
 - **所有页面（S1~S6 及暗色镜像）实现时只能 `import` 这些已登记组件，禁止在页面文件内重复实现同类视觉原语**（比如 S3 画布页需要 StatusPill，就必须 `import` 已登记的 `StatusPill`，不能在画布组件文件内再手写一个视觉相同的 div 结构）。任务卡执行中若发现所需组件尚未移植，必须先补移植该组件到 `components/*` + 登记 `/playbook`，再在页面中 `import` 使用，不允许"页面里先临时糊一个、以后再抽取"。
 - 这一约束新增独立 Track（见 task-breakdown 的 **Track P — Pencil 组件港口**），且**排在 Track U（页面实装）之前**，因为 U 的每张任务卡都依赖 P 已完成的组件。
 
@@ -480,3 +484,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十） | **Shot artifact 可搬运性**：明确 Director 生成的 HTML 必须自包含且位置无关，禁止依赖工作区相对 `node_modules`/`docs` 资源；真实渲染验收从 StorageAdapter 路径加载 artifact。 |
 | 2026-07-24（修订十一） | **启动副作用收口**：Director/Render queue 与 runner 的模块导入不得实例化 SQLite repository；默认依赖延迟到真实 enqueue/handler 执行，避免构建和并行测试争用默认数据库。 |
 | 2026-07-24（修订十二） | **Node UI 领域合同收口**：`CanvasNodeType` 与六态 `NodeStatus` 统一定义在客户端安全 types 层；UI 禁止复制四态枚举或把 PipelineStage 当作节点类型，阶段色由节点类型显式派生。 |
+| 2026-07-24（修订十三） | **Pencil 登记口径收口**：30 个 reusable symbols 全部可追溯，四个 Button symbols 合并为一个 variant 组件，故 `/playbook` 登记 27 个 Pencil UI 组件族；图标白名单独立展示。 |

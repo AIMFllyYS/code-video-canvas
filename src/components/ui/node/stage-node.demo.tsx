@@ -1,4 +1,4 @@
-import { FileInput, GitBranch, ShieldCheck } from 'lucide-react'
+import { FileInput, ShieldCheck, Sparkles } from 'lucide-react'
 import { ArtifactChip } from '@/components/ui/artifact-chip'
 import { StageNode } from './stage-node'
 
@@ -21,7 +21,7 @@ export function StageNodeDemo() {
       <StageNode
         nodeType="shot-split"
         name="语义拆分 Split"
-        icon={GitBranch}
+        icon={Sparkles}
         status="running"
       />
       <StageNode

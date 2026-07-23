@@ -224,7 +224,7 @@ Zone D 与 Zone C 一一对应；根节点强制 `theme.mode = dark`，文案与
 
 ### 6.2 白名单（按分组）
 
-**品牌 / 导航**：`clapperboard` · `layout-dashboard` · `folder` · `settings` · `search`
+**品牌 / 导航**：`clapperboard` · `layout-dashboard` · `folder` · `waypoints` · `settings` · `search`
 
 **操作**：`plus` · `circle-plus` · `x` · `refresh-cw` · `download` · `upload` · `sparkles` · `ellipsis` · `chevron-right` · `arrow-left`
 

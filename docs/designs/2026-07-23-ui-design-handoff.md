@@ -262,7 +262,7 @@ y≈5803   ├──────────────────────
 - 缩略区：高 168（16:9），fill `$fill`，居中 lucide `film` 32 `$label-tertiary`；左上叠 StatusPill。
 - 信息区 padding 12 垂直 gap 4：标题 Subhead 13 `600`；元行 Caption `$label-tertiary`（「6 个分镜 · 01:24 · 2 小时前」mono 时间）。
 
-**㉑ ArtifactChip（工件芯片）** — 高 26，padding [4,8]，radius `$radius-sm`，fill `$fill`，水平 gap 6 alignItems center：lucide `file-json` 12 `$label-secondary` + 文件名 Micro 11 `$font-mono` `$label`（如 `shot-plan.json`）。
+**㉑ ArtifactChip（工件芯片）** — 高 26，padding [4,8]，radius `$radius-sm`，fill `$fill`，水平 gap 6 alignItems center：lucide `file-code` 12 `$label-secondary` + 文件名 Micro 11 `$font-mono` `$label`（如 `shot-plan.json`）。
 
 ### B4 业务组件（核心）
 
@@ -273,8 +273,8 @@ y≈5803   ├──────────────────────
 - 三实例阶段图标/名称：Ingest `file-input`「Ingest 语义分镜」/ Direct `palette`「Direct 风格圣经」/ Shot-Spec `file-check`「Shot-Spec 分镜合同」。
 
 **㉓ Node/ShotNode（分镜节点·产品灵魂）** — 宽 240，radius `$radius-md`，fill `$surface`，stroke `$stage-shot` 1.5，卡片阴影，垂直。左右端口同 ㉒。
-- 预览区：宽 fill_container，高 128（≈16:9），fill `$fill`，四角 radius [10,10,0,0]；中央 lucide `play` 24 `$label-tertiary`；左上叠 StatusPill；右下时长标签（fill `#00000099`，Caption 12 mono 白，padding [2,6]，radius 4，如「00:08」）。
-- 信息区 padding 12 垂直 gap 6：标题行（Subhead 13 `600`「开场：一个问题」+ 右侧 lucide `more-horizontal` 16 `$label-tertiary`）；元行（Caption `$label-tertiary`「HTML+GSAP · 配方 G12」mono 部分 `$font-mono`）；操作行（水平 gap 8）：Button/Tinted sm「重渲此镜」+ Caption `$label-tertiary`「已缓存」。
+- 预览区：宽 fill_container，高 128（≈16:9），fill `$fill`，四角 radius [10,10,0,0]；中央 lucide `play` 24 `$label-tertiary`；左上叠 StatusPill；右下时长标签（fill `$overlay`，Caption 12 mono `$text-inverse`，padding [2,6]，radius 4，如「00:08」）。
+- 信息区 padding 12 垂直 gap 6：标题行（Subhead 13 `600`「开场：一个问题」+ 右侧 lucide `ellipsis` 16 `$label-tertiary`）；元行（Caption `$label-tertiary`「HTML+GSAP · 配方 G12」mono 部分 `$font-mono`）；操作行（水平 gap 8）：Button/Tinted sm「重渲此镜」+ Caption `$label-tertiary`「已缓存」。
 
 **㉔ Node/AudioNode** — 宽 200，radius `$radius-md`，fill `$surface`，stroke `$stage-audio` 1.5，padding 12 垂直 gap 8。
 - 头行：lucide `audio-lines` 16 `$stage-audio` + 「Audio 配音/字幕」Subhead 13 `600` + 状态点。
@@ -282,21 +282,21 @@ y≈5803   ├──────────────────────
 
 **㉕ Node/ExportNode** — 宽 200，radius `$radius-md`，fill `$surface`，stroke `$stage-finalize` 1.5，padding 12 垂直 gap 8。
 - 头行：lucide `download` 16 `$stage-finalize` + 「Finalize 导出」Subhead 13 `600`。
-- 内容行：lucide `file-video` 16 `$label-secondary` + 「成片 · MP4 1080p」Subhead 13 + 右侧 StatusPill sm（已渲染）。
+- 内容行：lucide `video` 16 `$label-secondary` + 「成片 · MP4 1080p」Subhead 13 + 右侧 StatusPill sm（已渲染）。
 
 **㉖ Edge（连线规范，不建组件，画布层直接画）** — `{type:"path"}` 贝塞尔曲线，stroke `$separator`（或上游节点阶段色 40% 透明度），strokeWidth 1.5，无 fill；箭头终点用 6×6 小三角或圆点。从源节点右端口到目标节点左端口。
 
 **㉗ QueueStatusBar（底部队列栏）** — 高 36，宽 fill_container，fill `$surface`，顶部 1px `$separator`，水平 padding 16 alignItems center justifyContent space_between。
-- 左：lucide `loader-2` 14 `$accent` + Caption 12 `$label-secondary`「渲染队列 · 2/8 节点完成」+ 迷你 ProgressBar（宽 120，仅轨道条）。
+- 左：lucide `loader-circle` 14 `$accent` + Caption 12 `$label-secondary`「渲染队列 · 2/8 节点完成」+ 迷你 ProgressBar（宽 120，仅轨道条）。
 - 右：Caption `$label-tertiary`「本地渲染 · 命中缓存 5 次」。
 
 **㉘ TimelineTrack（时间线轨道）** — 高 48，宽 fill_container，水平。
 - 轨道头（宽 72，Caption 12 `$label-secondary` + icon 14，垂直居中）。
-- 轨道区（fill_container，fill `$fill`，radius `$radius-sm`，`layout:"none"` 内部绝对放置 clip）：clip = 圆角 4 色块（分镜轨 `$stage-shot`、字幕轨 `$indigo`、配音轨 `$stage-audio`、BGM 轨 `$stage-assemble`），clip 内 Caption 11 白/深色文字。
+- 轨道区（fill_container，fill `$fill`，radius `$radius-sm`，`layout:"none"` 内部绝对放置 clip）：clip = 圆角 4 色块（分镜轨 `$stage-shot`、字幕轨 `$stage-direct`、配音轨 `$stage-audio`、BGM 轨 `$stage-assemble`），clip 内 Caption 11 使用 `$text-inverse`。
 
 **㉙ ContactSheetThumb（QA 抽帧联系表卡）** — 宽 160，垂直 gap 6。
 - 帧区水平 gap 2：三个 52×30 小帧（fill `$fill`，radius 3，分别标注 25%/60%/95% Micro 9-11 `$label-tertiary`）。
-- 底行：Caption 12 `$label`「镜头 02」+ 右侧 lucide `check-circle-2` 14 `$success`（或 `alert-triangle` `$warning`）。
+- 底行：Caption 12 `$label`「镜头 02」+ 右侧 lucide `circle-check` 14 `$success`（或 `triangle-alert` `$warning`）。
 
 **㉚ SettingsRow + SettingsGroup** — Group：宽 fill_container，radius `$radius-md`，fill `$surface`，卡片阴影，垂直（行间 1px `$separator` 分隔线，左右留 16 缩进）。
 - Row：高 44，padding [0,16]，水平 alignItems center justifyContent space_between：左 Label Body 15 `$label`；右控件区（TextField/Toggle/SegmentedControl/StatusPill/Caption `$label-tertiary` + `chevron-right` 16）。
@@ -318,7 +318,7 @@ Hero区(padding [64,80], 垂直 gap16, alignItems center):
   Button/Primary md [plus 16]「新建项目」
 新建项目大卡(宽 fill_container, margin [16,80,0,80] → 用 padding 包裹, 高 140):
   radius $radius-lg, stroke $separator dash感→用实线, fill $surface
-  居中: lucide [plus-circle] 28 $accent + 「粘贴一段文字稿，开始创作」Headline17 $label-secondary
+  居中: lucide [circle-plus] 28 $accent + 「粘贴一段文字稿，开始创作」Headline17 $label-secondary
      + Caption12 $label-tertiary「支持导入 .txt / .md，可选上传配音作为时间地基」
 项目区(padding [32,80], 垂直 gap16):
   行标题: 「我的项目」Title2 22 + 右侧 SearchField 实例(宽 220)
@@ -344,7 +344,7 @@ Dialog(居中, 宽 560):
     左: lucide [audio-lines] 16 $stage-audio + Subhead13 $label「配音（可选）」
       + Caption12 $label-tertiary「作为全片时间地基」
     右: Button/Gray sm [upload 14]「上传音频」
-  预估行: Caption12 $label-tertiary [clock 12]「预计 6–8 个分镜 · 首轮渲染约 3–5 分钟」
+  预估行: Caption12 $label-tertiary [timer 12]「预计 6–8 个分镜 · 首轮渲染约 3–5 分钟」
   按钮行: Button/Gray「取消」 + Button/Primary [sparkles 16]「生成分镜」
 ```
 
@@ -356,7 +356,7 @@ Sidebar 实例: 导航选中「画布编辑器」; 项目小节列出 3 项目(N
   TopBar 实例: 左「RAG 十分钟入门」Headline17 + Caption $label-tertiary「8 节点 · 已自动保存」
                右 Button/Gray sm [play 14]「全部渲染」+ Button/Primary sm [download 14]「导出 MP4」
   画布区(fill_container × fill_container, fill $canvas-bg, layout:"none" 绝对定位):
-    网格底纹: 用低透明 separator 圆点阵（4×4 一组示意即可, #3C3C4312 2×2 圆点, 间距 24, 仅铺左上区域示意）
+    网格底纹: 用 `$canvas-grid` 圆点阵（4×4 一组示意即可, 2×2 圆点, 间距 24, 仅铺左上区域示意）
     节点坐标(相对画布区左上角):
       Ingest  (40, 60)    Direct  (300, 60)   ShotSpec (560, 60)
       Shot01  (80, 300)   Shot02  (360, 300)  Shot03   (640, 300)
@@ -420,7 +420,7 @@ TopBar 实例: 左「合成与导出」Headline17; 右 Button/Primary sm [downlo
   QA 区(fill_container, 垂直 gap 12):
     「Final QA · 抽帧审查」Subhead13 600 + Caption12 $label-tertiary「25% / 60% / 95% 三态联系表」
     ContactSheetThumb ×4 一行(镜头 01✓ / 02✓ / 03⚠ / 04✓)
-    提示行: lucide [alert-triangle 14 $warning] + Caption12 $label-secondary「镜头 03 存在 1 条视觉 WARNING：主视觉偏小」
+    提示行: lucide [triangle-alert 14 $warning] + Caption12 $label-secondary「镜头 03 存在 1 条视觉 WARNING：主视觉偏小」
 ```
 
 ### S6 设置页（路由 `settings/`）

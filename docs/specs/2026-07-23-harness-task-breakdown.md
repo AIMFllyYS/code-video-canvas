@@ -1151,7 +1151,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track A 章节执行。
 
 ## Track P — Pencil 组件港口（`docs/designs/canvas.pen` → 真实前端组件，SSOT 强制）
 
-**目的**：把 `docs/designs/canvas.pen` 中标记 `reusable:true` 的 30 个组件，通过 **Pencil MCP 工具**（`mcp_pencil_batch_get`/`mcp_pencil_get_variables`/`mcp_pencil_get_screenshot`/`mcp_pencil_export_html` 等）逐一读取真实结构与样式，一比一移植为 `src/components/ui/*.tsx` 或 `src/components/icons/*.tsx`，并登记进 `/playbook`。**这是总纲 §5.6 的强制约束的具体执行**：Track U 的任何页面任务卡都只允许 `import` 这里产出的组件，不允许重新实现。**必须排在 Track U 之前完成。**
+**目的**：把 `docs/designs/canvas.pen` 中标记 `reusable:true` 的 30 个 symbols，通过 **Pencil MCP 工具**（`mcp_pencil_batch_get`/`mcp_pencil_get_variables`/`mcp_pencil_get_screenshot`/`mcp_pencil_export_html` 等）逐一读取真实结构与样式，一比一移植为 `src/components/ui/*.tsx` 或 `src/components/icons/*.tsx`，并登记进 `/playbook`。四个 Button symbols 由一个带 variant 的组件承载，故登记口径为 27 个 Pencil UI 组件族。**这是总纲 §5.6 的强制约束的具体执行**：Track U 的任何页面任务卡都只允许 `import` 这里产出的组件，不允许重新实现。**必须排在 Track U 之前完成。**
 
 **Goal 启动提示词**：
 ```
@@ -1170,7 +1170,8 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
 完成条件（达成后才可 update_goal(complete)）：
 - [ ] P0.1~P1.5 状态已全部为 ☑
 - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
-- [ ] /playbook 页面可查看到 canvas.pen 全部 30 个 reusable 组件对应的条目
+- [ ] /playbook 页面可查看到 27 个 Pencil UI 组件族，并明示其完整覆盖
+      canvas.pen 30 个 reusable symbols（四个 Button symbols 合并为一个 variant 族）
       （或在完成汇报中说明任何有意合并/不单列的组件及理由）
 ```
 
@@ -1337,9 +1338,11 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
 
 ### P1.5 — 图标白名单核查 + Playbook 完整性收口
 
-- 状态：☐
+- 状态：☑
 - 前置任务：P1.1, P1.2, P1.3, P1.4
-- 允许改动范围：`src/components/icons/**`、`src/app/playbook/**`（仅核查/补registry条目，不改已完成组件的实现）
+- 允许改动范围：`src/components/icons/**`、`src/components/ui/**/*.demo.tsx`
+  （仅修正 demo 图标引用）、`src/app/playbook/**`、设计系统清单与 UI 交接文档
+  （仅同步 Pencil 已证实的图标白名单、标准名及 token）
 - Task 规格：
   ```
   目标：核查 P1.1~P1.4 移植的全部组件内部使用的图标名，逐一对照设计系统清单
@@ -1351,13 +1354,17 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
 
   允许改动范围：
   - src/components/icons/**
-  - src/app/playbook/registry.ts（仅补充遗漏条目，不删除已有条目）
+  - src/components/ui/**/*.demo.tsx（仅修正图标引用）
+  - src/app/playbook/**
+  - docs/designs/2026-07-23-design-system-inventory.md 与
+    docs/designs/2026-07-23-ui-design-handoff.md（仅同步图标/token 规范）
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 全项目搜索确认零处使用设计系统清单 §6.3"旧名"列的图标名
-  - [ ] /playbook 页面展示的组件数量核对等于 30（或列出任何有意不作为独立
-        playbook 条目的理由，如 Button 四变体算一个条目+variant）
+  - [ ] /playbook 明示数量口径：canvas.pen 的 30 个 reusable symbols 中，
+        Button 四变体合并为一个 variant 组件，因此登记 27 个 Pencil UI 组件族；
+        非 Pencil 视觉原语不得冒充 Track P 登记项
   - [ ] 无 emoji 用作图标的残留引用
 
   不在本任务范围内：
@@ -1368,7 +1375,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track P 章节逐一执行�
 
 ## Track U — UI（六页面按设计稿实装）
 
-**前置**：**Track P 全部完成**（30 个组件已港口完成并登记 `/playbook`）、Track C（画布）、Track D（触发阶段的路由）、Track R（触发渲染的路由）均已完成对应 API。UI Track 内部各页面耦合度低，可并行分配给不同会话，但均依赖 [`2026-07-23-ui-design-handoff.md`](../designs/2026-07-23-ui-design-handoff.md) 的逐页规格与 [`2026-07-23-design-system-inventory.md`](../designs/2026-07-23-design-system-inventory.md) 的 Token/组件清单。
+**前置**：**Track P 全部完成**（30 个 Pencil symbols 已港口为 27 个组件族并登记 `/playbook`）、Track C（画布）、Track D（触发阶段的路由）、Track R（触发渲染的路由）均已完成对应 API。UI Track 内部各页面耦合度低，可并行分配给不同会话，但均依赖 [`2026-07-23-ui-design-handoff.md`](../designs/2026-07-23-ui-design-handoff.md) 的逐页规格与 [`2026-07-23-design-system-inventory.md`](../designs/2026-07-23-design-system-inventory.md) 的 Token/组件清单。
 
 **Goal 启动提示词**（Task 数较多，建议按下述方式拆成两个 Goal 顺序启动）：
 ```
