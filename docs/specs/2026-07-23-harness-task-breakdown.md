@@ -395,7 +395,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 ### C1.3 — `status.ts`：节点状态机与内容哈希比对
 
-- 状态：☐
+- 状态：☑
 - 前置任务：F0.4
 - 允许改动范围：`src/features/canvas/status.ts`（新建）、`status.test.ts`
 - 禁止改动：`fan-out.ts`、`layout.ts`
