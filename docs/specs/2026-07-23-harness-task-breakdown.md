@@ -265,7 +265,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track F 章节逐一执行�
 
 ### F0.7 — 确定性守卫扩展：覆盖检查范围与 CI 化
 
-- 状态：☐
+- 状态：☑
 - 前置任务：无（可并行）
 - 允许改动范围：`src/lib/determinism/**`
 - 禁止改动：`src/features/render/**`、`src/features/canvas/**`

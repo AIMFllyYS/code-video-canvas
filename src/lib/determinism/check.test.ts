@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkDeterminism, isDeterministic } from './check'
+import { checkDeterminism, checkSource, isDeterministic } from './check'
 
 describe('checkDeterminism', () => {
   it('flags non-deterministic sources', () => {
@@ -25,5 +25,15 @@ describe('checkDeterminism', () => {
     ].join('\n')
     expect(checkDeterminism(code)).toEqual([])
     expect(isDeterministic(code)).toBe(true)
+  })
+
+  it('checks generated HTML source directly', () => {
+    const html = '<script>setTimeout(() => render(), 100)</script>'
+    expect(checkSource(html).map((violation) => violation.ruleId)).toContain('set-timeout')
+  })
+
+  it('accepts compliant generated HTML source', () => {
+    const html = '<script>timeline.seek(frame / fps)</script>'
+    expect(checkSource(html)).toEqual([])
   })
 })
