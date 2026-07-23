@@ -1,0 +1,56 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { POST } from './route'
+
+const mocks = vi.hoisted(() => ({ exportProject: vi.fn() }))
+
+vi.mock('server-only', () => ({}))
+vi.mock('@/features/render/export-service', () => ({
+  exportProject: mocks.exportProject,
+}))
+
+describe('POST /api/render/export', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns 400 for invalid input', async () => {
+    const response = await POST(request({ projectId: '' }))
+    expect(response.status).toBe(400)
+    expect(mocks.exportProject).not.toHaveBeenCalled()
+  })
+
+  it('returns every incomplete node with status 409', async () => {
+    mocks.exportProject.mockResolvedValue({
+      ok: false,
+      incompleteNodeIds: ['node-1', 'node-2'],
+    })
+    const response = await POST(request({ projectId: 'project-1' }))
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      incompleteNodeIds: ['node-1', 'node-2'],
+    })
+  })
+
+  it('returns the trusted export result', async () => {
+    mocks.exportProject.mockResolvedValue({
+      ok: true,
+      outputKey: 'exports/project-1/final.mp4',
+      contentHash: 'hash',
+    })
+    const response = await POST(request({ projectId: 'project-1' }))
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      outputKey: 'exports/project-1/final.mp4',
+    })
+    expect(mocks.exportProject).toHaveBeenCalledWith('project-1')
+  })
+})
+
+function request(body: unknown): Request {
+  return new Request('http://localhost/api/render/export', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}

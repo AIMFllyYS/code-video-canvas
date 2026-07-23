@@ -122,7 +122,7 @@
     - 对应 task-breakdown：R1.5
     - _Requirements: F4、F5_
 
-  - [ ] 4.6 API 路由：`api/render` 与 `api/render/export`
+  - [x] 4.6 API 路由：`api/render` 与 `api/render/export`
     - 对应 task-breakdown：R1.6
     - _Requirements: F4、F9_
 

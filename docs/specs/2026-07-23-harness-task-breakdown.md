@@ -1054,7 +1054,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track R 章节逐一执行�
 
 ### R1.6 — API 路由：`api/render` 与 `api/render/export`
 
-- 状态：☐
+- 状态：☑
 - 前置任务：R1.5, R1.4
 - 允许改动范围：`src/app/api/render/route.ts`、`src/app/api/render/export/route.ts` 及对应测试（均新建）
 - 禁止改动：`src/features/render/**`
