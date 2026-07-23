@@ -8,6 +8,8 @@
 
 - 本文档是 §9（Goal 模式协作协议）的具体落地。每张任务卡对应 Codex 的一次 `/goal` 生命周期。
 - 任务卡按 Track 分组，Track 内按序号严格顺序执行（有前置依赖）；不同 Track 之间若无交叉依赖可并行分配给不同会话。
+- **Track 依赖速览**：F（地基）最先；C/D/R/P 可在 F 完成后并行推进；**Track P 必须在 Track U 开始前完成**（U 的每张卡都要求"只 import Track P 组件"）；A 依赖 C/D。
+- **Track D 不依赖任何 Pi Skills 机制**：D0.1/D0.2 是把 `docs/video-director/` 的方法论移植为本项目原生 TypeScript 代码（Zod schema + prompt 模板），D1.x 只把 Pi 当作裸的 tool-calling 循环引擎使用。
 - 每张卡执行前，先确认「前置任务」已全部通过 Tier A 验收。
 - 每张卡的「Goal 提示词」可直接复制给 Codex 作为 `/goal` 的 objective + 附加说明。
 - Track 全部完成后执行一次 Tier B 里程碑验收（见总纲 §8.2），产出报告追加至 `docs/updates/`。
@@ -953,32 +955,230 @@
 
 ---
 
+## Track P — Pencil 组件港口（`docs/designs/canvas.pen` → 真实前端组件，SSOT 强制）
+
+**目的**：把 `docs/designs/canvas.pen` 中标记 `reusable:true` 的 30 个组件，通过 **Pencil MCP 工具**（`mcp_pencil_batch_get`/`mcp_pencil_get_variables`/`mcp_pencil_get_screenshot`/`mcp_pencil_export_html` 等）逐一读取真实结构与样式，一比一移植为 `src/components/ui/*.tsx` 或 `src/components/icons/*.tsx`，并登记进 `/playbook`。**这是总纲 §5.6 的强制约束的具体执行**：Track U 的任何页面任务卡都只允许 `import` 这里产出的组件，不允许重新实现。**必须排在 Track U 之前完成。**
+
+**执行铁律（每张任务卡都适用）**：
+1. 严禁凭记忆或凭空实现——每个组件必须先用 `mcp_pencil_batch_get` 读取该组件在 `canvas.pen` 中的真实节点结构（fill/padding/gap/cornerRadius/stroke/effect 等），必要时用 `mcp_pencil_get_screenshot` 核对视觉。
+2. 颜色/圆角/间距/阴影必须映射到 `mcp_pencil_get_variables` 读出的 Design Token（对应 Tailwind CSS 变量或 `tailwind.config` 扩展），不允许硬编码 hex/px 数值。
+3. 每个组件完成后必须在 `src/app/playbook/registry.ts` 登记 + 配 `*.demo.tsx`，且在完成条件中截图/描述验证过 `/playbook` 页面能正确渲染该组件。
+4. 图标统一用 `lucide-react`（P0.1 先装好），命名遵循设计系统清单 §6.3 的新命名表（如 `circle-plus` 不是 `plus-circle`），禁止 emoji。
+
+### P0.1 — 依赖补全：`lucide-react` + 自动布局库
+
+- 状态：☐
+- 前置任务：无
+- 允许改动范围：`package.json`
+- Goal 提示词：
+  ```
+  目标：安装 lucide-react（全部图标的唯一来源）与 @dagrejs/dagre（画布自动
+  布局，供后续 C1.2 使用），确认安装后可从两个包分别成功 import 一个符号
+  （如 lucide-react 的 CirclePlus，@dagrejs/dagre 的 graphlib）。
+
+  前置任务：无
+
+  允许改动范围：
+  - package.json
+
+  完成条件：
+  - [ ] pnpm install 成功，两个包出现在 dependencies
+  - [ ] pnpm lint / pnpm tsc --noEmit 通过
+  - [ ] 一次性验证两个包可被 import（验证代码可以是临时文件，验证后删除，或
+        直接在后续 P1.x/C1.2 任务卡中一并验证，本卡只需确保安装成功）
+
+  不在本任务范围内：
+  - 不实现任何组件或布局逻辑
+  ```
+
+### P1.1 — B1 基础控件港口（13 个组件）
+
+- 状态：☐
+- 前置任务：P0.1
+- 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
+- Goal 提示词：
+  ```
+  目标：用 Pencil MCP 读取 canvas.pen 中以下 13 个 reusable 组件的真实结构：
+  Button/Primary、Button/Tinted、Button/Gray、Button/Destructive、IconButton、
+  SegmentedControl、TextField、TextArea、SearchField、Toggle、ProgressBar、
+  StatusPill、Tooltip。逐一移植为 src/components/ui/ 下的 React 组件（如
+  button.tsx 内以 variant prop 覆盖四种 Button 样式，而不是四个独立文件——
+  与 canvas.pen 内四个变体是同一组件家族的事实保持一致），颜色/圆角/间距取自
+  mcp_pencil_get_variables 读出的 Token，全部登记进 playbook。
+
+  前置任务：P0.1
+
+  允许改动范围：
+  - src/components/ui/**
+  - src/app/playbook/registry.ts
+
+  完成条件：
+  - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+  - [ ] 13 个组件（Button 四变体算 1 个组件家族+4 变体）逐一可在 /playbook
+        页面查看，且样式与 canvas.pen 截图核对一致（用 mcp_pencil_get_screenshot
+        对照，完成汇报中说明核对过程）
+  - [ ] 每个组件均已在 registry.ts 登记 + 配 *.demo.tsx
+  - [ ] 未出现硬编码颜色 hex 值（可用简单 grep 自查后在完成汇报中说明结果）
+
+  不在本任务范围内：
+  - 不实现 B2/B3/B4 组件（P1.2/P1.3/P1.4 的范围）
+  ```
+
+### P1.2 — B2 反馈组件港口（Toast / Dialog / EmptyState）
+
+- 状态：☐
+- 前置任务：P0.1
+- 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
+- Goal 提示词：
+  ```
+  目标：用 Pencil MCP 读取并移植 Toast、Dialog、EmptyState 三个组件，登记进
+  playbook。Dialog 需支持作为受控组件（open/onClose props），Toast 需考虑
+  后续被全局挂载调用的方式（导出一个简单的 toast() 函数或 context，具体设计
+  以最小可用为原则，不过度工程化）。
+
+  前置任务：P0.1
+
+  允许改动范围：
+  - src/components/ui/**
+  - src/app/playbook/registry.ts
+
+  完成条件：
+  - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+  - [ ] 三个组件均可在 /playbook 查看且样式核对一致
+  - [ ] 均已登记 registry.ts + 配 demo
+  - [ ] Dialog 的 demo 能演示打开/关闭交互（因为 playbook 是活文档，demo 需
+        可交互而不是静态截图）
+
+  不在本任务范围内：
+  - 不实现 B1/B3/B4 组件
+  ```
+
+### P1.3 — B3 导航组件港口（NavItem / TopBar / Sidebar）
+
+- 状态：☐
+- 前置任务：P0.1
+- 允许改动范围：`src/components/ui/**`（新建）、`src/app/playbook/registry.ts`
+- Goal 提示词：
+  ```
+  目标：用 Pencil MCP 读取并移植 NavItem、TopBar、Sidebar 三个组件。Sidebar
+  的毛玻璃效果（glass-sidebar + background_blur）需用 Tailwind 的
+  backdrop-blur 等价实现并核对视觉效果，宽 240、高 fill_container、右侧
+  1px 分隔线等尺寸约束需精确对应。
+
+  前置任务：P0.1
+
+  允许改动范围：
+  - src/components/ui/**
+  - src/app/playbook/registry.ts
+
+  完成条件：
+  - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+  - [ ] 三个组件均可在 /playbook 查看且样式核对一致（含毛玻璃效果的视觉核对）
+  - [ ] 均已登记 registry.ts + 配 demo
+  - [ ] Sidebar 组件设计为可接收 children（NavItem 列表）而不是硬编码具体
+        导航项，供 Track U 的页面按需组装
+
+  不在本任务范围内：
+  - 不实现 B1/B2/B4 组件
+  - 不实现页面级的实际导航逻辑（Track U 的范围）
+  ```
+
+### P1.4 — B4 业务/节点组件港口（11 个组件，产品灵魂）
+
+- 状态：☐
+- 前置任务：P0.1, F0.5（节点类型 taxonomy 已定稿，命名需与组件对齐）
+- 允许改动范围：`src/components/ui/**`（新建，节点类组件可单独放 `src/components/ui/node/` 子目录）、`src/app/playbook/registry.ts`
+- Goal 提示词：
+  ```
+  目标：用 Pencil MCP 读取并移植 11 个业务组件：ProjectCard、ArtifactChip、
+  Node/StageNode、Node/ShotNode、Node/AudioNode、Node/ExportNode、
+  QueueStatusBar、TimelineTrack、ContactSheetThumb、SettingsRow、
+  SettingsGroup。四个 Node/* 组件的 stroke 颜色对应阶段色 Token
+  （$stage-ingest 等），需在组件 props 中开放阶段/状态作为可配置项（不是
+  硬编码某一个阶段的颜色），因为运行时同一节点组件要渲染不同状态/不同分镜的
+  数据。
+
+  前置任务：P0.1, F0.5
+
+  允许改动范围：
+  - src/components/ui/** （节点类组件可放 src/components/ui/node/ 子目录）
+  - src/app/playbook/registry.ts
+
+  完成条件：
+  - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+  - [ ] 11 个组件均可在 /playbook 查看且样式核对一致
+  - [ ] 均已登记 registry.ts + 配 demo，Node/* 组件的 demo 展示至少两种不同
+        状态（如 pending 与 success）以证明状态可配置而非硬编码
+  - [ ] Node/* 组件的 props 类型与 F0.5 定稿的节点类型/状态枚举对齐（可直接
+        复用该枚举类型，不重复定义）
+
+  不在本任务范围内：
+  - 不实现节点在真实画布（React Flow）中的挂载逻辑（C1.4 的范围，本卡只做
+    纯展示组件本体）
+  ```
+
+### P1.5 — 图标白名单核查 + Playbook 完整性收口
+
+- 状态：☐
+- 前置任务：P1.1, P1.2, P1.3, P1.4
+- 允许改动范围：`src/components/icons/**`、`src/app/playbook/**`（仅核查/补registry条目，不改已完成组件的实现）
+- Goal 提示词：
+  ```
+  目标：核查 P1.1~P1.4 移植的全部组件内部使用的图标名，逐一对照设计系统清单
+  §6.3 的 Lucide 新命名表，修正任何使用旧名（如 plus-circle）的引用为标准名
+  （circle-plus）。核查 registry.ts 是否遗漏任何 canvas.pen 中的 30 个
+  reusable 组件，补全缺失条目。
+
+  前置任务：P1.1, P1.2, P1.3, P1.4
+
+  允许改动范围：
+  - src/components/icons/**
+  - src/app/playbook/registry.ts（仅补充遗漏条目，不删除已有条目）
+
+  完成条件：
+  - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
+  - [ ] 全项目搜索确认零处使用设计系统清单 §6.3"旧名"列的图标名
+  - [ ] /playbook 页面展示的组件数量核对等于 30（或列出任何有意不作为独立
+        playbook 条目的理由，如 Button 四变体算一个条目+variant）
+  - [ ] 无 emoji 用作图标的残留引用
+
+  不在本任务范围内：
+  - 不新增任何组件的业务逻辑变更，只做命名核查与登记表补全
+  ```
+
+---
+
 ## Track U — UI（六页面按设计稿实装）
 
-**前置**：Track C（画布）、Track D（触发阶段的路由）、Track R（触发渲染的路由）均已完成对应 API。UI Track 内部各页面耦合度低，可并行分配给不同会话，但均依赖 [`2026-07-23-ui-design-handoff.md`](../designs/2026-07-23-ui-design-handoff.md) 的逐页规格与 [`2026-07-23-design-system-inventory.md`](../designs/2026-07-23-design-system-inventory.md) 的 Token/组件清单。
+**前置**：**Track P 全部完成**（30 个组件已港口完成并登记 `/playbook`）、Track C（画布）、Track D（触发阶段的路由）、Track R（触发渲染的路由）均已完成对应 API。UI Track 内部各页面耦合度低，可并行分配给不同会话，但均依赖 [`2026-07-23-ui-design-handoff.md`](../designs/2026-07-23-ui-design-handoff.md) 的逐页规格与 [`2026-07-23-design-system-inventory.md`](../designs/2026-07-23-design-system-inventory.md) 的 Token/组件清单。
+
+**强制约束（每张 U 任务卡都适用）**：页面只能 `import` Track P 已登记的组件，**禁止在页面文件或页面私有子组件内重新实现任何视觉原语**（Button/Card/StatusPill/NavItem 等）。若发现某页面需要一个 Track P 尚未覆盖的组件，必须先停下补一张 Track P 任务卡完成移植，再回来 `import` 使用，不允许"页面里先临时糊一个"。
 
 ### U1.1 — S1 首页 / 项目列表
 
 - 状态：☐
-- 前置任务：Track C 完成（`api/projects` 已可用）
-- 允许改动范围：`src/app/page.tsx`、`src/app/_components/**`（若需要页面私有子组件）
+- 前置任务：Track P 全部完成，Track C 完成（`api/projects` 已可用）
+- 允许改动范围：`src/app/page.tsx`、`src/app/_components/**`（若需要页面私有子组件；仅允许拼装 Track P 已登记组件，不新增视觉原语）
 - Goal 提示词：
   ```
   目标：按 UI 设计交接文档 S1 章节的结构、文案（第 8 节复用库原文，禁止发明新
-  文案）与设计系统 Token 实装首页：项目列表 + 新建项目入口。
+  文案）实装首页：项目列表 + 新建项目入口。只允许 import Track P 已登记的组件
+  （ProjectCard、Button、NavItem、Sidebar 等），不允许重新实现任何视觉原语。
 
-  前置任务：Track C 完成
+  前置任务：Track P 全部完成, Track C 完成
 
   允许改动范围：
   - src/app/page.tsx
-  - src/app/_components/**（页面私有，不进 src/components/ui 的除非确认要复用）
+  - src/app/_components/**（页面私有的布局/拼装代码，不得在此重新实现
+    src/components/ui 已有的视觉原语）
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] page.tsx 不超过 200 行
   - [ ] 页面文案与设计交接文档 §8 复用库逐字一致，无发明文案
-  - [ ] 使用的颜色/间距/圆角均来自 Design Token，无硬编码 hex
-  - [ ] 新增可复用组件已登记 playbook
+  - [ ] 页面内使用的每个视觉组件均可追溯到 Track P 的 import，零重新实现
+  - [ ] 若发现缺失组件，先补一张 Track P 任务卡完成移植后再回来使用，不在本
+        卡内临时实现
 
   不在本任务范围内：
   - 不实现 S2（新建项目对话框）的具体交互（U1.2 的范围）
@@ -1181,14 +1381,16 @@
 |---|---|---|
 | F（地基） | 7 | 必须最先完成，严格顺序 |
 | C（画布） | 5 | 依赖 F0.4/F0.5 |
-| D（Director/Pi） | 5 | 依赖 F0.1 结论 |
+| D（Director：方法论移植 + Pi 编排） | 7 | D0.1/D0.2 为方法论移植，无外部 Skill 依赖；D1.x 依赖 F0.1 结论 |
 | R（渲染） | 6 | 依赖 F0.6/F0.7 |
+| P（Pencil 组件港口，SSOT 强制） | 6 | 必须排在 Track U 之前完成 |
 | A（音频，Demo 占位） | 1 | P1 真实实现延后 |
-| U（UI） | 8 | 依赖 C/D/R 对应 API |
-| **合计** | **32** | 另有 Tier B 里程碑验收穿插在每个 Track 完成后触发，不单独计入任务数 |
+| U（UI） | 8 | 依赖 Track P + C/D/R 对应 API |
+| **合计** | **40** | 另有 Tier B 里程碑验收穿插在每个 Track 完成后触发，不单独计入任务数 |
 
 ## 变更记录
 
 | 日期 | 变更 |
 |---|---|
 | 2026-07-23 | 初版发布，32 张任务卡覆盖 Foundation/Canvas/Director/Render/Audio/UI 六条 Track |
+| 2026-07-23（修订） | **架构纠正**：Track D 新增 D0.1/D0.2（video-director 方法论移植为原生 Zod schema + prompt 模板），D1.1/D1.2 措辞改为"裸 tool-calling 引擎，不挂 Skill"；新增 **Track P — Pencil 组件港口**（6 张任务卡，`canvas.pen` 30 个组件通过 Pencil MCP 一比一移植 + 登记 `/playbook`），并设为 Track U 的强制前置；Track U 全部任务卡改为"只 import Track P 组件，禁止重新实现"；任务卡合计 32→40 |
