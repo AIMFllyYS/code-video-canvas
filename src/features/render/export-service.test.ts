@@ -27,7 +27,7 @@ describe('exportProject', () => {
           shots: [],
           musicKey: null,
         })),
-        registerFinalArtifact: vi.fn(),
+        registerFinalArtifact: vi.fn(() => 'unused'),
       },
       storage: createStorage(),
       concat,
@@ -46,7 +46,7 @@ describe('exportProject', () => {
     vi.mocked(storage.exists).mockResolvedValue(true)
     vi.mocked(storage.localPath).mockImplementation((key) => path.join(tempRoot, key))
     vi.mocked(storage.put).mockImplementation(async (key) => key)
-    const registerFinalArtifact = vi.fn()
+    const registerFinalArtifact = vi.fn(() => 'artifact-final')
     const concat = vi.fn(async (_shots, _music, outputPath: string) => {
       await writeFile(outputPath, Buffer.from('deterministic-final-mp4'))
       return outputPath
@@ -69,7 +69,7 @@ describe('exportProject', () => {
       tempRoot,
     })
 
-    expect(result).toMatchObject({ ok: true })
+    expect(result).toMatchObject({ ok: true, artifactId: 'artifact-final' })
     expect(concat.mock.calls[0]?.[0]).toEqual([
       path.join(tempRoot, 'render/S001.mp4'),
       path.join(tempRoot, 'render/S002.mp4'),

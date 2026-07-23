@@ -177,7 +177,7 @@
     - 对应 task-breakdown：U1.4
     - _Requirements: F4、F5_
 
-  - [ ] 7.5 S5 导出页（合并导出）
+  - [x] 7.5 S5 导出页（合并导出）
     - 对应 task-breakdown：U1.5
     - _Requirements: F9_
 

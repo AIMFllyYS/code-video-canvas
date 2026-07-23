@@ -13,11 +13,11 @@ import {
 
 export type ExportProjectResult =
   | { ok: false; incompleteNodeIds: string[] }
-  | { ok: true; outputKey: string; contentHash: string }
+  | { ok: true; artifactId: string; outputKey: string; contentHash: string }
 
 interface ExportRepository {
   getExportPlan(projectId: string): RenderExportPlan
-  registerFinalArtifact(input: FinalArtifactInput): string | void
+  registerFinalArtifact(input: FinalArtifactInput): string
 }
 
 interface ExportDependencies {
@@ -63,10 +63,22 @@ export async function exportProject(
       `exports/${projectId}/final-${contentHash}.mp4`,
       bytes
     )
-    repository.registerFinalArtifact({ projectId, outputKey, contentHash })
-    return { ok: true, outputKey, contentHash }
+    const artifactId = repository.registerFinalArtifact({ projectId, outputKey, contentHash })
+    return { ok: true, artifactId, outputKey, contentHash }
   } finally {
     await rm(workDirectory, { recursive: true, force: true })
+  }
+}
+
+export function getExportReadiness(
+  projectId: string,
+  repository: Pick<ExportRepository, 'getExportPlan'> = new RenderRepository()
+): { ready: boolean; incompleteNodeIds: string[]; shotCount: number } {
+  const plan = repository.getExportPlan(projectId)
+  return {
+    ready: plan.incompleteNodeIds.length === 0,
+    incompleteNodeIds: plan.incompleteNodeIds,
+    shotCount: plan.shots.length,
   }
 }
 

@@ -1542,9 +1542,10 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
 
 ### U1.5 — S5 导出页（合并导出）
 
-- 状态：☐
+- 状态：☑
 - 前置任务：R1.6, U1.3
-- 允许改动范围：`src/app/canvas/export/**`（新建，路径以设计稿为准）
+- 允许改动范围：`src/app/canvas/export/**`、`src/app/api/render/export/**`、
+  `src/features/render/export-service.ts` 与对应测试（补齐 readiness 与受控终片 URL）
 - Task 规格：
   ```
   目标：按设计交接文档 S5 章节实装导出页：展示全部分镜通道的完成状态汇总，
@@ -1554,12 +1555,15 @@ Goal 2：完成 Track U 的 U1.5~U1.8（导出页/设置页/暗色主题/端到�
   前置任务：R1.6, U1.3
 
   允许改动范围：
-  - src/app/canvas/export/**
+  - src/app/canvas/export/** 
+  - src/app/api/render/export/**
+  - src/features/render/export-service.ts 与对应测试
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit / pnpm build 通过
   - [ ] 未完成分镜场景下导出按钮禁用状态与文案符合设计交接文档
   - [ ] 导出成功后终片可直接预览或下载
+  - [ ] API 不向浏览器暴露 outputKey，只返回 artifact-id 受控 URL
   - [ ] page.tsx ≤200 行
 
   不在本任务范围内：

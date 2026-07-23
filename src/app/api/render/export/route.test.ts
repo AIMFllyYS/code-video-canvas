@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './route'
 
-const mocks = vi.hoisted(() => ({ exportProject: vi.fn() }))
+const mocks = vi.hoisted(() => ({ exportProject: vi.fn(), getExportReadiness: vi.fn() }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/features/render/export-service', () => ({
   exportProject: mocks.exportProject,
+  getExportReadiness: mocks.getExportReadiness,
 }))
 
 describe('POST /api/render/export', () => {
@@ -35,6 +36,7 @@ describe('POST /api/render/export', () => {
   it('returns the trusted export result', async () => {
     mocks.exportProject.mockResolvedValue({
       ok: true,
+      artifactId: 'artifact-final',
       outputKey: 'exports/project-1/final.mp4',
       contentHash: 'hash',
     })
@@ -42,7 +44,7 @@ describe('POST /api/render/export', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
-      outputKey: 'exports/project-1/final.mp4',
+      artifactUrl: '/api/artifacts/artifact-final?projectId=project-1',
     })
     expect(mocks.exportProject).toHaveBeenCalledWith('project-1')
   })
