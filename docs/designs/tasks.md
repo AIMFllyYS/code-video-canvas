@@ -188,7 +188,7 @@
   - [x] 7.6a 全局主题状态
     - 对应 task-breakdown：U1.6a
 
-  - [ ] 7.7 暗色主题（Zone D 页面镜像）
+  - [x] 7.7 暗色主题（Zone D 页面镜像）
     - 对应 task-breakdown：U1.7
 
   - [ ] 7.8 端到端 UI 走查（Tier B 里程碑收口）
