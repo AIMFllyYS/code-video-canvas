@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Code, Download, Play, RefreshCw, ShieldCheck, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import { ArrowLeft, Download, FileCode, Play, RefreshCw, ShieldCheck, SkipBack, SkipForward, Volume2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
@@ -142,7 +142,7 @@ function ShotCode({ sourceCode, onRender, rendering }: { sourceCode: string; onR
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-[13px] font-semibold">
-          <Code className="h-4 w-4 text-accent" />分镜画布代码
+          <FileCode className="h-4 w-4 text-accent" />分镜画布代码
         </span>
         <span className="text-[11px] text-success">已同步</span>
       </div>
