@@ -1115,9 +1115,9 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track A 章节执行。
 
 ### A1.1 — `features/audio/` 骨架与占位实现
 
-- 状态：☐
+- 状态：☑
 - 前置任务：Track C 完成
-- 允许改动范围：`src/features/audio/subtitle.ts`、`voiceover.ts`、`sfx.ts`、`score.ts`（均新建，替换现有仅有 index.ts/types.ts 的空骨架）
+- 允许改动范围：`src/features/audio/subtitle.ts`、`voiceover.ts`、`sfx.ts`、`score.ts`（均新建）、`types.ts`、`index.ts` 及对应测试
 - Task 规格：
   ```
   目标：为字幕/配音/音效/配乐四个子域各建一个文件，导出与其角色对应的函数
@@ -1132,11 +1132,14 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track A 章节执行。
   - src/features/audio/voiceover.ts
   - src/features/audio/sfx.ts
   - src/features/audio/score.ts
+  - src/features/audio/types.ts（定稿公共输入/结果合同）
+  - src/features/audio/index.ts（统一公开入口）
+  - src/features/audio/*.test.ts
 
   完成条件：
   - [ ] pnpm lint / pnpm tsc --noEmit 通过
   - [ ] 每个函数都有对应最小单测，验证返回值符合预期的 mock 结构
-  - [ ] 每个函数体内有清晰注释标注"P1 实现"及对应 PRD 功能编号（F10/F11/F14）
+  - [ ] 每个函数体内有清晰注释标注"P1 实现"及对应 PRD 功能编号（F10/F11/F12/F14）
   - [ ] 函数签名设计为未来替换为真实实现时不需要改调用方代码（即接口定稿，
         实现留白）
 

@@ -153,7 +153,7 @@
   - 对应 Goal：Track A（前置：Task 2、Task 3 完成）
   - _Requirements: F10、F11、F12、F14_
 
-  - [ ] 6.1 `features/audio/` 骨架与占位实现
+  - [x] 6.1 `features/audio/` 骨架与占位实现
     - 对应 task-breakdown：A1.1
     - _Requirements: F10、F11、F12、F14（Demo 阶段仅占位，真实实现为 P1 后续任务）_
 
