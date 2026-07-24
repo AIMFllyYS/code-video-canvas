@@ -169,8 +169,13 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
 
 ### Track N0 — Baseline and bleeding fixes
 
-- [ ] **N0.1 冻结 Demo v1 权威、建立 v3 workflowVersion 与基线证据** —
-  `task_state=in_progress; status=ready; blocked_by=none`;
+- [x] **N0.1 冻结 Demo v1 权威、建立 v3 workflowVersion 与基线证据** —
+  `task_state=done; status=ready; blocked_by=none; commit=1a604b5`;
+  evidence=`docs/evidence/refactor-v3/n0-baseline.json`（Node 22 隔离本地副本，
+  Task 文件 SHA-256 与主工作树一致；lint/typecheck/build 退出 0，79 files / 352 tests
+  与脱敏对抗测试通过；绝对路径/已知 secret/U+FFFD 扫描为 0；用户既有 Node 24
+  dev server 未中断；随后出现的 `.qoder/repowiki/**` 并发 WIP 未读取、未修改、未
+  stage，Task 精确路径 `diff --check` 通过）;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n01)
 - [ ] **N0.2 修复 Pi Tool 参数与 result details 提取** —
   `task_state=todo; status=ready; blocked_by=none`;
