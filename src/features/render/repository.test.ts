@@ -69,7 +69,7 @@ describe('RenderRepository export plan', () => {
     ])
   })
 
-  it('loads a validated running render context', () => {
+  it('loads admission and running contexts from one validated job shape', () => {
     db.update(canvasNodes)
       .set({
         status: 'idle',
@@ -85,18 +85,41 @@ describe('RenderRepository export plan', () => {
       .where(eq(canvasNodes.id, 'node-S001-shot-codegen'))
       .run()
     db.insert(artifacts)
-      .values({
-        id: 'html-S001',
-        projectId: 'project-1',
-        nodeId: 'node-S001-shot-codegen',
-        kind: 'director-fabricate',
-        path: 'director/S001.html',
-      })
+      .values([
+        {
+          id: 'html-S001-old',
+          projectId: 'project-1',
+          nodeId: 'node-S001-shot-codegen',
+          kind: 'director-fabricate',
+          path: 'director/S001-old.html',
+          createdAt: new Date(1),
+        },
+        {
+          id: 'html-S001-new',
+          projectId: 'project-1',
+          nodeId: 'node-S001-shot-codegen',
+          kind: 'director-fabricate',
+          path: 'director/S001.html',
+          createdAt: new Date(2),
+        },
+      ])
       .run()
 
+    expect(
+      repository.loadRenderAdmissionContext(
+        'project-1',
+        'node-S001-shot-codegen'
+      )
+    ).toMatchObject({
+      projectId: 'project-1',
+      nodeId: 'node-S001-shot-codegen',
+      shotId: 'S001',
+      htmlKey: 'director/S001.html',
+      frames: { fps: 30, durationInFrames: 60, width: 1920, height: 1080 },
+    })
     expect(() =>
-      repository.assertRenderEnqueueable('project-1', 'node-S001-shot-codegen')
-    ).not.toThrow()
+      repository.loadRenderContext('project-1', 'node-S001-shot-codegen')
+    ).toThrow('渲染节点必须处于 running：idle')
     db.update(canvasNodes)
       .set({ status: 'running' })
       .where(eq(canvasNodes.id, 'node-S001-shot-codegen'))
@@ -111,6 +134,77 @@ describe('RenderRepository export plan', () => {
       frames: { fps: 30, durationInFrames: 60, width: 1920, height: 1080 },
     })
   })
+
+  it('requires an enqueueable status and committed source for admission', () => {
+    db.update(canvasNodes)
+      .set({
+        status: 'pending',
+        data: {
+          renderSpec: {
+            fps: 30,
+            durationInFrames: 60,
+            width: 1920,
+            height: 1080,
+          },
+        },
+      })
+      .where(eq(canvasNodes.id, 'node-S001-shot-codegen'))
+      .run()
+
+    expect(() =>
+      repository.loadRenderAdmissionContext(
+        'project-1',
+        'node-S001-shot-codegen'
+      )
+    ).toThrow('渲染节点当前不可入队：pending')
+
+    db.update(canvasNodes)
+      .set({ status: 'idle' })
+      .where(eq(canvasNodes.id, 'node-S001-shot-codegen'))
+      .run()
+    expect(() =>
+      repository.loadRenderAdmissionContext(
+        'project-1',
+        'node-S001-shot-codegen'
+      )
+    ).toThrow('节点缺少 director-fabricate 产物')
+  })
+
+  it.each(['idle', 'failed', 'stale'] as const)(
+    'accepts %s as an admission status',
+    (status) => {
+      db.update(canvasNodes)
+        .set({
+          status,
+          data: {
+            renderSpec: {
+              fps: 30,
+              durationInFrames: 60,
+              width: 1920,
+              height: 1080,
+            },
+          },
+        })
+        .where(eq(canvasNodes.id, 'node-S001-shot-codegen'))
+        .run()
+      db.insert(artifacts)
+        .values({
+          id: `html-S001-${status}`,
+          projectId: 'project-1',
+          nodeId: 'node-S001-shot-codegen',
+          kind: 'director-fabricate',
+          path: 'director/S001.html',
+        })
+        .run()
+
+      expect(
+        repository.loadRenderAdmissionContext(
+          'project-1',
+          'node-S001-shot-codegen'
+        ).shotId
+      ).toBe('S001')
+    }
+  )
 
   it('carries default target resolution and null shotQa when unset', () => {
     const plan = repository.getExportPlan('project-1')

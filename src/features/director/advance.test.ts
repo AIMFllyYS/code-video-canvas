@@ -34,7 +34,7 @@ function harness(
   const enqueueDirectorStage =
     vi.fn<AdvanceDependencies['enqueueDirectorStage']>(() => 'director-job')
   const enqueueRenderShot =
-    vi.fn<AdvanceDependencies['enqueueRenderShot']>(() => 'render-job')
+    vi.fn<AdvanceDependencies['enqueueRenderShot']>(async () => 'render-job')
   const prepareFinalExport =
     vi.fn<AdvanceDependencies['prepareFinalExport']>(async () => {})
   return {
@@ -148,6 +148,40 @@ describe('advancePipeline', () => {
       'SHOT_SPEC',
       expect.any(Error)
     )
+  })
+
+  it('awaits render admission failure and continues other ready branches', async () => {
+    const test = harness([
+      candidate({
+        id: 'codegen',
+        type: 'shot-codegen',
+        stage: 'FABRICATE',
+      }),
+      candidate({ id: 'good', stage: 'ASSEMBLE' }),
+    ])
+    const failure = new Error('runtime admission 失败')
+    test.enqueueRenderShot.mockRejectedValueOnce(failure)
+
+    const result = await advancePipeline(
+      'project-1',
+      'shot-script',
+      test.dependencies
+    )
+
+    expect(result).toEqual({
+      enqueuedNodeIds: ['good'],
+      failedNodeIds: ['codegen'],
+    })
+    expect(test.repository.recordStageError).toHaveBeenCalledWith(
+      'codegen',
+      'FABRICATE',
+      failure
+    )
+    expect(test.enqueueDirectorStage).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      nodeId: 'good',
+      stage: 'ASSEMBLE',
+    })
   })
 
   it('skips a candidate whose persisted stage is absent', async () => {

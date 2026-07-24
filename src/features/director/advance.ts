@@ -40,7 +40,7 @@ type EnqueueDirectorStage = (input: {
 type EnqueueRenderShot = (input: {
   projectId: string
   nodeId: string
-}) => string
+}) => Promise<string>
 
 export interface AdvanceDependencies {
   repository: AdvanceRepository
@@ -95,7 +95,7 @@ export async function advancePipeline(
     }
     try {
       if (candidate.type === 'shot-codegen') {
-        resolved.enqueueRenderShot({ projectId, nodeId: candidate.id })
+        await resolved.enqueueRenderShot({ projectId, nodeId: candidate.id })
       } else {
         if (candidate.type === 'export') {
           await resolved.prepareFinalExport(projectId)

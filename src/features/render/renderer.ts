@@ -3,7 +3,6 @@ import os from 'node:os'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
-import { checkSource } from '@/lib/determinism'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
 import {
   lookupCache,
@@ -14,6 +13,7 @@ import {
 } from './cache'
 import { encodeToMp4 } from './encode'
 import { captureSequence, type FrameSequence } from './frame-sequence'
+import { assertDeterministicSource } from './source-contract'
 import type { RenderJob, RenderResult } from './types'
 
 export interface Renderer {
@@ -62,7 +62,7 @@ export class HyperframesRenderer implements Renderer {
 
   async render(job: RenderJob): Promise<RenderResult> {
     const html = await this.dependencies.storage.get(job.htmlKey)
-    assertDeterministic(html.toString('utf8'))
+    assertDeterministicSource(html.toString('utf8'))
     const renderKey = renderHash(html, job)
     const cacheLookup = {
       projectId: job.projectId,
@@ -108,15 +108,6 @@ export class HyperframesRenderer implements Renderer {
       }
     }
   }
-}
-
-function assertDeterministic(source: string): void {
-  const violations = checkSource(source)
-  if (violations.length === 0) return
-  const summary = violations
-    .map((violation) => `${violation.ruleId}@${violation.line}`)
-    .join(', ')
-  throw new Error(`确定性违规：${summary}`)
 }
 
 function renderHash(html: Buffer, job: RenderJob): string {

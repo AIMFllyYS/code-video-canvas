@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   try {
     return NextResponse.json({
       ok: true,
-      jobId: enqueueRenderShot({ projectId, nodeId }),
+      jobId: await enqueueRenderShot({ projectId, nodeId }),
     })
   } catch (error) {
     return NextResponse.json(

@@ -1,8 +1,10 @@
 import 'server-only'
 import { z } from 'zod'
 import { transitionNodeStatus } from '@/features/canvas/status'
-import { fabricateShot } from '@/features/director/fabricate'
 import { queue as defaultQueue, type QueueAdapter } from '@/lib/queue'
+import { storage } from '@/lib/storage'
+import { assertRenderAdmission } from './admission'
+import { openFrameCapture } from './frame-capture'
 import { RenderRepository } from './repository'
 import { HyperframesRenderer, type Renderer } from './renderer'
 import type { RenderJob } from './types'
@@ -34,7 +36,11 @@ interface HandlerDependencies {
 
 interface EnqueueDependencies {
   queue: QueueAdapter
-  assertRenderEnqueueable(projectId: string, nodeId: string): void
+  loadAdmissionContext(
+    projectId: string,
+    nodeId: string
+  ): RenderJob | Promise<RenderJob>
+  assertAdmission(job: RenderJob): Promise<void>
   transitionNodeStatus: typeof transitionNodeStatus
   recordRenderError(nodeId: string, error: unknown): void
 }
@@ -48,19 +54,10 @@ export function registerRenderShotHandler(
     const payload = renderJobPayloadSchema.parse(job.payload)
     resolved.transitionNodeStatus(payload.nodeId, 'running')
     try {
-      let context: ReturnType<typeof resolved.repository.loadRenderContext>
-      try {
-        context = resolved.repository.loadRenderContext(
-          payload.projectId,
-          payload.nodeId
-        )
-      } catch {
-        await fabricateShot(payload.projectId, payload.nodeId)
-        context = resolved.repository.loadRenderContext(
-          payload.projectId,
-          payload.nodeId
-        )
-      }
+      const context = resolved.repository.loadRenderContext(
+        payload.projectId,
+        payload.nodeId
+      )
       await resolved.renderer.render(context)
       resolved.transitionNodeStatus(payload.nodeId, 'success')
       await advanceWithoutMasking(
@@ -75,13 +72,17 @@ export function registerRenderShotHandler(
   })
 }
 
-export function enqueueRenderShot(
+export async function enqueueRenderShot(
   input: RenderShotInput,
   dependencies?: EnqueueDependencies
-): string {
+): Promise<string> {
   const resolved = dependencies ?? createEnqueueDependencies()
   const payload = renderJobPayloadSchema.parse(input)
-  resolved.assertRenderEnqueueable(payload.projectId, payload.nodeId)
+  const job = await resolved.loadAdmissionContext(
+    payload.projectId,
+    payload.nodeId
+  )
+  await resolved.assertAdmission(job)
   resolved.transitionNodeStatus(payload.nodeId, 'pending')
   try {
     return resolved.queue.enqueue('render-shot', payload, {
@@ -123,8 +124,10 @@ function createEnqueueDependencies(): EnqueueDependencies {
   const repository = new RenderRepository()
   return {
     queue: defaultQueue,
-    assertRenderEnqueueable: (projectId, nodeId) =>
-      repository.assertRenderEnqueueable(projectId, nodeId),
+    loadAdmissionContext: (projectId, nodeId) =>
+      repository.loadRenderAdmissionContext(projectId, nodeId),
+    assertAdmission: (job) =>
+      assertRenderAdmission(job, { storage, openFrameCapture }),
     transitionNodeStatus,
     recordRenderError: (nodeId, error) =>
       repository.recordRenderError(nodeId, error),

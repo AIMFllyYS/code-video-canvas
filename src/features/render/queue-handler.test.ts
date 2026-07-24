@@ -99,21 +99,70 @@ describe('render queue handler', () => {
     expect(recordRenderError).toHaveBeenCalledWith('node-1', failure)
   })
 
-  it('validates, marks pending, and enqueues a render job', () => {
+  it('fails directly when the committed source is missing', async () => {
+    const harness = createQueue()
+    const missingSource = new Error('节点缺少 director-fabricate 产物：node-1')
+    const loadRenderContext = vi.fn(() => {
+      throw missingSource
+    })
+    const renderer = { render: vi.fn() }
+    const transitionNodeStatus = vi.fn()
+    const recordRenderError = vi.fn()
+    const advancePipeline = vi.fn()
+    registerRenderShotHandler(harness.queue, {
+      repository: {
+        loadRenderContext,
+        recordRenderError,
+      },
+      transitionNodeStatus,
+      renderer,
+      advancePipeline,
+    })
+
+    await expect(
+      harness.getHandler()?.({
+        id: 'job-1',
+        kind: 'render-shot',
+        status: 'running',
+        payload: { projectId: 'project-1', nodeId: 'node-1' },
+        attempts: 1,
+      })
+    ).rejects.toBe(missingSource)
+    expect(loadRenderContext).toHaveBeenCalledOnce()
+    expect(renderer.render).not.toHaveBeenCalled()
+    expect(transitionNodeStatus.mock.calls.map((call) => call[1])).toEqual([
+      'running',
+      'failed',
+    ])
+    expect(recordRenderError).toHaveBeenCalledWith('node-1', missingSource)
+    expect(advancePipeline).not.toHaveBeenCalled()
+  })
+
+  it('loads admission, validates, marks pending, and enqueues a render job', async () => {
     const harness = createQueue()
     const order: string[] = []
-    const jobId = enqueueRenderShot(
+    vi.mocked(harness.queue.enqueue).mockImplementation(() => {
+      order.push('enqueue')
+      return 'job-1'
+    })
+    const jobId = await enqueueRenderShot(
       { projectId: 'project-1', nodeId: 'node-1' },
       {
         queue: harness.queue,
-        assertRenderEnqueueable: vi.fn(() => order.push('validate')),
+        loadAdmissionContext: vi.fn(() => {
+          order.push('load')
+          return renderJob
+        }),
+        assertAdmission: vi.fn(async () => {
+          order.push('admission')
+        }),
         transitionNodeStatus: vi.fn((_nodeId, status) => order.push(status)),
         recordRenderError: vi.fn(),
       }
     )
 
     expect(jobId).toBe('job-1')
-    expect(order).toEqual(['validate', 'pending'])
+    expect(order).toEqual(['load', 'admission', 'pending', 'enqueue'])
     expect(harness.queue.enqueue).toHaveBeenCalledWith(
       'render-shot',
       { projectId: 'project-1', nodeId: 'node-1' },
@@ -121,7 +170,57 @@ describe('render queue handler', () => {
     )
   })
 
-  it('compensates a failed enqueue without leaving pending state', () => {
+  it('rejects runtime admission before pending or queue side effects', async () => {
+    const harness = createQueue()
+    const transitionNodeStatus = vi.fn()
+    const recordRenderError = vi.fn()
+
+    await expect(
+      enqueueRenderShot(
+        { projectId: 'project-1', nodeId: 'node-1' },
+        {
+          queue: harness.queue,
+          loadAdmissionContext: vi.fn(() => renderJob),
+          assertAdmission: vi.fn(async () => {
+            throw new Error('shot 缺少 window.__CVC_RENDER__ runtime')
+          }),
+          transitionNodeStatus,
+          recordRenderError,
+        }
+      )
+    ).rejects.toThrow('shot 缺少 window.__CVC_RENDER__ runtime')
+    expect(transitionNodeStatus).not.toHaveBeenCalled()
+    expect(harness.queue.enqueue).not.toHaveBeenCalled()
+    expect(recordRenderError).not.toHaveBeenCalled()
+  })
+
+  it('rejects a missing committed source before admission or status changes', async () => {
+    const harness = createQueue()
+    const assertAdmission = vi.fn()
+    const transitionNodeStatus = vi.fn()
+    const recordRenderError = vi.fn()
+
+    await expect(
+      enqueueRenderShot(
+        { projectId: 'project-1', nodeId: 'node-1' },
+        {
+          queue: harness.queue,
+          loadAdmissionContext: vi.fn(() => {
+            throw new Error('节点缺少 director-fabricate 产物：node-1')
+          }),
+          assertAdmission,
+          transitionNodeStatus,
+          recordRenderError,
+        }
+      )
+    ).rejects.toThrow('节点缺少 director-fabricate 产物')
+    expect(assertAdmission).not.toHaveBeenCalled()
+    expect(transitionNodeStatus).not.toHaveBeenCalled()
+    expect(harness.queue.enqueue).not.toHaveBeenCalled()
+    expect(recordRenderError).not.toHaveBeenCalled()
+  })
+
+  it('compensates a failed enqueue without leaving pending state', async () => {
     const harness = createQueue()
     vi.mocked(harness.queue.enqueue).mockImplementation(() => {
       throw new Error('队列写入失败')
@@ -129,17 +228,18 @@ describe('render queue handler', () => {
     const statuses: string[] = []
     const recordRenderError = vi.fn()
 
-    expect(() =>
+    await expect(
       enqueueRenderShot(
         { projectId: 'project-1', nodeId: 'node-1' },
         {
           queue: harness.queue,
-          assertRenderEnqueueable: vi.fn(),
+          loadAdmissionContext: vi.fn(() => renderJob),
+          assertAdmission: vi.fn(async () => {}),
           transitionNodeStatus: vi.fn((_nodeId, status) => statuses.push(status)),
           recordRenderError,
         }
       )
-    ).toThrow('队列写入失败')
+    ).rejects.toThrow('队列写入失败')
     expect(statuses).toEqual(['pending', 'running', 'failed'])
     expect(recordRenderError).toHaveBeenCalledWith('node-1', expect.any(Error))
   })

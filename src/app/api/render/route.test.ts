@@ -16,7 +16,7 @@ describe('POST /api/render', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getCanvasGraph.mockReturnValue({ nodes: [{ id: 'node-1' }], edges: [] })
-    mocks.enqueueRenderShot.mockReturnValue('job-1')
+    mocks.enqueueRenderShot.mockResolvedValue('job-1')
   })
 
   it('returns 400 for invalid input', async () => {
@@ -38,6 +38,22 @@ describe('POST /api/render', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ ok: true, jobId: 'job-1' })
     expect(mocks.enqueueRenderShot).toHaveBeenCalledWith(input)
+  })
+
+  it('maps asynchronous admission rejection to a conflict response', async () => {
+    mocks.enqueueRenderShot.mockRejectedValueOnce(
+      new Error('shot 缺少 window.__CVC_RENDER__ runtime')
+    )
+
+    const response = await POST(
+      request({ projectId: 'project-1', nodeId: 'node-1' })
+    )
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      ok: false,
+      error: 'shot 缺少 window.__CVC_RENDER__ runtime',
+    })
   })
 })
 
