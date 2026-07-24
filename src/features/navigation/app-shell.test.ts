@@ -1,7 +1,8 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { AppSidebar, type AppSection } from './app-shell'
+import { AppSidebar } from './app-sidebar'
+import type { AppSection } from './types'
 
 const SECTIONS: AppSection[] = [
   'workbench',
@@ -58,5 +59,17 @@ describe('AppSidebar', () => {
       createElement(AppSidebar, { active: 'workbench' })
     )
     expect(html).not.toContain('href="/canvas/export"')
+  })
+
+  it('keeps nav labels in the DOM when compact (via Tooltip)', () => {
+    const html = renderToStaticMarkup(
+      createElement(AppSidebar, { active: 'workbench', compact: true })
+    )
+    for (const label of ['工作台', '项目列表', '画布编辑器', '分镜渲染器', '合成与导出', '设置']) {
+      expect(html.match(new RegExp(label, 'g'))).toHaveLength(1)
+    }
+    // compact 态状态文案仅保留为 title，不作为可见文本节点重复渲染
+    expect(html).toContain('title="本地模式 · 数据不出本机"')
+    expect(html.match(/aria-current="page"/g)).toHaveLength(1)
   })
 })
