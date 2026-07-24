@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-24T17:14:51.103Z",
+  "branch": "main",
+  "commit": "ce8430b33fa3b505b328bd3e604a0acb2eaae711",
+  "workflowVersion": {
+    "workflow": "cvc-v3-foundation",
+    "contracts": "cvc-arch-v3.0.0",
+    "compiler": "legacy-html-v1",
+    "hyperframes": "legacy-cvc-render-v1",
+    "renderImage": "node22-playwright1.61.1-ffmpeg-static5.3.0"
+  },
+  "commands": [
+    {
+      "command": "git rev-parse --abbrev-ref HEAD",
+      "exitCode": 0,
+      "durationMs": 76,
+      "stdoutSha256": "6403203dd5a0867eb14d104ee8a73730bd72dd9ad92e78d996a6dba0a5dcfc01",
+      "lastLines": [
+        "main"
+      ]
+    },
+    {
+      "command": "git rev-parse HEAD",
+      "exitCode": 0,
+      "durationMs": 69,
+      "stdoutSha256": "9574a36fe15e56c4a67d041b3aa1254c48b15f2f13ea0ceb2aa95efdb128f0d8",
+      "lastLines": [
+        "[REDACTED_TOKEN]"
+      ]
+    },
+    {
+      "command": "node --version",
+      "exitCode": 0,
+      "durationMs": 80,
+      "stdoutSha256": "bd9f0deee02f7eeaf827fce7c98191122ba7a6c2675d1af5c59491371f704dda",
+      "lastLines": [
+        "v22.17.1"
+      ]
+    },
+    {
+      "command": "pnpm --version",
+      "exitCode": 0,
+      "durationMs": 403,
+      "stdoutSha256": "62c808c62ab7e8c80f9a10749407fa48c60820fc387864c350a5ca4fc5d20013",
+      "lastLines": [
+        "9.15.0"
+      ]
+    },
+    {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "durationMs": 8655,
+      "stdoutSha256": "2cab7481b19146eca6285bd9a24bb0770253befd3f63a48d15ca7a33237222c2",
+      "lastLines": [
+        "> code-video-canvas@0.1.0 lint [ABSOLUTE_PATH]",
+        "> eslint ."
+      ]
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "durationMs": 9404,
+      "stdoutSha256": "600c5a0a259f17af5dbf0c332c0851f7b4ce9bd774aabb6f8d681005be092724",
+      "lastLines": [
+        "> code-video-canvas@0.1.0 typecheck [ABSOLUTE_PATH]",
+        "> tsc --noEmit"
+      ]
+    },
+    {
+      "command": "pnpm test",
+      "exitCode": 0,
+      "durationMs": 14239,
+      "stdoutSha256": "0c59987e8a50ed8ba2ac8da8aaf2cebd71e8a6dd0cbf5e028a1e4909fb5e6205",
+      "lastLines": [
+        "> code-video-canvas@0.1.0 test [ABSOLUTE_PATH]",
+        "> vitest run",
+        " RUN  v4.1.10 [ABSOLUTE_PATH]",
+        " Test Files  79 passed (79)",
+        "      Tests  352 passed (352)",
+        "   Start at  06:14:14",
+        "   Duration  13.26s (transform 26.66s, setup 0ms, import 139.39s, tests 52.14s, environment 43ms)"
+      ]
+    },
+    {
+      "command": "pnpm build",
+      "exitCode": 0,
+      "durationMs": 23280,
+      "stdoutSha256": "412668688a89872bf9260b8610d3150eca8dee0cbe654ad36ae35d1a3c98d1e7",
+      "lastLines": [
+        "├ ƒ /api/director/stream/[nodeId]",
+        "├ ƒ /api/jobs/[id]",
+        "├ ƒ /api/ping",
+        "├ ƒ /api/projects",
+        "├ ƒ /api/projects/[id]",
+        "├ ƒ /api/render",
+        "├ ƒ /api/render/export",
+        "├ ƒ /api/render/thumbnails",
+        "├ ƒ /api/settings",
+        "├ ƒ /canvas",
+        "├ ƒ /canvas/export",
+        "├ ƒ /canvas/shot/[id]",
+        "├ ○ /playbook",
+        "├ ○ /playbook/foundations",
+        "├ ○ /playbook/icons",
+        "├ ○ /playbook/ui",
+        "├ ƒ /projects",
+        "└ ƒ /settings",
+        "○  (Static)   prerendered as static content",
+        "ƒ  (Dynamic)  server-rendered on demand"
+      ]
+    }
+  ]
+}

@@ -14,6 +14,7 @@ const eslintConfig = [
       'out/**',
       'node_modules/**',
       '.data/**',
+      'tmp/**',
       'docs/**',
       'src/lib/db/migrations/**',
     ],
