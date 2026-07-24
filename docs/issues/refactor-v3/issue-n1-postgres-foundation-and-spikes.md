@@ -235,6 +235,7 @@ Expected: lint/typecheck/diff 通过；`.data/**` 不在 staged diff；commit �
 - Create: `src/lib/db/schema/index.ts`
 - Create: `src/lib/db/test/pg-test-database.ts`
 - Create: `src/lib/db/schema.pg.test.ts`
+- Create: `src/lib/db/schema-metadata.pg.test.ts`
 - Create: `src/lib/db/postgres-client.test.ts`
 - Create: `src/lib/db/postgres-migrator.test.ts`
 - Create: `vitest.pg.config.ts`
@@ -322,7 +323,7 @@ Run:
 
 ```powershell
 docker compose -f docker-compose.dev.yml config
-pnpm vitest run --config vitest.pg.config.ts src/lib/db/schema.pg.test.ts
+pnpm vitest run --config vitest.pg.config.ts src/lib/db/schema.pg.test.ts src/lib/db/schema-metadata.pg.test.ts
 pnpm test -- src/lib/db/postgres-client.test.ts src/lib/db/postgres-migrator.test.ts
 ```
 
@@ -458,7 +459,7 @@ Run:
 $env:DATABASE_URL='postgresql://cvc:cvc_dev_only@127.0.0.1:54327/cvc'
 $env:TEST_DATABASE_URL='postgresql://cvc:cvc_dev_only@127.0.0.1:54327/cvc_test'
 pnpm db:migrate
-pnpm vitest run --config vitest.pg.config.ts src/lib/db/schema.pg.test.ts
+pnpm vitest run --config vitest.pg.config.ts src/lib/db/schema.pg.test.ts src/lib/db/schema-metadata.pg.test.ts
 pnpm test -- src/lib/db/postgres-client.test.ts src/lib/db/postgres-migrator.test.ts
 pnpm typecheck
 ```
@@ -480,7 +481,7 @@ Run:
 ```powershell
 pnpm eslint drizzle.config.ts src/lib/db scripts/setup/db-migrate.ts
 git diff --check
-git add -- docker-compose.dev.yml scripts/setup/postgres-init.sql drizzle.config.ts src/lib/db/schema src/lib/db/test/pg-test-database.ts src/lib/db/schema.pg.test.ts src/lib/db/postgres-client.test.ts src/lib/db/postgres-migrator.test.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/migrations/pg scripts/setup/db-migrate.ts vitest.config.ts vitest.pg.config.ts package.json pnpm-lock.yaml docs/evidence/refactor-v3/n1/postgres-health.md docs/evidence/refactor-v3/n1/fresh-migration.md docs/evidence/refactor-v3/n1/constraint-matrix.md
+git add -- docker-compose.dev.yml scripts/setup/postgres-init.sql drizzle.config.ts src/lib/db/schema src/lib/db/test/pg-test-database.ts src/lib/db/schema.pg.test.ts src/lib/db/schema-metadata.pg.test.ts src/lib/db/postgres-client.test.ts src/lib/db/postgres-migrator.test.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/migrations/pg scripts/setup/db-migrate.ts vitest.config.ts vitest.pg.config.ts package.json pnpm-lock.yaml docs/evidence/refactor-v3/n1/postgres-health.md docs/evidence/refactor-v3/n1/fresh-migration.md docs/evidence/refactor-v3/n1/constraint-matrix.md
 git diff --cached --check
 git commit -m "feat(db): establish Postgres v3 schema"
 ```
