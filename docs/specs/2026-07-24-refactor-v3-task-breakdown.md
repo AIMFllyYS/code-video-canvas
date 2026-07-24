@@ -184,8 +184,14 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   thinking 未进入 artifact/display/JSONL；`@openai/agents*` 与 U+FFFD 扫描为 0，
   `new Agent(` 仅位于既有 Pi 封装；并发 `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n02)
-- [ ] **N0.3 把 source/runtime 合同检查前移到 render enqueue** —
-  `task_state=in_progress; status=ready; blocked_by=none`;
+- [x] **N0.3 把 source/runtime 合同检查前移到 render enqueue** —
+  `task_state=done; status=ready; blocked_by=none; commit=339bc0f; scope_doc=1cc940c`;
+  evidence=Node 22 纯逻辑 5 files / 35 tests、typecheck、lint 通过；Node 24 原生
+  focused 6 files / 47 tests 与真实 renderer integration 通过；Render→Director fallback、
+  U+FFFD 与新增 `any` 扫描均为 0；历史 441 行 repository 已真实拆为 309/149 行。
+  主树原生模块由用户 Node 24 dev server 使用，隔离副本同步又被环境配额拒绝，故
+  Node 22 SQLite/Playwright 组合门禁保留到 N0 Track closeout 复核；并发
+  `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n03)
 - [ ] **N0.4 修复 API 结果丢弃与 UI 假进度** —
   `task_state=todo; status=ready; blocked_by=none`;
