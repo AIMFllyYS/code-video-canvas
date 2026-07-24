@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getLatestArtifact } from '@/features/artifacts'
 import { getCanvasGraph, listProjects, type CanvasGraphNode } from '@/features/canvas'
 import { ShotDetail } from './shot-detail'
+import { resolveCompositionMode, resolveRenderSpec } from './shot-server-data'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +26,14 @@ export default async function ShotDetailPage({
   const previewUrl = preview
     ? `/api/artifacts/${preview.id}?projectId=${encodeURIComponent(projectId)}`
     : undefined
+  // §1/§5：历史 render-mp4 作为初始视频；分辨率/fps 取自 renderSpec，构图模式取自
+  // 同通道 shot-script 节点的 director-shot-spec（缺失则由页面显式展示"待生成"）。
+  const rendered = getLatestArtifact(projectId, id, 'render-mp4')
+  const initialOutputUrl = rendered
+    ? `/api/artifacts/${rendered.id}?projectId=${encodeURIComponent(projectId)}`
+    : undefined
+  const { resolution, fps } = resolveRenderSpec(node.data)
+  const compositionMode = await resolveCompositionMode(projectId, graph.nodes, node.laneKey)
   return (
     <ShotDetail
       projectId={projectId}
@@ -35,6 +44,10 @@ export default async function ShotDetailPage({
       previousNodeId={renderNodes[nodeIndex - 1]?.id}
       nextNodeId={renderNodes[nodeIndex + 1]?.id}
       previewUrl={previewUrl}
+      initialOutputUrl={initialOutputUrl}
+      resolution={resolution}
+      fps={fps}
+      compositionMode={compositionMode}
     />
   )
 }

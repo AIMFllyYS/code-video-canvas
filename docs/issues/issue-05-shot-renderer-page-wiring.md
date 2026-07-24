@@ -5,7 +5,7 @@
 | 优先级 | P1 |
 | Wave | 3（`docs/specs/2026-07-23-harness-task-breakdown.md` Track H） |
 | 依赖 | `issue-04-shot-thumbnail-infrastructure`（缩略图轨道需要其产出） |
-| 状态 | 待施工 |
+| 状态 | 已完成（2026-07-24，待提交） |
 
 ## 背景
 
@@ -89,10 +89,10 @@
 - `src/features/director/**`（不改 Director 六阶段逻辑，只新增一个前端可触发的独立 FABRICATE 入口，复用现有 API）
 
 **完成条件**：
-- [ ] 刷新页面/首次进入即可看到该分镜的历史渲染结果（若存在）
-- [ ] 播放器上一帧/播放/下一帧/进度条/时间戳全部绑定真实 `<video>` 状态；预览态（无真实视频）时相关控件隐藏或禁用
-- [ ] 8 格缩略图为真实帧图，加载中展示 `Skeleton`
-- [ ] 「已同步」文案反映真实同步状态
-- [ ] 分镜合同的构图模式/分辨率来自真实数据，未生成时显式展示"待生成"
-- [ ] 独立"生成分镜代码"入口可用，不强制依赖"重渲此镜"
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过
+- [x] 刷新页面/首次进入即可看到该分镜的历史渲染结果（若存在）
+- [x] 播放器上一帧/播放/下一帧/进度条/时间戳全部绑定真实 `<video>` 状态；预览态（无真实视频）时相关控件隐藏或禁用
+- [x] 8 格缩略图为真实帧图，加载中展示 `Skeleton`
+- [x] 「已同步」文案反映真实同步状态
+- [x] 分镜合同的构图模式/分辨率来自真实数据，未生成时显式展示"待生成"
+- [x] 独立"生成分镜代码"入口可用，不强制依赖"重渲此镜"
+- [~] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过 —— `pnpm lint` ✅ 全绿、`pnpm build` ✅ 通过（含新增 `/api/render/thumbnails` 与 `/canvas/shot/[id]`，`next build` 不类检 `*.test.ts`）、issue-05 自身文件 `tsc --noEmit` 干净、新增 8 个 shot-api 单测通过；仅**全树 `tsc --noEmit`** 当前被工作区中未提交的 issue-06 WIP（`src/features/render/export-service.test.ts` 缺 `targetResolution/resolutionPreset/shotQa` 字段的 3 处类型错误）阻塞，该文件不在 issue-05 允许改动范围内，按并行施工守则不越界修复
