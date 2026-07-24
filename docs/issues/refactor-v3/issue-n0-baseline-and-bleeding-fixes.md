@@ -212,7 +212,7 @@ Run:
 ```powershell
 pnpm eslint src/lib/workflow/version.ts src/lib/workflow/version.test.ts src/lib/workflow/baseline-redaction.test.ts scripts/verify/capture-v3-baseline.ts eslint.config.mjs
 git diff --check
-rg -n --fixed-strings ([string][char]0xFFFD) AGENTS.md README.md docs src scripts
+rg -n --fixed-strings ([string][char]0xFFFD) AGENTS.md README.md docs src scripts -g '!**/*.pen' -g '!**/.qoder/**'
 git add -- src/lib/workflow/version.ts src/lib/workflow/version.test.ts src/lib/workflow/baseline-redaction.test.ts scripts/verify/capture-v3-baseline.ts docs/evidence/refactor-v3/n0-baseline.json eslint.config.mjs
 git diff --cached --check
 git commit -m "chore(refactor): freeze demo baseline and pin workflow version"
@@ -765,7 +765,7 @@ Expected: 全部退出 0；最终 baseline 四项命令均为 `exitCode: 0`。�
 Run:
 
 ```powershell
-rg -n --fixed-strings ([string][char]0xFFFD) AGENTS.md README.md docs src scripts
+rg -n --fixed-strings ([string][char]0xFFFD) AGENTS.md README.md docs src scripts -g '!**/*.pen' -g '!**/.qoder/**'
 rg -n "from ['\"]@openai/agents|@openai/agents-" package.json pnpm-lock.yaml src --glob '!src/lib/architecture/v3-architecture.test.ts'
 git diff --check
 git add -- scripts/verify/v3-architecture.ts src/lib/architecture/v3-architecture.test.ts scripts/verify/v3-architecture-baseline.json package.json docs/evidence/refactor-v3/n0-baseline.json
