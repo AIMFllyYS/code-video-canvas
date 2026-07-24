@@ -1276,11 +1276,27 @@
                   "name": "Top Bar",
                   "width": "fill_container",
                   "height": 64,
-                  "fill": "$ds-surface",
+                  "fill": "#FAFBFFD9",
                   "stroke": "$ds-border",
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "effect": [
+                    {
+                      "type": "background_blur",
+                      "radius": 18
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#25305A14",
+                      "offset": {
+                        "x": 0,
+                        "y": 6
+                      },
+                      "blur": 18
+                    }
+                  ],
                   "padding": [
                     0,
                     24
@@ -1363,7 +1379,18 @@
                   "name": "Pipeline Canvas",
                   "width": "fill_container",
                   "height": "fill_container",
-                  "fill": "$ds-surface-muted",
+                  "fill": {
+                    "type": "shader",
+                    "enabled": true,
+                    "url": "canvas-dot-grid.glsl",
+                    "uniforms": {
+                      "u_background": "#E8ECFA",
+                      "u_dot_color": "#68728F",
+                      "u_spacing": 20,
+                      "u_radius": 1,
+                      "u_opacity": 0.22
+                    }
+                  },
                   "layout": "vertical",
                   "gap": 28,
                   "padding": 28,
@@ -1657,7 +1684,24 @@
                   "type": "ref",
                   "ref": "XL8t8",
                   "name": "Queue",
-                  "width": "fill_container"
+                  "width": "fill_container",
+                  "fill": "#FAFBFFD9",
+                  "effect": [
+                    {
+                      "type": "background_blur",
+                      "radius": 18
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#25305A14",
+                      "offset": {
+                        "x": 0,
+                        "y": -5
+                      },
+                      "blur": 16
+                    }
+                  ]
                 }
               ]
             },
@@ -1667,11 +1711,27 @@
               "name": "Inspector",
               "width": 360,
               "height": "fill_container",
-              "fill": "$ds-surface",
+              "fill": "#FAFBFFD9",
               "stroke": "$ds-border",
               "strokeWidth": {
                 "left": 1
               },
+              "effect": [
+                {
+                  "type": "background_blur",
+                  "radius": 20
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#25305A14",
+                  "offset": {
+                    "x": -6,
+                    "y": 0
+                  },
+                  "blur": 18
+                }
+              ],
               "layout": "vertical",
               "gap": 16,
               "padding": 18,
@@ -4263,75 +4323,18 @@
               "name": "Sidebar Header",
               "width": "fill_container",
               "cornerRadius": 6,
-              "gap": 320,
+              "gap": 8,
               "padding": 8,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
                 {
-                  "type": "frame",
-                  "id": "kXbCo",
-                  "name": "Brand",
-                  "gap": 8,
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "XV6n5",
-                      "name": "Brand Logo",
-                      "clip": true,
-                      "width": 32,
-                      "height": 32,
-                      "fill": "$--sidebar-accent",
-                      "cornerRadius": 10,
-                      "layout": "none",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "aqHA6",
-                          "x": 8,
-                          "y": 8,
-                          "width": 16,
-                          "height": 16,
-                          "icon": "hexagon",
-                          "library": "lucide",
-                          "fill": "$--sidebar-accent-foreground"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "RvmUd",
-                      "name": "Brand Name",
-                      "layout": "vertical",
-                      "justifyContent": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "cR6yR",
-                          "name": "Name",
-                          "fill": "$--sidebar-foreground",
-                          "content": "Acme, Inc.",
-                          "lineHeight": 1.4285714285714286,
-                          "fontFamily": "Inter",
-                          "fontSize": 14,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "HKlTS",
-                          "name": "Description",
-                          "fill": "$--sidebar-foreground",
-                          "content": "Enterprise",
-                          "lineHeight": 1.6666666666666667,
-                          "textAlignVertical": "middle",
-                          "fontFamily": "Inter",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    }
-                  ]
+                  "id": "Fga0V",
+                  "type": "ref",
+                  "ref": "gdVnx",
+                  "name": "PurpleInk Brand",
+                  "width": 176,
+                  "height": 40
                 },
                 {
                   "type": "icon",
@@ -16133,11 +16136,27 @@
                   "name": "Top Bar",
                   "width": "fill_container",
                   "height": 64,
-                  "fill": "$ds-surface",
+                  "fill": "#0D0E13D9",
                   "stroke": "$ds-border",
                   "strokeWidth": {
                     "bottom": 1
                   },
+                  "effect": [
+                    {
+                      "type": "background_blur",
+                      "radius": 18
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#0000004D",
+                      "offset": {
+                        "x": 0,
+                        "y": 6
+                      },
+                      "blur": 18
+                    }
+                  ],
                   "padding": [
                     0,
                     24
@@ -16220,7 +16239,18 @@
                   "name": "Pipeline Canvas",
                   "width": "fill_container",
                   "height": "fill_container",
-                  "fill": "$ds-surface-muted",
+                  "fill": {
+                    "type": "shader",
+                    "enabled": true,
+                    "url": "canvas-dot-grid.glsl",
+                    "uniforms": {
+                      "u_background": "#171820",
+                      "u_dot_color": "#9696A3",
+                      "u_spacing": 20,
+                      "u_radius": 1,
+                      "u_opacity": 0.24
+                    }
+                  },
                   "layout": "vertical",
                   "gap": 28,
                   "padding": 28,
@@ -16514,7 +16544,24 @@
                   "type": "ref",
                   "ref": "XL8t8",
                   "name": "Queue",
-                  "width": "fill_container"
+                  "width": "fill_container",
+                  "fill": "#0D0E13D9",
+                  "effect": [
+                    {
+                      "type": "background_blur",
+                      "radius": 18
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#0000004D",
+                      "offset": {
+                        "x": 0,
+                        "y": -5
+                      },
+                      "blur": 16
+                    }
+                  ]
                 }
               ]
             },
@@ -16524,11 +16571,27 @@
               "name": "Inspector",
               "width": 360,
               "height": "fill_container",
-              "fill": "$ds-surface",
+              "fill": "#0D0E13D9",
               "stroke": "$ds-border",
               "strokeWidth": {
                 "left": 1
               },
+              "effect": [
+                {
+                  "type": "background_blur",
+                  "radius": 20
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#0000004D",
+                  "offset": {
+                    "x": -6,
+                    "y": 0
+                  },
+                  "blur": 18
+                }
+              ],
               "layout": "vertical",
               "gap": 16,
               "padding": 18,
@@ -19869,67 +19932,12 @@
       "padding": 12,
       "children": [
         {
-          "type": "frame",
-          "id": "vpqlx",
-          "name": "Brand",
-          "width": "fill_container",
-          "gap": 10,
-          "padding": 8,
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "frame",
-              "id": "VEvUy",
-              "name": "Mark",
-              "width": 28,
-              "height": 28,
-              "fill": "$ds-primary",
-              "cornerRadius": 7,
-              "justifyContent": "center",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "icon",
-                  "id": "RD1fn",
-                  "name": "Icon",
-                  "width": 16,
-                  "height": 16,
-                  "icon": "clapperboard",
-                  "library": "lucide",
-                  "fill": "$ds-primary-fg"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "B9bJN",
-              "name": "Brand Copy",
-              "layout": "vertical",
-              "gap": 1,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "T9MVkl",
-                  "name": "Name",
-                  "fill": "$ds-text",
-                  "content": "CodeVideoCanvas",
-                  "fontFamily": "$ds-font",
-                  "fontSize": 14,
-                  "fontWeight": "600"
-                },
-                {
-                  "type": "text",
-                  "id": "STAYG",
-                  "name": "Workspace",
-                  "fill": "$ds-text-muted",
-                  "content": "本地工作区",
-                  "fontFamily": "$font-sc",
-                  "fontSize": 11,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
+          "id": "iSe0s",
+          "type": "ref",
+          "ref": "gdVnx",
+          "name": "PurpleInk Brand",
+          "width": 176,
+          "height": 40
         },
         {
           "type": "frame",
@@ -20684,6 +20692,180 @@
           "fontFamily": "$font-sc",
           "fontSize": 11,
           "fontWeight": "700"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "gdVnx",
+      "x": -298,
+      "y": -256,
+      "name": "PurpleInkLogo/Canonical",
+      "reusable": true,
+      "width": 176,
+      "height": 40,
+      "fill": "$transparent",
+      "gap": 10,
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "g7oNga",
+          "name": "PurpleInk Mark",
+          "width": 40,
+          "height": 40,
+          "fill": "$transparent",
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": 10,
+              "id": "gA5zH",
+              "x": 1,
+              "y": 1,
+              "name": "Rounded Outline",
+              "fill": "$transparent",
+              "width": 37,
+              "height": 37,
+              "stroke": "$foreground",
+              "strokeWidth": 3,
+              "strokeAlignment": "inner"
+            },
+            {
+              "type": "path",
+              "id": "t3o6t",
+              "x": 8,
+              "y": 8,
+              "name": "Letter P",
+              "geometry": "M2 23v-22h10.4c6.3 0 9.6 3.1 9.6 8.2 0 5.2-3.3 8.2-9.6 8.2h-4.4v5.6h-6z m6-16.7v5.9h4c2.8 0 4.1-0.9 4.1-3 0-2-1.3-2.9-4.1-2.9h-4z",
+              "viewBox": [
+                0,
+                0,
+                23,
+                24
+              ],
+              "fill": "$foreground",
+              "width": 23,
+              "height": 24
+            },
+            {
+              "type": "ellipse",
+              "id": "Av9N9",
+              "x": 29,
+              "y": 4,
+              "name": "Magenta Signal",
+              "fill": "#F23886",
+              "width": 8,
+              "height": 8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "V47MYz",
+          "name": "PurpleInk Wordmark",
+          "fill": "$foreground",
+          "content": "PurpleInk",
+          "fontFamily": "Geist",
+          "fontSize": 21,
+          "fontWeight": "700",
+          "letterSpacing": -0.5
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vtgfX",
+      "x": -298,
+      "y": -376,
+      "name": "SVG/SidebarCollapse/Canonical",
+      "reusable": true,
+      "width": 20,
+      "height": 20,
+      "fill": "$transparent",
+      "layout": "none",
+      "children": [
+        {
+          "type": "path",
+          "id": "Hz4vE",
+          "x": 1,
+          "y": 1,
+          "name": "Panel Outline and Collapse Arrow",
+          "geometry": "M3 2.5h12c1.38 0 2.5 1.12 2.5 2.5v10c0 1.38-1.12 2.5-2.5 2.5h-12c-1.38 0-2.5-1.12-2.5-2.5v-10c0-1.38 1.12-2.5 2.5-2.5z m3.5 0v15m6.5-10l-2.5 2.5 2.5 2.5",
+          "viewBox": [
+            0,
+            0,
+            18,
+            20
+          ],
+          "fill": "$transparent",
+          "width": 18,
+          "height": 18,
+          "stroke": "$foreground",
+          "strokeWidth": 1.6,
+          "strokeLinejoin": "round",
+          "strokeLinecap": "round"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "aIdiS",
+      "x": -198,
+      "y": -376,
+      "name": "SVG/SidebarExpand/Canonical",
+      "reusable": true,
+      "width": 20,
+      "height": 20,
+      "fill": "$transparent",
+      "layout": "none",
+      "children": [
+        {
+          "type": "path",
+          "id": "v0L6r",
+          "x": 1,
+          "y": 1,
+          "name": "Panel Outline and Expand Arrow",
+          "geometry": "M3 2.5h12c1.38 0 2.5 1.12 2.5 2.5v10c0 1.38-1.12 2.5-2.5 2.5h-12c-1.38 0-2.5-1.12-2.5-2.5v-10c0-1.38 1.12-2.5 2.5-2.5z m3.5 0v15m4-10l2.5 2.5-2.5 2.5",
+          "viewBox": [
+            0,
+            0,
+            18,
+            20
+          ],
+          "fill": "$transparent",
+          "width": 18,
+          "height": 18,
+          "stroke": "$foreground",
+          "strokeWidth": 1.6,
+          "strokeLinejoin": "round",
+          "strokeLinecap": "round"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "d8hpu",
+      "x": -98,
+      "y": -376,
+      "name": "SidebarToggle/Canonical",
+      "reusable": true,
+      "width": 32,
+      "height": 32,
+      "fill": "$transparent",
+      "cornerRadius": 6,
+      "stroke": "$ds-border",
+      "strokeWidth": 1,
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "vJtPQ",
+          "type": "ref",
+          "ref": "vtgfX",
+          "name": "Collapse Sidebar Icon",
+          "width": 20,
+          "height": 20
         }
       ]
     }
