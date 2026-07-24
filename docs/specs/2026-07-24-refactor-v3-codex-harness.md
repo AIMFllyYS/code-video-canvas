@@ -444,7 +444,7 @@ pnpm build
 中文文件始终 UTF-8。Task/Track 结束扫描：
 
 ```powershell
-rg -n --fixed-strings ([string][char]0xFFFD) AGENTS.md README.md docs src
+rg -n --fixed-strings ([string][char]0xFFFD) AGENTS.md README.md docs src scripts -g '!**/*.pen' -g '!**/.qoder/**'
 ```
 
 `.pen` 文件只允许 Pencil MCP 访问，不用 shell Read/Grep。

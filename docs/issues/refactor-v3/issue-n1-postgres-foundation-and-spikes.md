@@ -1,6 +1,8 @@
 # Track N1 Postgres Foundation and Spikes Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** 按本 Issue 的 Task 顺序逐项施工；辅助 skill 只有在用户与
+> 运行环境允许时才可使用，不是完成条件。Steps use checkbox (`- [ ]`) syntax for
+> tracking.
 
 **Goal:** 用可回滚、可对账的方式把所有活动结构化数据迁到 Postgres，并用三个真实 spike 消除 Trigger.dev、Pi terminal Tool 与 HyperFrames CLI 的集成不确定性。
 
@@ -12,7 +14,7 @@
 
 ## 规范与施工边界
 
-- 需求：`PROD-FOUND-001..004`、`PROD-AI-001..005`、`PROD-RUN-001..006`。
+- 需求：`PROD-FOUND-001..005`、`PROD-AI-001..005`、`PROD-RUN-001..006`。
 - 架构：`DATA-001..006`、`EXEC-CMD-001..004`、`EXEC-TRIGGER-001..007`、
   `CONTRACT-AI-001..007`、`TEST-001..006`、`SEC-001..003`。
 - N1 不实现七任务 DAG、run API、Realtime UI、Pi 四任务合同或正式 HyperFrames
@@ -58,6 +60,7 @@ workspace 业务表使用 `(workspace_id,id)` 复合 PK/FK，聚合使用
 - Create: `src/lib/migration/sqlite-online-backup.ts`
 - Create: `src/lib/migration/sqlite-online-backup.test.ts`
 - Create: `scripts/migration/sqlite-backup.ts`
+- Create: `docs/evidence/refactor-v3/n1/sqlite-backup.md`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/app.db`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/backup-report.json`
 - Read-only source: `.data/app.db`
@@ -189,7 +192,10 @@ Get-Item -LiteralPath '.data/legacy-sqlite-archives/baseline-before-postgres/app
 Expected: report 的 `quickCheck` 为 `ok`，六个 count 均为非负整数，report
 SHA 与 `Get-FileHash` 一致，快照 Attributes 包含 `ReadOnly`；源文件仍存在且未被
 脚本写入。若 `.data/app.db` 不存在，任务以“无可迁移数据”的明确证据阻塞，不得
-创建空库冒充快照。
+创建空库冒充快照。将脱敏摘要写入
+`docs/evidence/refactor-v3/n1/sqlite-backup.md`，只记录相对路径、inventory、
+quick_check、六表 count、源文件前后 hash、快照 hash、命令退出码和
+fixture/live 边界；禁止绝对路径、SQL 行内容、setting 值或 secret。
 
 - [ ] **Step 6: Task-Light 检查并本地提交源码**
 
@@ -199,13 +205,13 @@ Run:
 pnpm eslint src/lib/migration/sqlite-online-backup.ts src/lib/migration/sqlite-online-backup.test.ts scripts/migration/sqlite-backup.ts
 pnpm typecheck
 git diff --check
-git add -- src/lib/migration/sqlite-online-backup.ts src/lib/migration/sqlite-online-backup.test.ts scripts/migration/sqlite-backup.ts
+git add -- src/lib/migration/sqlite-online-backup.ts src/lib/migration/sqlite-online-backup.test.ts scripts/migration/sqlite-backup.ts docs/evidence/refactor-v3/n1/sqlite-backup.md
 git diff --cached --check
 git commit -m "chore(migration): add WAL-safe SQLite backup"
 ```
 
 Expected: lint/typecheck/diff 通过；`.data/**` 不在 staged diff；commit 只含三个
-源码文件。
+源码文件和一份脱敏 evidence。
 
 **N1.1 exit gate:** 活动 WAL 上的 Online Backup 测试与真实 `.data/app.db`
 快照均通过 quick_check、六表计数与 SHA 验证；未使用 `Copy-Item`；源数据库未被
@@ -230,6 +236,9 @@ Expected: lint/typecheck/diff 通过；`.data/**` 不在 staged diff；commit �
 - Create: `src/lib/db/test/pg-test-database.ts`
 - Create: `src/lib/db/schema.pg.test.ts`
 - Create: `vitest.pg.config.ts`
+- Create: `docs/evidence/refactor-v3/n1/postgres-health.md`
+- Create: `docs/evidence/refactor-v3/n1/fresh-migration.md`
+- Create: `docs/evidence/refactor-v3/n1/constraint-matrix.md`
 - Create (generated and reviewed): `src/lib/db/migrations/pg/0000_v3_postgres_foundation.sql`
 - Create (generated): `src/lib/db/migrations/pg/meta/_journal.json`
 - Create (generated): `src/lib/db/migrations/pg/meta/0000_snapshot.json`
@@ -320,6 +329,8 @@ docker compose -f docker-compose.dev.yml ps
 ```
 
 Expected: `postgres` 为 healthy；端口没有暴露到非 loopback 地址。
+将 image/version、绑定地址、healthcheck 与脱敏 `docker compose ps` 摘要写入
+`docs/evidence/refactor-v3/n1/postgres-health.md`；禁止容器环境变量或 credential。
 
 - [ ] **Step 4: 实现十二表 schema 与异步 client/migrator**
 
@@ -400,7 +411,10 @@ pnpm typecheck
 
 Expected: 空 `cvc` 与每次重建的 `cvc_test` 都从已提交 SQL migration 成功建立；
 全部 PG contract 测试 GREEN；重复 `pnpm db:migrate` 为幂等；应用 import 不会自动
-改 schema。
+改 schema。将 fresh/repeat migration 的命令、exit code、十二表 inventory 写入
+`docs/evidence/refactor-v3/n1/fresh-migration.md`，将 workspace 复合 FK、命名
+CHECK、unique 与 artifact immutable trigger 的测试矩阵写入
+`docs/evidence/refactor-v3/n1/constraint-matrix.md`；两份证据都不得包含连接串。
 
 - [ ] **Step 7: Task-Light 检查并本地提交**
 
@@ -409,13 +423,14 @@ Run:
 ```powershell
 pnpm eslint drizzle.config.ts src/lib/db scripts/setup/db-migrate.ts
 git diff --check
-git add -- docker-compose.dev.yml scripts/setup/postgres-init.sql drizzle.config.ts src/lib/db/schema src/lib/db/test/pg-test-database.ts src/lib/db/schema.pg.test.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/migrations/pg scripts/setup/db-migrate.ts vitest.config.ts vitest.pg.config.ts package.json pnpm-lock.yaml
+git add -- docker-compose.dev.yml scripts/setup/postgres-init.sql drizzle.config.ts src/lib/db/schema src/lib/db/test/pg-test-database.ts src/lib/db/schema.pg.test.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/migrations/pg scripts/setup/db-migrate.ts vitest.config.ts vitest.pg.config.ts package.json pnpm-lock.yaml docs/evidence/refactor-v3/n1/postgres-health.md docs/evidence/refactor-v3/n1/fresh-migration.md docs/evidence/refactor-v3/n1/constraint-matrix.md
 git diff --cached --check
 git commit -m "feat(db): establish Postgres v3 schema"
 ```
 
 Expected: lint/typecheck/diff 通过；staged SQL 与 Drizzle schema 一致；没有
-`.env*`、`.data/**` 或 legacy SQLite 文件；commit 成功。
+`.env*`、`.data/**`、连接串或 legacy SQLite 文件；三份脱敏 evidence 与源码一并
+提交。
 
 **N1.2 exit gate:** fresh Postgres 可仅从受审 migration 建立十二表；workspace
 复合隔离、状态 CHECK、attempt/receipt unique、artifact 不可变 trigger 均由 PG
@@ -635,6 +650,7 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 - Create: `scripts/migration/export-sqlite.ts`
 - Create: `scripts/migration/import-postgres.ts`
 - Create: `scripts/migration/reconcile-postgres.ts`
+- Create: `docs/evidence/refactor-v3/n1/import-reconciliation.md`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/export/manifest.json`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/export/*.jsonl`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/reconciliation.json`
@@ -737,7 +753,10 @@ pnpm tsx scripts/migration/reconcile-postgres.ts --manifest .data/legacy-sqlite-
 
 Expected: fixture 全 GREEN；真实 export/import/reconcile 均退出 0；
 reconciliation 的六张表 `sourceCount = accountedCount`、PK set/hash 无未解释差异；
-disposition 数量与原因明确；中文 round-trip 无 U+FFFD；命令不打印 secret。
+disposition 数量与原因明确；中文 round-trip 无 U+FFFD；命令不打印 secret。将
+snapshot/export/reconciliation hash、六表计数、disposition 分类和命令
+exit code 写入 `docs/evidence/refactor-v3/n1/import-reconciliation.md`；只记录相对
+路径，禁止 credential、SQL 行内容或本机绝对路径。
 
 - [ ] **Step 5: 再跑 importer 证明幂等，保留只读源**
 
@@ -750,7 +769,8 @@ Get-Item -LiteralPath '.data/app.db','.data/legacy-sqlite-archives/baseline-befo
 ```
 
 Expected: 第二次 import `inserted=0`，PG counts/hash 不变；原 DB 仍存在，backup
-仍 ReadOnly。
+仍 ReadOnly。把第二次 import/reconcile 的 `inserted=0`、counts/hash 与 exit code
+追加到 `docs/evidence/refactor-v3/n1/import-reconciliation.md`，作为幂等结论。
 
 - [ ] **Step 6: Task-Light 检查并本地提交源码**
 
@@ -760,12 +780,13 @@ Run:
 pnpm eslint src/lib/migration scripts/migration
 pnpm typecheck
 git diff --check
-git add -- src/lib/migration/legacy-export.ts src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-import.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.ts src/lib/migration/legacy-reconcile.pg.test.ts src/lib/migration/legacy-id.ts src/lib/migration/legacy-id.test.ts scripts/migration/export-sqlite.ts scripts/migration/import-postgres.ts scripts/migration/reconcile-postgres.ts
+git add -- src/lib/migration/legacy-export.ts src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-import.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.ts src/lib/migration/legacy-reconcile.pg.test.ts src/lib/migration/legacy-id.ts src/lib/migration/legacy-id.test.ts scripts/migration/export-sqlite.ts scripts/migration/import-postgres.ts scripts/migration/reconcile-postgres.ts docs/evidence/refactor-v3/n1/import-reconciliation.md
 git diff --cached --check
 git commit -m "feat(migration): reconcile SQLite data into Postgres"
 ```
 
-Expected: 源码/tests 提交；`.data/**`、Key、绝对本机 artifact 路径不在 commit。
+Expected: 源码/tests 与脱敏 evidence 提交；`.data/**`、Key、绝对本机 artifact
+路径不在 commit。
 
 **N1.4 exit gate:** 原 SQLite 与 Online Backup 均保留只读；六表每一行都以 PG
 目标或显式 disposition 对账；重复 import 无新增；中文与 artifact hash 保真；
@@ -786,6 +807,7 @@ credential 原文从未进入 export、日志、commit。
 - Create: `scripts/spikes/hyperframes-canary/index.html`
 - Create: `scripts/spikes/hyperframes-canary/README.md`
 - Create: `scripts/spikes/run-v3-spikes.ts`
+- Create: `docs/evidence/refactor-v3/n1/trigger-realtime.md`
 - Create (generated evidence): `docs/evidence/refactor-v3/n1-spikes.json`
 - Modify: `.gitignore`
 - Modify: `package.json`
@@ -854,6 +876,10 @@ pnpm tsx scripts/spikes/trigger-realtime-probe.ts
 
 Expected: task 实际执行一次，B 输出脱敏的 run ID 与
 `started → completed → succeeded`，不是“Successfully registered”即算完成。
+将 run ID、typed event 顺序/hash 与 terminal 状态写入
+`docs/evidence/refactor-v3/n1/trigger-realtime.md`；scoped token 正/负测试属于
+N2.5，本 Task 明确标为 deferred，不提前实现 run API/Realtime UI。不得保存 token、
+raw payload 或 Trigger credential。
 
 - [ ] **Step 4: 实现 Pi terminal Tool 真实模型调用**
 
@@ -917,7 +943,7 @@ pnpm tsx scripts/spikes/run-v3-spikes.ts --verify-evidence
 pnpm eslint trigger.config.ts trigger scripts/spikes
 pnpm typecheck
 git diff --check
-git add -- trigger.config.ts trigger/tasks/pipeline-run.ts scripts/spikes/trigger-realtime-probe.ts scripts/spikes/pi-terminal-tool-probe.ts scripts/spikes/hyperframes-canary/index.html scripts/spikes/hyperframes-canary/README.md scripts/spikes/run-v3-spikes.ts docs/evidence/refactor-v3/n1-spikes.json .gitignore package.json pnpm-lock.yaml
+git add -- trigger.config.ts trigger/tasks/pipeline-run.ts scripts/spikes/trigger-realtime-probe.ts scripts/spikes/pi-terminal-tool-probe.ts scripts/spikes/hyperframes-canary/index.html scripts/spikes/hyperframes-canary/README.md scripts/spikes/run-v3-spikes.ts docs/evidence/refactor-v3/n1-spikes.json docs/evidence/refactor-v3/n1/trigger-realtime.md .gitignore package.json pnpm-lock.yaml
 git diff --cached --check
 git commit -m "chore(spikes): prove v3 runtime integrations"
 ```
