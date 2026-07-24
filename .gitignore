@@ -161,6 +161,7 @@ bun.lockb
 # ========================
 # Temporary files
 # ========================
+.worktrees/
 tmp/
 temp/
 *.tmp
