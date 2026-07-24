@@ -415,6 +415,7 @@ Expected: `@openai/agents*` scan 无匹配；`new Agent(` 只在 Pi 封装中；
 - Create: `src/features/render/source-contract.test.ts`
 - Create: `src/features/render/admission.ts`
 - Create: `src/features/render/admission.test.ts`
+- Create: `src/features/render/render-shot-repository.ts`
 - Modify: `src/features/render/repository.ts`
 - Modify: `src/features/render/repository.test.ts`
 - Modify: `src/features/render/renderer.ts`
@@ -504,6 +505,11 @@ export async function assertRenderAdmission(
 `director-fabricate` artifact，并返回完整 `RenderJob`。`loadRenderContext()` 只增加
 `status === 'running'` 条件后复用同一私有构造函数，避免两份 artifact 查询。
 
+N0.3 开工时 `repository.ts` 已有 441 行且职责混合；本 Task 又必须触碰该文件。先将
+shot 执行上下文、render error 与 source artifact 查询真实拆到
+`render-shot-repository.ts`，`RenderRepository` 继承该职责类以保持现有公开构造入口；
+禁止用 re-export 壳或格式压缩规避 repository 400 行硬上限。
+
 - [ ] **Step 6: 让 enqueue 异步并删除 render→fabricate fallback**
 
 `enqueueRenderShot()` 必须按以下顺序：
@@ -539,7 +545,7 @@ Expected: 测试 PASS；typecheck 退出 0；最后一条无匹配。真实 fixt
 - [ ] **Step 8: 提交**
 
 ```powershell
-git add -- src/features/render/source-contract.ts src/features/render/source-contract.test.ts src/features/render/admission.ts src/features/render/admission.test.ts src/features/render/repository.ts src/features/render/repository.test.ts src/features/render/renderer.ts src/features/render/queue-handler.ts src/features/render/queue-handler.test.ts src/features/director/advance.ts src/features/director/advance.test.ts src/app/api/render/route.ts src/app/api/render/route.test.ts
+git add -- src/features/render/source-contract.ts src/features/render/source-contract.test.ts src/features/render/admission.ts src/features/render/admission.test.ts src/features/render/render-shot-repository.ts src/features/render/repository.ts src/features/render/repository.test.ts src/features/render/renderer.ts src/features/render/queue-handler.ts src/features/render/queue-handler.test.ts src/features/director/advance.ts src/features/director/advance.test.ts src/app/api/render/route.ts src/app/api/render/route.test.ts
 git diff --cached --check
 git commit -m "fix(render): validate source runtime before enqueue"
 ```
