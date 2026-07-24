@@ -231,6 +231,33 @@ body {
   caret-color: var(--color-accent);
 }
 
+/* ─── 画布光标可见性 / Canvas cursor visibility ─── */
+/*
+ * React Flow 画布使用系统关键字光标(grab/grabbing),其颜色由 OS 光标主题决定;
+ * 用户使用白色系统指针时会在浅色画布上"隐形"。这里用自带白色描边的深色手型
+ * SVG 光标覆盖之,颜色烘焙进 SVG,浅色/深色画布均可见。仅作用于 .react-flow__*
+ * (仅画布存在),不影响其他页面。
+ * 注:data-URI 无法引用 CSS 变量,故 SVG 内为字面色值 —— 镜像 --color-tooltip-bg
+ * (%231C1C1E)+ 白色描边,属 data-URI 必需的受控例外,非硬编码违规。
+ */
+:root {
+  --cursor-grab: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%231C1C1E" stroke="%23FFFFFF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" paint-order="stroke" d="M4 12C4 6.5 6.2 6.5 6.2 12C6.2 4 8.4 4 8.4 12C8.4 3 10.6 3 10.6 12C10.6 4.5 12.8 4.5 12.8 12C12.8 8 15 8 15 13L15 15C15 19 12.6 21 9.5 21C6 21 4 18.5 4 14Z"/></svg>') 9 9;
+  --cursor-grabbing: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%231C1C1E" stroke="%23FFFFFF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" paint-order="stroke" d="M5 13C5 11.3 5.4 11 6.2 11C6.9 11 7.2 11.4 7.3 12C7.4 10.2 7.8 9.8 8.6 9.8C9.3 9.8 9.6 10.2 9.7 10.8C9.9 9.4 10.3 9 11.1 9C11.8 9 12.1 9.4 12.2 10C12.5 9 13 8.6 13.8 8.8C14.6 9 15 10 15 11L16.6 12.4C18 13.6 18.4 15 18 16.5C17.2 19.8 14.5 21 12 21C8 21 5 18 5 14Z"/></svg>') 10 11;
+}
+
+/* 用 .react-flow 祖先类抬高特异度,稳压库内 .react-flow__pane.draggable /
+   .react-flow__node.draggable.dragging 等规则;末尾关键字为 SVG 失败时的兜底。
+   两主题都启用(深手型 + 白描边在浅/深背景均可见)。 */
+.react-flow .react-flow__pane.draggable,
+.react-flow .react-flow__node.draggable {
+  cursor: var(--cursor-grab), grab;
+}
+
+.react-flow .react-flow__pane.dragging,
+.react-flow .react-flow__node.draggable.dragging {
+  cursor: var(--cursor-grabbing), grabbing;
+}
+
 /* ─── 无障碍：尊重系统「减弱动态效果」 ─── */
 /* 仅约束应用 UI；视频 shot 渲染是自包含 artifact，不引入本样式表。 */
 @media (prefers-reduced-motion: reduce) {
