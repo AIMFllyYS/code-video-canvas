@@ -282,11 +282,17 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
 
 ### Track N2 — Trigger orchestration
 
-- [ ] **N2.1 Trigger config、queues、tags 与 typed streams** —
-  `task_state=todo; status=ready; blocked_by=none`;
+- [x] **N2.1 Trigger config、queues、tags 与 typed streams** —
+  `task_state=done; status=ready; blocked_by=none; commit=61dd51c; scope_doc=9c57d85`;
+  七个 task ID、三组业务状态、四个静态 queue、UUID 语义一致与小写规范化 tags、
+  唯一 `cvc.pipeline.progress.v1` safe typed stream、Task payload/result/failure 已由
+  13 个合同测试锁定；progress 与 failure 共享稳定 issue code，stream 写入先经
+  strict Zod parse；旧 N1 probe 已迁移到唯一新合同，按用户 waiver 未登录或执行
+  Trigger 云端 run；focused test、lint、typecheck、`verify:v3`、evidence verifier、
+  U+FFFD 与 scoped diff gate 全部通过；
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n21)
 - [ ] **N2.2 七类 Trigger task 与统一 TaskResult** —
-  `task_state=todo; status=blocked; blocked_by=N2.1`;
+  `task_state=todo; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n22)
 - [ ] **N2.3 DAG、checkpoint、global idempotency、receipt 与 attempt fence** —
   `task_state=todo; status=blocked; blocked_by=N2.2`;
