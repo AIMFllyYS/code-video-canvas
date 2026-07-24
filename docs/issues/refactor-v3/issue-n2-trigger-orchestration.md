@@ -92,6 +92,7 @@ pipeline task。
 - Create: `src/features/pipeline/contracts/contracts.test.ts`
 - Modify: `trigger.config.ts`
 - Modify: `trigger/tasks/pipeline-run.ts`
+- Modify: `scripts/spikes/trigger-realtime-probe.ts`
 - Prohibited: 新 queue 名、按 Shot 动态建 queue、raw model delta/reasoning stream
 - Prohibited: Trigger metadata 持久化为业务事实、创建 `run_events`
 
@@ -161,6 +162,10 @@ payload 放入 tag。
 `trigger.config.ts` 保持 `dirs: ['./trigger']` 和 N1 已验证配置，只增加 N2 所需
 build/runtime 配置；不得运行数据库 migration。
 
+N1 Realtime probe 必须同步改为消费新的 `TaskPayloadV1`、`TaskResultV1` 与
+`cvc.pipeline.progress.v1`，不得为了兼容 probe 保留第二个旧 stream 或旧 probe-only
+payload；用户已豁免云端实跑时只要求 typecheck/static gate，不伪造运行 evidence。
+
 - [ ] **Step 4: 运行 GREEN 与静态泄漏扫描**
 
 Run:
@@ -181,7 +186,7 @@ Run:
 ```powershell
 pnpm eslint trigger.config.ts trigger/queues.ts trigger/streams.ts src/features/pipeline/contracts
 git diff --check
-git add -- trigger.config.ts trigger/tasks/pipeline-run.ts trigger/queues.ts trigger/streams.ts src/features/pipeline/contracts
+git add -- trigger.config.ts trigger/tasks/pipeline-run.ts trigger/queues.ts trigger/streams.ts scripts/spikes/trigger-realtime-probe.ts src/features/pipeline/contracts
 git diff --cached --check
 git commit -m "feat(orchestration): define Trigger execution contracts"
 ```
