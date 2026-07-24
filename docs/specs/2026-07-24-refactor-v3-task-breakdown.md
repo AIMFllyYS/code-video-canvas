@@ -269,7 +269,10 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   run ID、未伪造通过，`--verify-evidence` 正确以 `TRIGGER_PASSED_INVALID` 失败；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n15)
 - [ ] **N1.6 移除 runtime SQLite，仅保留只读 migration 工具** —
-  `task_state=todo; status=blocked; blocked_by=N1.3,N1.4,N1.5`;
+  `task_state=in_progress; status=blocked; blocked_by=N1.5; execution_override=user-authorized-independent-progress`;
+  N1.5 外部 Trigger 认证阻塞期间，按用户无人值守指令只推进不依赖真实 Trigger
+  run 的 SQLite 清退实现与 focused gate；N1.6 exit、N1 Tier B 与账本完成状态仍须
+  等 N1.5 live Realtime 证据后关闭；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n16)
 
 ### Track N2 — Trigger orchestration
