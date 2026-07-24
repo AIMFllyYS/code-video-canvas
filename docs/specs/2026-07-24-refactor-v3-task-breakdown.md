@@ -194,7 +194,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n03)
 - [ ] **N0.4 修复 API 结果丢弃与 UI 假进度** —
-  `task_state=todo; status=ready; blocked_by=none`;
+  `task_state=in_progress; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n04)
 - [ ] **N0.5 建立 import、文件长度与 UTF-8 基线报告** —
   `task_state=todo; status=ready; blocked_by=none`;
