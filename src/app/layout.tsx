@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { AppMotionConfig } from '@/lib/motion/config'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -27,7 +28,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AppMotionConfig>{children}</AppMotionConfig>
+      </body>
     </html>
   )
 }

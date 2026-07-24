@@ -75,6 +75,14 @@
   --radius-lg: 14px;
   --radius-xl: 20px;
   --radius-pill: 999px;
+
+  /* 动效（Motion）——权威源见设计系统清单 §3.8 */
+  --duration-fast: 120ms;
+  --duration-base: 220ms;
+  --duration-slow: 360ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 
 .dark {
@@ -205,6 +213,14 @@
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
   --radius-pill: var(--radius-pill);
+
+  /* 动效缓动曲线（生成 ease-standard / ease-emphasized / ease-exit 工具类） */
+  --ease-standard: var(--ease-standard);
+  --ease-emphasized: var(--ease-emphasized);
+  --ease-exit: var(--ease-exit);
+
+  /* 骨架微光动画（生成 animate-shimmer 工具类） */
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 }
 
 /* ─── Base ─── */
@@ -213,4 +229,27 @@ body {
   color: var(--color-label);
   font-family: var(--font-sans);
   caret-color: var(--color-accent);
+}
+
+/* ─── 无障碍：尊重系统「减弱动态效果」 ─── */
+/* 仅约束应用 UI；视频 shot 渲染是自包含 artifact，不引入本样式表。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 骨架微光：横向扫光。reduced-motion 下由上方规则自动停到静态。 */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
