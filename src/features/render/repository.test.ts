@@ -156,6 +156,7 @@ describe('RenderRepository export plan', () => {
       passed: false,
       checkedAt: 2,
       thumbnailContentHash: 'vision',
+      provider: 'stepfun',
       model: 'step-3.7-flash',
       summary: '缺少标题',
       reportArtifactId: 'report-1',

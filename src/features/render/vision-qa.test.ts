@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  analyzeStepfunVision,
+  analyzeVision,
   runShotVisionQa,
   storeVisionQaReport,
   type ShotVisionQaDependencies,
@@ -26,6 +26,7 @@ function harness() {
   const writeShotQaVision = vi.fn()
   const analyze = vi.fn(async () => ({
     model: 'step-3.7-flash',
+    provider: 'stepfun' as const,
     report: {
       summary: '合同检查完成',
       mustShow: [
@@ -98,6 +99,7 @@ describe('runShotVisionQa', () => {
           version: 1,
           passed: true,
           model: 'step-3.7-flash',
+          provider: 'stepfun',
           thumbnailArtifactIds: ['thumb-1', 'thumb-2', 'thumb-3'],
         }),
       })
@@ -118,6 +120,7 @@ describe('runShotVisionQa', () => {
     const target = harness()
     target.analyze.mockResolvedValueOnce({
       model: 'step-3.7-flash',
+      provider: 'stepfun' as const,
       report: {
         summary: '遗漏合同项',
         mustShow: [],
@@ -158,14 +161,12 @@ describe('runShotVisionQa', () => {
   })
 })
 
-describe('StepFun Vision client and report storage', () => {
-  const config = {
+describe('routed Vision client and report storage', () => {
+  const target = {
+    provider: 'gemini' as const,
     apiKey: 'test-key',
-    baseUrl: 'https://api.stepfun.test/v1',
-    chatModel: 'chat',
-    ttsModel: 'tts',
-    asrModel: 'asr',
-    visionModel: 'vision-model',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    modelId: 'gemini-3.6-flash',
   }
 
   it('uses the resolved vision model and sends PNG data URLs through the compatible API', async () => {
@@ -173,19 +174,22 @@ describe('StepFun Vision client and report storage', () => {
       '```json\n{"summary":"通过","mustShow":[],"mustAvoid":[],"findings":[]}\n```'
     )
 
-    const result = await analyzeStepfunVision(
+    const result = await analyzeVision(
       {
         shotId: 'S001',
         mustShow: [],
         mustAvoid: [],
         images: [{ label: '25%', bytes: Buffer.from([1, 2, 3]) }],
       },
-      { getConfig: () => config, complete }
+      { resolveTarget: () => target, complete }
     )
 
-    expect(result.model).toBe('vision-model')
+    expect(result).toMatchObject({
+      provider: 'gemini',
+      model: 'gemini-3.6-flash',
+    })
     expect(complete).toHaveBeenCalledWith(
-      config,
+      target,
       expect.arrayContaining([
         expect.objectContaining({
           role: 'user',
@@ -206,9 +210,12 @@ describe('StepFun Vision client and report storage', () => {
     const complete = vi.fn()
 
     await expect(
-      analyzeStepfunVision(
+      analyzeVision(
         { shotId: 'S001', mustShow: [], mustAvoid: [], images: [] },
-        { getConfig: () => ({ ...config, apiKey: null }), complete }
+        {
+          resolveTarget: () => ({ ...target, apiKey: null }),
+          complete,
+        }
       )
     ).rejects.toThrow('API Key 未配置')
     expect(complete).not.toHaveBeenCalled()
@@ -234,6 +241,7 @@ describe('StepFun Vision client and report storage', () => {
           report: {
             version: 1,
             shotId: 'S001',
+            provider: 'gemini',
             model: 'vision-model',
             passed: true,
             summary: '通过',

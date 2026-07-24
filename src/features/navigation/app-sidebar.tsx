@@ -99,7 +99,10 @@ export function AppSidebar({
         >
           设置
         </NavItem>
-        <SidebarLocalStatus compact={compact} />
+        <SidebarLocalStatus
+          compact={compact}
+          label="本地存储 · 模型直连"
+        />
       </SidebarFooter>
     </Sidebar>
   )

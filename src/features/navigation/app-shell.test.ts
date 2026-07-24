@@ -26,7 +26,7 @@ describe('AppSidebar', () => {
       '分镜渲染器',
       '合成与导出',
       '设置',
-      '本地模式 · 数据不出本机',
+      '本地存储 · 模型直连',
     ]) {
       expect(html.match(new RegExp(label, 'g'))).toHaveLength(1)
     }
@@ -69,7 +69,7 @@ describe('AppSidebar', () => {
       expect(html.match(new RegExp(label, 'g'))).toHaveLength(1)
     }
     // compact 态状态文案仅保留为 title，不作为可见文本节点重复渲染
-    expect(html).toContain('title="本地模式 · 数据不出本机"')
+    expect(html).toContain('title="本地存储 · 模型直连"')
     expect(html.match(/aria-current="page"/g)).toHaveLength(1)
   })
 })

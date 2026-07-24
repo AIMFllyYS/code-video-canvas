@@ -122,7 +122,7 @@ export interface SidebarLocalStatusProps {
 }
 
 export function SidebarLocalStatus({
-  label = '本地模式 · 数据不出本机',
+  label = '本地存储 · 模型直连',
   className,
   compact,
 }: SidebarLocalStatusProps) {

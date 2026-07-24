@@ -157,6 +157,9 @@ describe('director prompt templates', () => {
       'CSS animation/transition',
       'paused timeline',
       'seek',
+      'window.__CVC_RENDER__ = { version: 1, seek(frame, fps) }',
+      '第一个字符必须是 <',
+      '禁止 Markdown 围栏',
     ]) {
       expect(prompt).toContain(term)
     }

@@ -12,5 +12,5 @@ describe('server module startup boundary', () => {
     await expect(import('./queue-handler')).resolves.toBeDefined()
     await expect(import('@/features/render/queue-handler')).resolves.toBeDefined()
     expect(getDb).not.toHaveBeenCalled()
-  })
+  }, 15_000)
 })

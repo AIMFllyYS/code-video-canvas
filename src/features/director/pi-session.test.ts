@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => {
   const buildContext = vi.fn()
   const openStore = vi.fn()
   const publish = vi.fn()
+  const createProvider = vi.fn(() => ({}))
+  const resolveDirectorModelTarget = vi.fn()
   const agentInstances: MockAgent[] = []
 
   class MockAgent {
@@ -74,7 +76,17 @@ const mocks = vi.hoisted(() => {
     abort() {}
   }
 
-  return { appendMessage, closeStore, buildContext, openStore, publish, agentInstances, MockAgent }
+  return {
+    appendMessage,
+    closeStore,
+    buildContext,
+    openStore,
+    publish,
+    createProvider,
+    resolveDirectorModelTarget,
+    agentInstances,
+    MockAgent,
+  }
 })
 
 vi.mock('server-only', () => ({}))
@@ -82,14 +94,28 @@ vi.mock('@/lib/stream/stream-bus', () => ({ streamBus: { publish: mocks.publish 
 vi.mock('@earendil-works/pi-agent-core', () => ({ Agent: mocks.MockAgent }))
 vi.mock('@earendil-works/pi-ai', () => ({
   createModels: () => ({ setProvider: vi.fn(), streamSimple: vi.fn() }),
-  createProvider: vi.fn(() => ({})),
+  createProvider: mocks.createProvider,
   envApiKeyAuth: vi.fn(() => ({})),
 }))
 vi.mock('@earendil-works/pi-ai/api/openai-completions.lazy', () => ({
   openAICompletionsApi: vi.fn(() => ({})),
 }))
-vi.mock('@/features/ai/stepfun-adapter', () => ({
-  getStoredApiKey: vi.fn(() => 'stored-test-key'),
+vi.mock('@earendil-works/pi-ai/api/google-generative-ai.lazy', () => ({
+  googleGenerativeAIApi: vi.fn(() => ({ nativeGoogle: true })),
+}))
+vi.mock('@/features/ai/model-routing', () => ({
+  DIRECTOR_NODE_TYPES: [
+    'script-import',
+    'shot-split',
+    'score',
+    'export',
+    'shot-script',
+    'shot-codegen',
+    'shot-sfx',
+    'shot-subtitle',
+    'shot-qa',
+  ],
+  resolveDirectorModelTarget: mocks.resolveDirectorModelTarget,
 }))
 vi.mock('./session-store', () => ({
   DirectorSessionStore: class {
@@ -102,6 +128,12 @@ describe('createDirectorSession', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.agentInstances.length = 0
+    mocks.resolveDirectorModelTarget.mockReturnValue({
+      provider: 'stepfun',
+      baseUrl: 'https://api.stepfun.test/v1',
+      modelId: 'step-chat',
+      apiKey: 'stepfun-key',
+    })
     mocks.buildContext.mockResolvedValue({
       messages: [{ role: 'user', content: [{ type: 'text', text: '历史消息' }], timestamp: 1 }],
     })
@@ -176,5 +208,61 @@ describe('createDirectorSession', () => {
       ['project-1:node-1', '完'],
       ['project-1:node-1', '成'],
     ])
+  })
+
+  it('constructs the selected Gemini runtime from the trusted node type', async () => {
+    mocks.resolveDirectorModelTarget.mockReturnValueOnce({
+      provider: 'gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+      modelId: 'gemini-3.6-flash',
+      apiKey: 'gemini-key',
+    })
+
+    const session = await createDirectorSession({
+      projectId: 'project-1',
+      nodeId: 'node-1',
+      nodeType: 'shot-codegen',
+      stage: 'FABRICATE',
+    })
+
+    expect(mocks.resolveDirectorModelTarget).toHaveBeenCalledWith(
+      'shot-codegen',
+      'text'
+    )
+    expect(mocks.createProvider).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'gemini',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+        api: { nativeGoogle: true },
+        models: [
+          expect.objectContaining({
+            id: 'gemini-3.6-flash',
+            provider: 'gemini',
+            api: 'google-generative-ai',
+            baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+          }),
+        ],
+      })
+    )
+    await session.close()
+  })
+
+  it('fails explicitly instead of falling back when the selected provider has no key', async () => {
+    mocks.resolveDirectorModelTarget.mockReturnValueOnce({
+      provider: 'gemini',
+      baseUrl: 'https://gemini.test/openai/',
+      modelId: 'gemini-3.6-flash',
+      apiKey: null,
+    })
+
+    await expect(
+      createDirectorSession({
+        projectId: 'project-1',
+        nodeId: 'node-1',
+        nodeType: 'shot-codegen',
+        stage: 'FABRICATE',
+      })
+    ).rejects.toThrow('Gemini API Key 未配置')
+    expect(mocks.closeStore).toHaveBeenCalledOnce()
   })
 })

@@ -41,6 +41,11 @@ export function buildFabricatePrompt(input: FabricatePromptInput): string {
 - 不读取远程运行时素材，不改写镜头职责、音频时长或核心文案。
 - HTML 必须可从任意 StorageAdapter 本地路径独立加载，不得引用工作区相对
   node_modules/docs 路径；所需运行时代码与素材必须内联或使用 data URL。
+- 必须在内联脚本中暴露精确合同：
+  window.__CVC_RENDER__ = { version: 1, seek(frame, fps) }
+  seek 必须同步或返回 Promise，并只根据传入的 frame/fps 更新当前帧。
+- 输出的第一个字符必须是 <，最后一个字符必须是 >；禁止 Markdown 围栏、
+  解释、前后缀或省略内容。
 
 shot contract：
 ${JSON.stringify(parsed.shot)}

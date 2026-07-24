@@ -11,6 +11,29 @@ export const stepfunSettingsSchema = z.object({
   ttsModel: z.string().optional(),
   asrModel: z.string().optional(),
   visionModel: z.string().optional(),
-})
+  gemini: z
+    .object({
+      apiKey: z.string().min(1, 'Gemini API Key 不能为空').optional(),
+      baseUrl: z.string().optional(),
+      primaryModel: z.string().optional(),
+      fastModel: z.string().optional(),
+    })
+    .strict()
+    .optional(),
+  routes: z
+    .object({
+      'script-import': z.enum(['stepfun', 'gemini']).optional(),
+      'shot-split': z.enum(['stepfun', 'gemini']).optional(),
+      score: z.enum(['stepfun', 'gemini']).optional(),
+      export: z.enum(['stepfun', 'gemini']).optional(),
+      'shot-script': z.enum(['stepfun', 'gemini']).optional(),
+      'shot-codegen': z.enum(['stepfun', 'gemini']).optional(),
+      'shot-sfx': z.enum(['stepfun', 'gemini']).optional(),
+      'shot-subtitle': z.enum(['stepfun', 'gemini']).optional(),
+      'shot-qa': z.enum(['stepfun', 'gemini']).optional(),
+    })
+    .strict()
+    .optional(),
+}).strict()
 
 export type StepfunSettings = z.infer<typeof stepfunSettingsSchema>

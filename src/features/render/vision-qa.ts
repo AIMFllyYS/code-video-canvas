@@ -6,7 +6,10 @@ import { getDb } from '@/lib/db/client'
 import { artifacts } from '@/lib/db/schema'
 import { storage, type StorageAdapter } from '@/lib/storage'
 import { readArtifact } from '@/features/artifacts'
-import { getStepfunConfig, type StepfunConfig } from '@/features/ai/config'
+import {
+  resolveDirectorModelTarget,
+  type DirectorModelTarget,
+} from '@/features/ai/model-routing'
 import type { DirectorShot } from '@/features/director/schemas/director-shot-plan'
 import { captureThumbnails } from './thumbnail'
 import { QA_THUMBNAIL_FRACTIONS } from './qa-check'
@@ -51,6 +54,7 @@ export interface VisionQaAnalysisInput {
 }
 
 interface VisionQaAnalysis {
+  provider: 'stepfun' | 'gemini'
   model: string
   report: z.infer<typeof modelReportSchema>
 }
@@ -89,7 +93,7 @@ function defaultDependencies(): ShotVisionQaDependencies {
     capture: captureThumbnails,
     readArtifactBytes: async (projectId, artifactId) =>
       (await readArtifact(projectId, artifactId)).bytes,
-    analyze: analyzeStepfunVision,
+    analyze: analyzeVision,
     storeReport: storeVisionQaReport,
     now: () => Date.now(),
   }
@@ -139,6 +143,7 @@ export async function runShotVisionQa(
   const report: VisionQaReport = {
     version: 1,
     shotId: shot.id,
+    provider: analysis.provider,
     model: analysis.model,
     passed: [...normalized.mustShow, ...normalized.mustAvoid].every(
       (requirement) => requirement.passed
@@ -155,6 +160,7 @@ export async function runShotVisionQa(
     passed: report.passed,
     checkedAt: dependencies.now(),
     thumbnailContentHash: aggregateThumbnailHash(thumbnails),
+    provider: report.provider,
     model: report.model,
     summary: report.summary,
     reportArtifactId: stored.id,
@@ -164,29 +170,35 @@ export async function runShotVisionQa(
   return qaVision
 }
 
-export async function analyzeStepfunVision(
+export async function analyzeVision(
   input: VisionQaAnalysisInput,
   dependencies: {
-    getConfig: () => StepfunConfig
+    resolveTarget: () => DirectorModelTarget
     complete: (
-      config: StepfunConfig,
+      target: DirectorModelTarget,
       messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
     ) => Promise<string | null>
   } = {
-    getConfig: getStepfunConfig,
-    complete: async (config, messages) => {
-      const client = new OpenAI({ apiKey: config.apiKey ?? '', baseURL: config.baseUrl })
+    resolveTarget: () => resolveDirectorModelTarget('shot-qa', 'vision'),
+    complete: async (target, messages) => {
+      const client = new OpenAI({
+        apiKey: target.apiKey ?? '',
+        baseURL: target.baseUrl,
+      })
       const completion = await client.chat.completions.create({
-        model: config.visionModel,
+        model: target.modelId,
         messages,
       })
       return completion.choices[0]?.message.content ?? null
     },
   }
 ): Promise<VisionQaAnalysis> {
-  const config = dependencies.getConfig()
-  if (!config.apiKey) throw new Error('StepFun API Key 未配置，无法执行 Vision QA')
-  const content = await dependencies.complete(config, [
+  const target = dependencies.resolveTarget()
+  if (!target.apiKey) {
+    const provider = target.provider === 'gemini' ? 'Gemini' : 'StepFun'
+    throw new Error(`${provider} API Key 未配置，无法执行 Vision QA`)
+  }
+  const content = await dependencies.complete(target, [
       {
         role: 'system',
         content:
@@ -213,7 +225,8 @@ export async function analyzeStepfunVision(
     ])
   if (!content) throw new Error('Vision 模型未返回报告')
   return {
-    model: config.visionModel,
+    provider: target.provider,
+    model: target.modelId,
     report: modelReportSchema.parse(parseJsonResponse(content)),
   }
 }

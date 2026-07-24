@@ -10,11 +10,18 @@ import {
   envApiKeyAuth,
   type Model,
 } from '@earendil-works/pi-ai'
+import { googleGenerativeAIApi } from '@earendil-works/pi-ai/api/google-generative-ai.lazy'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
-import { getStepfunConfig } from '@/features/ai/config'
+import type { CanvasNodeType } from '@/features/canvas/types'
+import {
+  DIRECTOR_NODE_TYPES,
+  resolveDirectorModelTarget,
+  type DirectorModelTarget,
+} from '@/features/ai/model-routing'
 import { streamBus } from '@/lib/stream/stream-bus'
 import { STAGE_META } from './pipeline'
 import { DirectorSessionStore, type SessionStoreInput } from './session-store'
+import type { PipelineStage } from './types'
 
 export interface DirectorToolResult {
   content: string
@@ -54,7 +61,7 @@ export async function createDirectorSession(
   try {
     const stored = await store.open(input)
     const context = await stored.session.buildContext()
-    const runtime = createStepfunRuntime()
+    const runtime = createDirectorRuntime(input)
     const agent = new Agent({
       initialState: {
         model: runtime.model,
@@ -65,7 +72,7 @@ export async function createDirectorSession(
       streamFn: (model, agentContext, options) =>
         runtime.models.streamSimple(model, agentContext, options),
       getApiKey: (provider) =>
-        provider === 'stepfun' ? getStepfunConfig().apiKey ?? undefined : undefined,
+        provider === runtime.model.provider ? runtime.apiKey : undefined,
       sessionId: stored.id,
       toolExecution: 'sequential',
     })
@@ -138,38 +145,101 @@ function adaptDirectorTool(tool: DirectorTool): AgentTool {
   }
 }
 
-function createStepfunRuntime() {
-  const config = getStepfunConfig()
-  const model = createStepfunModel(config.baseUrl, config.chatModel)
+function createDirectorRuntime(input: SessionStoreInput) {
+  const nodeType = resolveNodeType(input)
+  const target = resolveDirectorModelTarget(nodeType, 'text')
+  if (!target.apiKey) {
+    throw new Error(`${providerName(target.provider)} API Key 未配置`)
+  }
+  return target.provider === 'gemini'
+    ? createGeminiRuntime(target, target.apiKey)
+    : createStepfunRuntime(target, target.apiKey)
+}
+
+function createGeminiRuntime(target: DirectorModelTarget, apiKey: string) {
+  const baseUrl = geminiNativeBaseUrl(target.baseUrl)
+  const model: Model<'google-generative-ai'> = {
+    id: target.modelId,
+    name: `Gemini ${target.modelId}`,
+    api: 'google-generative-ai',
+    provider: 'gemini',
+    baseUrl,
+    reasoning: true,
+    input: ['text'],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 1_048_576,
+    maxTokens: 32_000,
+  }
   const provider = createProvider({
-    id: 'stepfun',
-    name: 'StepFun',
-    baseUrl: config.baseUrl,
-    auth: { apiKey: envApiKeyAuth('StepFun API key', ['STEPFUN_API_KEY']) },
+    id: 'gemini',
+    name: 'Gemini',
+    baseUrl,
+    auth: {
+      apiKey: envApiKeyAuth('Gemini API key', ['GEMINI_API_KEY']),
+    },
     models: [model],
-    api: openAICompletionsApi(),
+    api: googleGenerativeAIApi(),
   })
   const models = createModels()
   models.setProvider(provider)
-  return { model, models }
+  return { model, models, apiKey }
 }
 
-function createStepfunModel(
-  baseUrl: string,
-  modelId: string
-): Model<'openai-completions'> {
-  return {
-    id: modelId,
-    name: `StepFun ${modelId}`,
+function createStepfunRuntime(target: DirectorModelTarget, apiKey: string) {
+  const model: Model<'openai-completions'> = {
+    id: target.modelId,
+    name: `StepFun ${target.modelId}`,
     api: 'openai-completions',
     provider: 'stepfun',
-    baseUrl,
+    baseUrl: target.baseUrl,
     reasoning: false,
     input: ['text'],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow: 128_000,
     maxTokens: 32_000,
   }
+  const provider = createProvider({
+    id: 'stepfun',
+    name: 'StepFun',
+    baseUrl: target.baseUrl,
+    auth: {
+      apiKey: envApiKeyAuth('StepFun API key', ['STEPFUN_API_KEY']),
+    },
+    models: [model],
+    api: openAICompletionsApi(),
+  })
+  const models = createModels()
+  models.setProvider(provider)
+  return { model, models, apiKey }
+}
+
+function geminiNativeBaseUrl(openAiBaseUrl: string): string {
+  return openAiBaseUrl.replace(/\/openai\/?$/, '')
+}
+
+function resolveNodeType(input: SessionStoreInput): CanvasNodeType {
+  if (
+    input.nodeType &&
+    DIRECTOR_NODE_TYPES.includes(input.nodeType as CanvasNodeType)
+  ) {
+    return input.nodeType as CanvasNodeType
+  }
+  if (input.nodeType) {
+    throw new Error(`未知 Director 节点类型：${input.nodeType}`)
+  }
+  const fallback: Record<PipelineStage, CanvasNodeType> = {
+    INGEST: 'script-import',
+    DIRECT: 'shot-split',
+    SHOT_SPEC: 'shot-script',
+    FABRICATE: 'shot-codegen',
+    ASSEMBLE: 'score',
+    FINALIZE: 'export',
+  }
+  return fallback[input.stage]
+}
+
+function providerName(provider: DirectorModelTarget['provider']): string {
+  return provider === 'gemini' ? 'Gemini' : 'StepFun'
 }
 
 function buildSystemPrompt(input: SessionStoreInput): string {

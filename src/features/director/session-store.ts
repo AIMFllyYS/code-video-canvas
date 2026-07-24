@@ -17,6 +17,7 @@ const SESSION_PREFIX = 'pi-sessions'
 export interface SessionStoreInput {
   projectId: string
   nodeId: string
+  nodeType?: string | null
   stage: PipelineStage
   resumeSessionKey?: string
 }

@@ -130,6 +130,7 @@ export function createStageRunner(
       session = await dependencies.createSession({
         projectId,
         nodeId,
+        nodeType: context.nodeType,
         stage,
         resumeSessionKey: context.resumeSessionKey,
       })
