@@ -755,12 +755,14 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 
 - Create: `src/lib/migration/legacy-export.ts`
 - Create: `src/lib/migration/legacy-export-contracts.ts`
+- Create: `src/lib/migration/legacy-export-validation.ts`
 - Create: `src/lib/migration/legacy-export-routes.ts`
 - Create: `src/lib/migration/legacy-export-artifacts.ts`
 - Create: `src/lib/migration/legacy-export.test.ts`
 - Create: `src/lib/migration/legacy-import.ts`
 - Create: `src/lib/migration/legacy-import-contracts.ts`
 - Create: `src/lib/migration/legacy-import-plan.ts`
+- Create: `src/lib/migration/legacy-import-target-verifier.ts`
 - Create: `src/lib/migration/legacy-import.pg.test.ts`
 - Create: `src/lib/migration/legacy-reconcile.ts`
 - Create: `src/lib/migration/legacy-reconcile.pg.test.ts`
@@ -788,10 +790,14 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 
 为满足生产文件硬上限，上述 split 必须按真实职责落地：
 `legacy-export-contracts.ts` 只含版本合同、固定常量、canonical hash 与严格 reader；
+`legacy-export-validation.ts` 只含 exact manifest/JSONL shape、disposition/inventory
+关联验证；
 `legacy-export-routes.ts` 只含 setting 分类、credential envelope 与冻结 route；
 `legacy-export-artifacts.ts` 只含 artifact 安全相对 key、实体 inventory/hash；
 `legacy-import-contracts.ts` 只含 import/account/plan 合同与 snapshot/JSONL verified loader；
 `legacy-import-plan.ts` 只做无 PG 副作用的 validated bundle → project/global 导入规划。
+`legacy-import-target-verifier.ts` 只把 expected import plan 与 PG canonical target
+投影逐项比较，供 conflict/resume 与 reconciliation 共用。
 `legacy-export.ts` 保留只读 SQLite 采集/原子写入，`legacy-import.ts` 保留 receipt 与
 PG transaction；允许它们从真实实现入口 re-export 公共合同，但禁止空 re-export
 壳、重复状态模型或循环依赖。每个生产文件仍须 ≤350 行、函数 ≤50 行。
@@ -1029,7 +1035,7 @@ pnpm eslint src/lib/migration scripts/migration
 pnpm typecheck
 git diff --check
 git add -- src/lib/db/schema/ai.ts src/lib/db/migrations/pg src/features/credentials/provider-credential-store.ts src/features/credentials/provider-credential-store.pg.test.ts
-git add -- src/lib/migration/legacy-export.ts src/lib/migration/legacy-export-contracts.ts src/lib/migration/legacy-export-routes.ts src/lib/migration/legacy-export-artifacts.ts src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-import.ts src/lib/migration/legacy-import-contracts.ts src/lib/migration/legacy-import-plan.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.ts src/lib/migration/legacy-reconcile.pg.test.ts src/lib/migration/legacy-id.ts src/lib/migration/legacy-id.test.ts scripts/migration/export-sqlite.ts scripts/migration/import-postgres.ts scripts/migration/reconcile-postgres.ts scripts/migration/provision-master-key.ts docs/evidence/refactor-v3/n1/import-reconciliation.md
+git add -- src/lib/migration/legacy-export.ts src/lib/migration/legacy-export-contracts.ts src/lib/migration/legacy-export-validation.ts src/lib/migration/legacy-export-routes.ts src/lib/migration/legacy-export-artifacts.ts src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-import.ts src/lib/migration/legacy-import-contracts.ts src/lib/migration/legacy-import-plan.ts src/lib/migration/legacy-import-target-verifier.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.ts src/lib/migration/legacy-reconcile.pg.test.ts src/lib/migration/legacy-id.ts src/lib/migration/legacy-id.test.ts scripts/migration/export-sqlite.ts scripts/migration/import-postgres.ts scripts/migration/reconcile-postgres.ts scripts/migration/provision-master-key.ts docs/evidence/refactor-v3/n1/import-reconciliation.md
 git diff --cached --check
 git commit -m "feat(migration): reconcile SQLite data into Postgres"
 ```
