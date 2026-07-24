@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { CanvasGraphNode } from '@/features/canvas'
-import { triggerNodeAction } from './canvas-action-api'
+import {
+  startPipeline,
+  stopPipeline,
+  triggerNodeAction,
+} from './canvas-action-api'
 
 describe('triggerNodeAction', () => {
   it('uses the persisted stage for Director nodes', async () => {
@@ -27,6 +31,43 @@ describe('triggerNodeAction', () => {
       '/api/render',
       expect.objectContaining({
         body: JSON.stringify({ projectId: 'project-1', nodeId: 'node-1' }),
+      })
+    )
+  })
+})
+
+describe('pipeline controls', () => {
+  it('starts project autopilot through the pipeline endpoint', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      response({ ok: true, autopilot: true, enqueuedNodeIds: ['node-1'] })
+    )
+
+    await expect(startPipeline('project-1', fetcher)).resolves.toMatchObject({
+      autopilot: true,
+      enqueuedNodeIds: ['node-1'],
+    })
+    expect(fetcher).toHaveBeenCalledWith(
+      '/api/director/pipeline',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ projectId: 'project-1' }),
+      })
+    )
+  })
+
+  it('stops project autopilot without pretending queued jobs were cancelled', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      response({ ok: true, autopilot: false })
+    )
+
+    await expect(stopPipeline('project-1', fetcher)).resolves.toEqual({
+      autopilot: false,
+    })
+    expect(fetcher).toHaveBeenCalledWith(
+      '/api/director/pipeline',
+      expect.objectContaining({
+        method: 'DELETE',
+        body: JSON.stringify({ projectId: 'project-1' }),
       })
     )
   })

@@ -23,6 +23,7 @@ export {
 export {
   getCanvasGraph,
   getExportSettings,
+  getProjectAutopilot,
   getNodeStreamContext,
   listProjects,
   type CanvasGraph,
@@ -37,4 +38,8 @@ export {
   type LayoutNode,
   type NodePosition,
 } from './layout'
-export { createProject, updateExportSettings } from './actions'
+export {
+  createProject,
+  setProjectAutopilot,
+  updateExportSettings,
+} from './actions'

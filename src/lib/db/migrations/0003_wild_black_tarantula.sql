@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `autopilot` integer DEFAULT false NOT NULL;

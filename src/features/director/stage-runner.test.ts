@@ -57,6 +57,9 @@ function createHarness(
   const commitResult = vi.fn(() => {
     calls.push('commit')
   })
+  const advancePipeline = vi.fn(async () => {
+    calls.push('advance')
+  })
   const runner = createStageRunner({
     repository,
     transitionNodeStatus,
@@ -65,6 +68,7 @@ function createHarness(
     writeArtifact,
     prepareResult,
     commitResult,
+    advancePipeline,
   })
   return {
     calls,
@@ -74,6 +78,7 @@ function createHarness(
     writeArtifact,
     prepareResult,
     commitResult,
+    advancePipeline,
     runner,
   }
 }
@@ -92,6 +97,7 @@ describe('createStageRunner', () => {
       'commit',
       'close',
       'success',
+      'advance',
     ])
     expect(harness.writeArtifact).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -108,6 +114,7 @@ describe('createStageRunner', () => {
       'INGEST',
       '阶段产出'
     )
+    expect(harness.advancePipeline).toHaveBeenCalledWith('project-1', 'node-1')
   })
 
   it('keeps the session pointer and records failures without leaving running state', async () => {
@@ -136,6 +143,7 @@ describe('createStageRunner', () => {
       'error',
     ])
     expect(harness.repository.persistStreamLog).toHaveBeenCalledTimes(1)
+    expect(harness.advancePipeline).not.toHaveBeenCalled()
   })
 
   it('fails invalid persisted input before creating a model session', async () => {
@@ -152,6 +160,7 @@ describe('createStageRunner', () => {
       writeArtifact: harness.writeArtifact,
       prepareResult: harness.prepareResult,
       commitResult: harness.commitResult,
+      advancePipeline: harness.advancePipeline,
     })
 
     await expect(runner('project-1', 'node-1', 'INGEST')).rejects.toBe(inputError)
@@ -176,6 +185,7 @@ describe('createStageRunner', () => {
       writeArtifact: harness.writeArtifact,
       prepareResult: harness.prepareResult,
       commitResult: harness.commitResult,
+      advancePipeline: harness.advancePipeline,
     })
 
     await expect(runner('project-1', 'node-1', 'INGEST')).rejects.toThrow('pending')

@@ -20,6 +20,7 @@ import {
   type WriteArtifactInput,
 } from './tools/write-artifact'
 import type { PipelineStage } from './types'
+import { advancePipeline } from './advance'
 
 interface StageRepository {
   loadStageContext(
@@ -59,6 +60,10 @@ interface StageRunnerDependencies {
     result: PreparedStageResult,
     artifact: ArtifactCommitResult
   ) => void
+  advancePipeline: (
+    projectId: string,
+    completedNodeId: string
+  ) => Promise<unknown>
 }
 
 type StageRunner = (
@@ -86,6 +91,7 @@ function createDefaultRunner(): StageRunner {
     prepareResult: prepareStageResult,
     commitResult: (context, result, artifact) =>
       commitStageResult(repository, context, result, artifact),
+    advancePipeline,
   })
 }
 
@@ -129,6 +135,11 @@ export function createStageRunner(
       await session.close()
       closed = true
       dependencies.transitionNodeStatus(nodeId, 'success')
+      await advanceWithoutMasking(
+        dependencies.advancePipeline,
+        projectId,
+        nodeId
+      )
     } catch (error) {
       if (session && !closed) await closeWithoutMasking(session)
       const cleanupErrors: unknown[] = []
@@ -165,6 +176,22 @@ export function createStageRunner(
       }
       throw error
     }
+  }
+}
+
+async function advanceWithoutMasking(
+  advance: StageRunnerDependencies['advancePipeline'],
+  projectId: string,
+  nodeId: string
+): Promise<void> {
+  try {
+    await advance(projectId, nodeId)
+  } catch (error) {
+    console.error('[director] 下游自动推进失败', {
+      projectId,
+      nodeId,
+      message: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 

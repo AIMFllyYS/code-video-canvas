@@ -53,6 +53,7 @@ describe('render queue handler', () => {
       },
       transitionNodeStatus: vi.fn((_nodeId, status) => statuses.push(status)),
       renderer,
+      advancePipeline: vi.fn(async () => statuses.push('advance')),
     })
 
     await harness.getHandler()?.({
@@ -64,7 +65,7 @@ describe('render queue handler', () => {
     })
 
     expect(renderer.render).toHaveBeenCalledWith(renderJob)
-    expect(statuses).toEqual(['running', 'success'])
+    expect(statuses).toEqual(['running', 'success', 'advance'])
   })
 
   it('moves render failures to failed and records the error', async () => {
@@ -79,6 +80,7 @@ describe('render queue handler', () => {
       },
       transitionNodeStatus,
       renderer: { render: vi.fn(async () => { throw failure }) },
+      advancePipeline: vi.fn(),
     })
 
     await expect(

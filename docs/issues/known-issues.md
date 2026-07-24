@@ -90,7 +90,7 @@ flowchart TB
 |---|---|---|---|---|---|
 | [`issue-09-stream-singleton-split-brain-and-replay`](./issue-09-stream-singleton-split-brain-and-replay.md) | P0 | 5 | 无 | 修复 streamBus/queue/db 模块级单例 split-brain + SSE useLive 判定 + 终态回放兜底，流式面板不再永久"正在连接 AI 流… 0 字" | **已完成**（2026-07-24） |
 | [`issue-10-stepfun-config-resolver-and-model-settings`](./issue-10-stepfun-config-resolver-and-model-settings.md) | P0 | 5 | 无 | `getStepfunConfig()` 统一 settings>env>默认 三层解析，设置页支持 4 类模型配置并消灭 `step-1-8k` 等假值 | **已完成**（2026-07-24，`208e6a3`） |
-| [`issue-11-one-click-pipeline-auto-advance`](./issue-11-one-click-pipeline-auto-advance.md) | P1 | 6 | 软依赖 issue-09（联调验收） | `advancePipeline` 消费 DAG 边链式自动推进 + autopilot 开关 + 顶栏一键启动接线 + Inspector 按钮文案修正 | 待施工 |
+| [`issue-11-one-click-pipeline-auto-advance`](./issue-11-one-click-pipeline-auto-advance.md) | P1 | 6 | 软依赖 issue-09（联调验收） | `advancePipeline` 消费 DAG 边链式自动推进 + autopilot 开关 + 顶栏一键启动接线 + Inspector 按钮文案修正 | **实现完成**（2026-07-24；68 files / 299 tests，真实 API/浏览器验收待本 Goal 末端统一执行） |
 | [`issue-12-tts-asr-vision-model-wiring-gap`](./issue-12-tts-asr-vision-model-wiring-gap.md) | P2 | 7 | issue-10 | TTS/ASR/Vision 三类模型从"定义了零引用"到真实接线（配音/字幕时间轴/多模态验收）；短期先做显式占位声明 | 待施工 |
 | [`issue-13-fabricate-gate-feedback-retry`](./issue-13-fabricate-gate-feedback-retry.md) | P2 | 7 | 建议 issue-11 后串行 | FABRICATE 确定性门禁失败时在同会话内有界反馈重试（违规明细回注模型），减少人工冷启动重试 | 待施工 |
 

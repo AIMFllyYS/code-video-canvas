@@ -254,7 +254,7 @@ function InspectorBody({
         retrying={submitting}
       />
       <Button variant="tinted" icon={RefreshCw} onClick={onExecute} disabled={submitting}>
-        {node.type === 'shot-codegen' ? '重渲此镜' : '全部渲染'}
+        {node.type === 'shot-codegen' ? '重渲此镜' : '执行此阶段'}
       </Button>
       {node.type === 'shot-codegen' && (
         <Link href={`/canvas/shot/${node.id}?projectId=${projectId}`}>

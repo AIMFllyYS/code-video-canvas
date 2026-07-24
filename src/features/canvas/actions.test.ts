@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDb, type Db } from '@/lib/db/migrate'
 import { canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
-import { createProject, updateExportSettings } from './actions'
-import { getExportSettings } from './queries'
+import {
+  createProject,
+  setProjectAutopilot,
+  updateExportSettings,
+} from './actions'
+import { getExportSettings, getProjectAutopilot } from './queries'
 
 const { getDbMock } = vi.hoisted(() => ({ getDbMock: vi.fn<() => Db>() }))
 
@@ -89,5 +93,35 @@ describe('export settings', () => {
     expect(() =>
       updateExportSettings('missing', { resolutionPreset: '720x1280' })
     ).toThrow('项目不存在')
+  })
+})
+
+describe('project autopilot', () => {
+  let database: ReturnType<typeof createDb>
+
+  beforeEach(() => {
+    database = createDb(':memory:')
+    getDbMock.mockReturnValue(database.db)
+    database.db.insert(projects).values({ id: 'p1', title: '项目', script: '' }).run()
+  })
+
+  afterEach(() => {
+    database.sqlite.close()
+    vi.clearAllMocks()
+  })
+
+  it('defaults to disabled and persists explicit changes', () => {
+    expect(getProjectAutopilot('p1')).toBe(false)
+
+    expect(setProjectAutopilot('p1', true)).toBe(true)
+    expect(getProjectAutopilot('p1')).toBe(true)
+
+    expect(setProjectAutopilot('p1', false)).toBe(false)
+    expect(getProjectAutopilot('p1')).toBe(false)
+  })
+
+  it('rejects an unknown project without creating state', () => {
+    expect(() => setProjectAutopilot('missing', true)).toThrow('项目不存在')
+    expect(() => getProjectAutopilot('missing')).toThrow('项目不存在')
   })
 })

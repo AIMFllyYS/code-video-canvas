@@ -1,6 +1,11 @@
 import { Clapperboard } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
-import { computeLayout, getCanvasGraph, listProjects } from '@/features/canvas'
+import {
+  computeLayout,
+  getCanvasGraph,
+  getProjectAutopilot,
+  listProjects,
+} from '@/features/canvas'
 import { PublishNavContext } from '@/features/navigation/nav-context'
 import { CanvasLoader } from './canvas-loader'
 
@@ -32,6 +37,7 @@ export default async function CanvasPage({ searchParams }: CanvasPageProps) {
     <CanvasLoader
       projectId={projectId}
       projectTitle={projectTitle}
+      autopilot={getProjectAutopilot(projectId)}
       nodes={nodes}
       edges={graph.edges}
     />

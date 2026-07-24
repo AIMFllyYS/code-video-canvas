@@ -59,6 +59,17 @@ export function getExportSettings(projectId: string): ExportSettings {
   return resolveExportSettings(row.exportSettings)
 }
 
+/** 读取项目级自动推进真实状态；项目不存在时抛错。 */
+export function getProjectAutopilot(projectId: string): boolean {
+  const row = getDb()
+    .select({ autopilot: projects.autopilot })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .get()
+  if (!row) throw new Error(`项目不存在：${projectId}`)
+  return row.autopilot
+}
+
 /** 读取单个项目的画布投影；不会跨项目返回节点或边。 */
 export function getCanvasGraph(projectId: string): CanvasGraph {
   const db = getDb()

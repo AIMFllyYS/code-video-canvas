@@ -6,6 +6,7 @@ import { queue as defaultQueue, type QueueAdapter } from '@/lib/queue'
 import { RenderRepository } from './repository'
 import { HyperframesRenderer, type Renderer } from './renderer'
 import type { RenderJob } from './types'
+import { advancePipeline } from '@/features/director/advance'
 
 const renderJobPayloadSchema = z
   .object({
@@ -25,6 +26,10 @@ interface HandlerDependencies {
   repository: HandlerRepository
   transitionNodeStatus: typeof transitionNodeStatus
   renderer: Renderer
+  advancePipeline: (
+    projectId: string,
+    completedNodeId: string
+  ) => Promise<unknown>
 }
 
 interface EnqueueDependencies {
@@ -58,6 +63,11 @@ export function registerRenderShotHandler(
       }
       await resolved.renderer.render(context)
       resolved.transitionNodeStatus(payload.nodeId, 'success')
+      await advanceWithoutMasking(
+        resolved.advancePipeline,
+        payload.projectId,
+        payload.nodeId
+      )
     } catch (error) {
       failRender(payload.nodeId, error, resolved)
       throw error
@@ -89,6 +99,23 @@ function createHandlerDependencies(): HandlerDependencies {
     repository: new RenderRepository(),
     transitionNodeStatus,
     renderer: new HyperframesRenderer(),
+    advancePipeline,
+  }
+}
+
+async function advanceWithoutMasking(
+  advance: HandlerDependencies['advancePipeline'],
+  projectId: string,
+  nodeId: string
+): Promise<void> {
+  try {
+    await advance(projectId, nodeId)
+  } catch (error) {
+    console.error('[render] 下游自动推进失败', {
+      projectId,
+      nodeId,
+      message: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 

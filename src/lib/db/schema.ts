@@ -12,6 +12,8 @@ export const projects = sqliteTable('projects', {
   script: text('script').notNull().default(''),
   // 可空：null = 从未设置，应用层读到 null 时回退 DEFAULT_EXPORT_SETTINGS。
   exportSettings: text('export_settings', { mode: 'json' }).$type<ExportSettings>(),
+  /** 项目级自动推进开关；关闭时保持原有手动逐节点行为。 */
+  autopilot: integer('autopilot', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(now),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(now),
 })

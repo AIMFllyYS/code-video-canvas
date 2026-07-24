@@ -29,6 +29,9 @@ export async function fabricateShot(projectId: string, nodeId: string): Promise<
     prepareResult: prepareStageResult,
     commitResult: (context, result, artifact) =>
       commitStageResult(repository, context, result, artifact),
+    advancePipeline: async () => {
+      // shot-codegen 只有 MP4 渲染成功后才能推进；由 render queue handler 挂接。
+    },
   })
   await runner(projectId, nodeId, 'FABRICATE')
 }

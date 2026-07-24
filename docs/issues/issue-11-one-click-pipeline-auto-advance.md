@@ -6,7 +6,7 @@
 | Wave | 6（建议 issue-09 先落地——本 issue 的链式执行会放大 split-brain 流式问题的暴露面） |
 | 依赖 | 软依赖 issue-09（非阻塞：文件零重叠，可并行开发，但联调验收建议在 issue-09 合并后进行） |
 | 关联证据 | 顶栏"全部渲染"按钮 `disabled` 死按钮；Inspector 按钮文案"全部渲染"实际只执行单节点 |
-| 状态 | 待施工 |
+| 状态 | **实现完成，待本 Goal 末端真实 API/浏览器统一验收**（2026-07-24） |
 
 ## 现状核查
 
@@ -98,12 +98,21 @@ export function advancePipeline(projectId: string, completedNodeId: string): voi
 
 **完成条件**：
 
-- [ ] 新建项目 → 填稿 → 点一次"一键启动" → INGEST → fan-out → 各通道 SHOT_SPEC → FABRICATE(render) → ASSEMBLE → FINALIZE 全自动推进（多入度 score 等待全部上游）
-- [ ] 中途某节点 failed：其下游不入队，其他分镜通道继续；重试成功后链路续跑
-- [ ] autopilot 关闭时行为与现状完全一致（手动单点执行不触发链式推进）
-- [ ] advance 规则单测：多入度等待 / 幂等防重 / 失败分支停止 / autopilot 开关
-- [ ] Inspector 按钮文案与真实行为一致；顶栏按钮为真实功能非死按钮
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿
+- [ ] 新建项目 → 填稿 → 点一次"一键启动" → INGEST → fan-out → 各通道 SHOT_SPEC → FABRICATE(render) → ASSEMBLE → FINALIZE 全自动推进（真实模型/浏览器验收安排在本 Goal 末端统一执行）
+- [x] 中途某节点 failed：其下游不入队，其他分镜通道继续；重试成功后链路续跑
+- [x] autopilot 关闭时行为与现状完全一致（手动单点执行不触发链式推进）
+- [x] advance 规则单测：多入度等待 / 幂等防重 / 失败分支停止 / autopilot 开关
+- [x] Inspector 按钮文案与真实行为一致；顶栏按钮为真实功能非死按钮
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿
+
+## 施工记录（2026-07-24）
+
+- 新增 `projects.autopilot` 与迁移 `0003_wild_black_tarantula.sql`；默认关闭，不改变手动单节点行为。
+- 新增 `features/director/advance.ts`：只读取服务端可信 DAG，要求候选为 `idle` 且全部上游 `success`；`shot-codegen` 与 Director 阶段分别走原有可信 enqueue 服务。
+- Director 与 render 成功路径在节点落 `success` 后推进；FABRICATE helper 明确 no-op，避免 HTML 生成完成但 MP4 尚未完成时提前推进。
+- `POST/DELETE /api/director/pipeline` 支持开启、续跑和停止；停止不伪装为取消已经入队的任务。
+- 顶栏死按钮已替换为真实“一键启动/停止自动推进”，Inspector 单节点动作更名为“执行此阶段”。
+- 新增/扩展测试后，全量 `68 files / 299 tests` 通过；`pnpm lint`、`pnpm tsc --noEmit`、`pnpm build` 均退出 0。
 
 ## 与其他 issue 的并行性
 

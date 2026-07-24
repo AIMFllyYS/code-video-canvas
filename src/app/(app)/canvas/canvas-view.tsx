@@ -14,11 +14,13 @@ import {
 import '@xyflow/react/dist/style.css'
 import { Button } from '@/components/ui/button'
 import { QueueStatusBar } from '@/components/ui/queue-status-bar'
+import { Toast } from '@/components/ui/toast'
 import { TopBar } from '@/components/ui/top-bar'
 import type { CanvasGraphEdge, CanvasGraphNode } from '@/features/canvas'
 import { fadeInUp } from '@/lib/motion/variants'
 import { usePublishNavContext } from '@/features/navigation/nav-context'
 import { CanvasInspector } from './canvas-inspector'
+import { startPipeline, stopPipeline } from './canvas-action-api'
 import {
   buildLaneSummaries,
   LaneSummaryDetails,
@@ -30,12 +32,21 @@ import {
 export interface CanvasViewProps {
   projectId: string
   projectTitle: string
+  autopilot: boolean
   nodes: CanvasGraphNode[]
   edges: CanvasGraphEdge[]
 }
 
-export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasViewProps) {
+export function CanvasView({
+  projectId,
+  projectTitle,
+  autopilot,
+  nodes,
+  edges,
+}: CanvasViewProps) {
   const router = useRouter()
+  const [pipelineSubmitting, setPipelineSubmitting] = useState(false)
+  const [pipelineError, setPipelineError] = useState<string>()
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(() => new Set())
   const [selectedNodeId, setSelectedNodeId] = useState(nodes[0]?.id)
   const laneSummaries = useMemo(() => buildLaneSummaries(nodes), [nodes])
@@ -82,6 +93,22 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
     })
   }
 
+  async function togglePipeline(): Promise<void> {
+    setPipelineSubmitting(true)
+    setPipelineError(undefined)
+    try {
+      if (autopilot) await stopPipeline(projectId)
+      else await startPipeline(projectId)
+      router.refresh()
+    } catch (error) {
+      setPipelineError(
+        error instanceof Error ? error.message : '工作流操作失败'
+      )
+    } finally {
+      setPipelineSubmitting(false)
+    }
+  }
+
   return (
     <div className="flex min-h-0 flex-1 bg-canvas-bg">
       <section className="flex min-w-0 flex-1 flex-col">
@@ -90,13 +117,30 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
           meta={`${nodes.length} 节点 · 已自动保存`}
           actions={
             <>
-              <Button variant="gray" size="sm" icon={Play} disabled>全部渲染</Button>
+              <Button
+                variant="gray"
+                size="sm"
+                icon={Play}
+                disabled={pipelineSubmitting}
+                onClick={() => void togglePipeline()}
+              >
+                {autopilot ? '停止自动推进' : '一键启动'}
+              </Button>
               <Link href={`/canvas/export?projectId=${projectId}`}>
                 <Button size="sm" icon={Download}>导出 MP4</Button>
               </Link>
             </>
           }
         />
+        {pipelineError && (
+          <div className="px-4 pt-3">
+            <Toast
+              variant="error"
+              title="工作流操作失败"
+              body={pipelineError}
+            />
+          </div>
+        )}
         <div className="relative min-h-0 flex-1">
           <ReactFlow
             nodes={flowNodes}

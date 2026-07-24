@@ -68,3 +68,15 @@ export function updateExportSettings(projectId: string, input: unknown): ExportS
   if (!updated) throw new Error(`项目不存在：${projectId}`)
   return exportSettings
 }
+
+/** 开启或关闭项目级自动推进；项目不存在时不静默创建状态。 */
+export function setProjectAutopilot(projectId: string, enabled: boolean): boolean {
+  const updated = getDb()
+    .update(projects)
+    .set({ autopilot: enabled, updatedAt: new Date() })
+    .where(eq(projects.id, projectId))
+    .returning({ autopilot: projects.autopilot })
+    .get()
+  if (!updated) throw new Error(`项目不存在：${projectId}`)
+  return updated.autopilot
+}

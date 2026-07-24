@@ -1705,8 +1705,13 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 | `issue-06-export-configurable-params-and-real-qa` | P1 | 4 | issue-04；建议 issue-01 后回归 | ✅ 已完成（2026-07-24，待提交）：3 档 9:16 分辨率预设可配置（导出时 ffmpeg scale，默认预设零回归）+ Final QA（`jimp` 黑帧/纯色检测写回 `shot-qa` 节点）；`export-settings` 因模块边界置于 `features/canvas` |
 | `issue-07-canvas-lane-panel-summary` | P2 | 2 | 无 | ✅ 已完成（2026-07-24，`29bba21`）：分镜通道折叠面板补充子节点真实状态摘要 |
 | `issue-08-export-service-storage-adapter-boundary` | P2 | 2 | 无 | ✅ 已完成（2026-07-24，`19fe79b`）：`export-service.ts` 裸 `fs` 改走 `StorageAdapter` |
+| `issue-09-stream-singleton-split-brain-and-replay` | P0 | 5 | 无 | ✅ 已完成（2026-07-24）：统一 stream/queue/db 进程内单例并补终态回放 |
+| `issue-10-stepfun-config-resolver-and-model-settings` | P0 | 5 | 无 | ✅ 已完成（2026-07-24，`208e6a3`）：StepFun 六项配置统一 resolver + 设置页真实值 |
+| `issue-11-one-click-pipeline-auto-advance` | P1 | 6 | 软依赖 issue-09 | ◐ 实现完成（2026-07-24）：服务端 DAG 自动推进 + 项目 autopilot + 一键启停；真实端测待本 Goal 统一执行 |
+| `issue-12-tts-asr-vision-model-wiring-gap` | P2 | 7 | issue-10 | 待施工：TTS/ASR/Vision 从配置定义接入真实消费方 |
+| `issue-13-fabricate-gate-feedback-retry` | P2 | 7 | 建议 issue-11 后串行 | 待施工：产物门禁失败同会话有界反馈重试 |
 
-推进顺序遵循 Wave 分组（同 Wave 内可并行）：Wave 1（issue-01/02）→ Wave 2（issue-03/04/07/08，可与 Wave 1 尾声并行）→ Wave 3（issue-05）→ Wave 4（issue-06）。
+推进顺序遵循 Wave 分组（同 Wave 内可并行）：Wave 1（issue-01/02）→ Wave 2（issue-03/04/07/08，可与 Wave 1 尾声并行）→ Wave 3（issue-05）→ Wave 4（issue-06）→ Wave 5（issue-09/10）→ Wave 6（issue-11）→ Wave 7（issue-12/13）。
 
 **Goal 启动提示词模板**（每个 issue 建议独立一次 Goal，不强制合并）：
 ```
@@ -1737,8 +1742,8 @@ Goal：完成 docs/issues/issue-NN-*.md 描述的修复，严格按该文件的�
 | P（Pencil 组件港口，SSOT 强制） | 6 | 必须排在 Track U 之前完成 |
 | A（音频，Demo 占位） | 1 | P1 真实实现延后 |
 | U（UI） | 9 | 依赖 Track P + C/D/R 对应 API；含 U1.6a 主题状态补充卡 |
-| H（系统性打通修复，详见 `docs/issues/`） | 8 | U1.8 里程碑收口后新发现，详细 Task 规格在 `docs/issues/`，不在本文档重复维护 |
-| **合计** | **48** | 另有 Tier B 里程碑验收穿插在每个 Track 完成后触发，不单独计入任务数 |
+| H（系统性打通修复，详见 `docs/issues/`） | 13 | U1.8 里程碑收口后两轮审查发现，详细 Task 规格在 `docs/issues/`，不在本文档重复维护 |
+| **合计** | **53** | 另有 Tier B 里程碑验收穿插在每个 Track 完成后触发，不单独计入任务数 |
 
 ## 变更记录
 
