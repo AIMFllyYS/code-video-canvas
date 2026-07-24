@@ -12,6 +12,7 @@ import {
 } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
 import { getStoredApiKey } from '@/features/ai/stepfun-adapter'
+import { streamBus } from '@/lib/stream/stream-bus'
 import { STAGE_META } from './pipeline'
 import { DirectorSessionStore, type SessionStoreInput } from './session-store'
 
@@ -73,8 +74,18 @@ export async function createDirectorSession(
       sessionId: stored.id,
       toolExecution: 'sequential',
     })
+    const streamKey = `${input.projectId}:${input.nodeId}`
+    let lastText = ''
     const unsubscribe = agent.subscribe(async (event) => {
-      if (event.type === 'message_end') {
+      if (event.type === 'message_update') {
+        // 逐 token 流式：用累积文本 diff 出增量推给事件总线（阶段结束/失败由
+        // stage-runner 依据真实阶段结果 markDone/markError，与 node.status 一致）。
+        const text = messageText(event.message)
+        if (text.length > lastText.length) {
+          streamBus.publish(streamKey, text.slice(lastText.length))
+          lastText = text
+        }
+      } else if (event.type === 'message_end') {
         await stored.session.appendMessage(event.message)
       }
     })
@@ -169,6 +180,15 @@ function createStepfunModel(
 function buildSystemPrompt(input: SessionStoreInput): string {
   const stage = STAGE_META[input.stage]
   return `你是 CodeVideoCanvas 项目原生 Director 运行时。当前阶段：${stage.id}（${stage.title}）。只遵守调用方提供的阶段 prompt 和项目工具；所有结构化输出必须通过项目 schema。`
+}
+
+/** 提取一条消息的文本内容（非 assistant 或无文本时返回空串），用于流式增量 diff。 */
+function messageText(message: AgentMessage): string {
+  if (message.role !== 'assistant') return ''
+  return message.content
+    .filter((item) => item.type === 'text')
+    .map((item) => item.text)
+    .join('')
 }
 
 function lastAssistantText(messages: AgentMessage[]): string {

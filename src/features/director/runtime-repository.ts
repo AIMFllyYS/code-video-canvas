@@ -164,6 +164,29 @@ export class DirectorRuntimeRepository {
     return id
   }
 
+  /**
+   * 持久化一轮流式输出为可回看日志：内容经 StorageAdapter 落盘，artifacts
+   * 表登记指针（kind='director-stream-log'，与 pi-session 同为非产物字节，
+   * 由 getNodeArtifacts 从 Inspector 产物 chips 中排除）。空文本直接跳过。
+   */
+  async persistStreamLog(
+    projectId: string,
+    nodeId: string,
+    stage: PipelineStage,
+    text: string
+  ): Promise<void> {
+    if (!text) return
+    const slug = stage.toLowerCase().replaceAll('_', '-')
+    const key = `director-stream/${projectId}/${nodeId}/${slug}.log`
+    await this.storage.put(key, text)
+    this.registerArtifactPointer({
+      projectId,
+      nodeId,
+      kind: 'director-stream-log',
+      storageKey: key,
+    })
+  }
+
   recordStageError(nodeId: string, stage: PipelineStage, error: unknown): void {
     const node = this.db
       .select({ data: canvasNodes.data })

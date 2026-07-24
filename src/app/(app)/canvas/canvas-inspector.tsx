@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ChevronRight, FileCode, LoaderCircle, RefreshCw } from 'lucide-react'
+import { ChevronRight, FileCode, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArtifactChip } from '@/components/ui/artifact-chip'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,7 @@ import {
 } from '@/lib/layout/breakpoints'
 import { cn } from '@/lib/utils'
 import { triggerNodeAction } from './canvas-action-api'
+import { StreamingLogCard } from './streaming-log-card'
 
 export function CanvasInspector({
   projectId,
@@ -243,12 +244,15 @@ function InspectorBody({
         )}
       </div>
       {node.status === 'success' && <ProgressBar value={100} label="生成进度" className="w-full" />}
-      {node.status === 'running' && (
-        <div className="flex w-full items-center gap-2 rounded-sm bg-fill px-3 py-2">
-          <LoaderCircle className="h-3.5 w-3.5 animate-spin text-accent" />
-          <span className="text-[13px] text-label-secondary">生成中，进度无法预估</span>
-        </div>
-      )}
+      <StreamingLogCard
+        projectId={projectId}
+        nodeId={node.id}
+        status={node.status}
+        stage={node.stage}
+        directorError={node.directorError}
+        onRetry={onExecute}
+        retrying={submitting}
+      />
       <Button variant="tinted" icon={RefreshCw} onClick={onExecute} disabled={submitting}>
         {node.type === 'shot-codegen' ? '重渲此镜' : '全部渲染'}
       </Button>

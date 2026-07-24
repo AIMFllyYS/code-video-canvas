@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { LucideCatalogDemo } from '@/components/icons/lucide-catalog.demo'
 import { ArtifactChipDemo } from '@/components/ui/artifact-chip.demo'
 import { ButtonDemo } from '@/components/ui/button.demo'
+import { CollapsibleCardDemo } from '@/components/ui/collapsible-card.demo'
 import { DialogDemo } from '@/components/ui/dialog.demo'
 import { EmptyStateDemo } from '@/components/ui/empty-state.demo'
 import { IconButtonDemo } from '@/components/ui/icon-button.demo'
@@ -39,10 +40,10 @@ export interface PlaybookEntry {
   Demo: ComponentType
 }
 
-export const PENCIL_REUSABLE_SYMBOL_COUNT = 30
-export const PENCIL_COMPONENT_FAMILY_COUNT = 27
+export const PENCIL_REUSABLE_SYMBOL_COUNT = 31
+export const PENCIL_COMPONENT_FAMILY_COUNT = 28
 /** Pencil 族之外的交互原语（如 ResizeHandle / Skeleton）计入 UI 登记总数。 */
-export const UI_COMPONENT_FAMILY_COUNT = 29
+export const UI_COMPONENT_FAMILY_COUNT = 30
 export const PENCIL_CONSOLIDATION_NOTE =
   'Button/Primary、Tinted、Gray、Destructive 四个 Pencil symbols 由一个 Button 组件的 variant 承载。'
 
@@ -54,6 +55,7 @@ export const PLAYBOOK_ENTRIES: PlaybookEntry[] = [
   { id: 'artifact-chip', name: 'ArtifactChip', category: 'ui', Demo: ArtifactChipDemo },
   { id: 'audio-node', name: 'AudioNode', category: 'ui', Demo: AudioNodeDemo },
   { id: 'button', name: 'Button', category: 'ui', Demo: ButtonDemo },
+  { id: 'collapsible-card', name: 'CollapsibleCard', category: 'ui', Demo: CollapsibleCardDemo },
   { id: 'contact-sheet-thumb', name: 'ContactSheetThumb', category: 'ui', Demo: ContactSheetThumbDemo },
   { id: 'export-node', name: 'ExportNode', category: 'ui', Demo: ExportNodeDemo },
   { id: 'dialog', name: 'Dialog', category: 'ui', Demo: DialogDemo },

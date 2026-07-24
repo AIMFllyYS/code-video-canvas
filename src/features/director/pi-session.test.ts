@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
   const closeStore = vi.fn()
   const buildContext = vi.fn()
   const openStore = vi.fn()
+  const publish = vi.fn()
   const agentInstances: MockAgent[] = []
 
   class MockAgent {
@@ -52,6 +53,15 @@ const mocks = vi.hoisted(() => {
           usage: {},
         },
       ]
+      // 流式增量：assistant 文本逐步增长（部分 → 完整），触发 message_update。
+      for (const partial of ['完', '完成']) {
+        for (const listener of this.listeners) {
+          await listener({
+            type: 'message_update',
+            message: { role: 'assistant', content: [{ type: 'text', text: partial }] },
+          })
+        }
+      }
       for (const message of messages) {
         for (const listener of this.listeners) {
           await listener({ type: 'message_end', message })
@@ -64,10 +74,11 @@ const mocks = vi.hoisted(() => {
     abort() {}
   }
 
-  return { appendMessage, closeStore, buildContext, openStore, agentInstances, MockAgent }
+  return { appendMessage, closeStore, buildContext, openStore, publish, agentInstances, MockAgent }
 })
 
 vi.mock('server-only', () => ({}))
+vi.mock('@/lib/stream/stream-bus', () => ({ streamBus: { publish: mocks.publish } }))
 vi.mock('@earendil-works/pi-agent-core', () => ({ Agent: mocks.MockAgent }))
 vi.mock('@earendil-works/pi-ai', () => ({
   createModels: () => ({ setProvider: vi.fn(), streamSimple: vi.fn() }),
@@ -151,5 +162,19 @@ describe('createDirectorSession', () => {
 
     expect(Object.keys(session).sort()).toEqual(['close', 'id', 'run', 'storageKey'])
     await session.close()
+  })
+
+  it('通过 message_update 捕获流式增量并按 projectId:nodeId 推送事件总线', async () => {
+    const session = await createDirectorSession({
+      projectId: 'project-1',
+      nodeId: 'node-1',
+      stage: 'INGEST',
+    })
+    await session.run({ prompt: '执行阶段' })
+
+    expect(mocks.publish.mock.calls).toEqual([
+      ['project-1:node-1', '完'],
+      ['project-1:node-1', '成'],
+    ])
   })
 })

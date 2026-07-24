@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDb, type Db } from '@/lib/db/migrate'
 import { artifacts, canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
-import { getCanvasGraph, getNodeArtifacts } from './queries'
+import { getCanvasGraph, getNodeArtifacts, getNodeStreamContext } from './queries'
 
 const { getDbMock } = vi.hoisted(() => ({ getDbMock: vi.fn<() => Db>() }))
 
@@ -103,6 +103,33 @@ describe('getCanvasGraph', () => {
     ])
     expect(nodes.find(({ id }) => id === 'node-without-artifact')?.artifacts).toEqual([])
   })
+
+  it('derives typed directorError from node data and omits it when absent', () => {
+    const projectId = seedProject(database.db, '错误项目')
+    database.db
+      .insert(canvasNodes)
+      .values({
+        id: 'failed-node',
+        projectId,
+        type: 'shot-split',
+        stage: 'DIRECT',
+        status: 'failed',
+        position: { x: 0, y: 0 },
+        data: { directorError: { stage: 'DIRECT', message: '风格圣经解析失败' } },
+      })
+      .run()
+    database.db
+      .insert(canvasNodes)
+      .values({ id: 'ok-node', projectId, type: 'script-import', position: { x: 0, y: 0 } })
+      .run()
+
+    const nodes = getCanvasGraph(projectId).nodes
+    expect(nodes.find(({ id }) => id === 'failed-node')?.directorError).toEqual({
+      stage: 'DIRECT',
+      message: '风格圣经解析失败',
+    })
+    expect(nodes.find(({ id }) => id === 'ok-node')?.directorError).toBeUndefined()
+  })
 })
 
 describe('getNodeArtifacts', () => {
@@ -148,7 +175,7 @@ describe('getNodeArtifacts', () => {
     ])
   })
 
-  it('excludes internal pi-session pointers and orders by most recent first', () => {
+  it('excludes internal pi-session and director-stream-log pointers, newest first', () => {
     const projectId = seedProject(database.db, '会话项目')
     insertArtifact(database.db, {
       id: 'session-pointer',
@@ -157,6 +184,14 @@ describe('getNodeArtifacts', () => {
       kind: 'pi-session',
       path: 'pi-sessions/node-1/session.jsonl',
       createdAt: new Date(1000),
+    })
+    insertArtifact(database.db, {
+      id: 'stream-log-pointer',
+      projectId,
+      nodeId: 'node-1',
+      kind: 'director-stream-log',
+      path: 'director-stream/a/node-1/ingest.log',
+      createdAt: new Date(4000),
     })
     insertArtifact(database.db, {
       id: 'older-output',
@@ -184,6 +219,52 @@ describe('getNodeArtifacts', () => {
   it('returns an empty list when the node has no real artifacts', () => {
     const projectId = seedProject(database.db, '空项目')
     expect(getNodeArtifacts(projectId, 'node-without-artifacts')).toEqual([])
+  })
+})
+
+describe('getNodeStreamContext', () => {
+  let database: ReturnType<typeof createDb>
+
+  beforeEach(() => {
+    database = createDb(':memory:')
+    getDbMock.mockReturnValue(database.db)
+  })
+
+  afterEach(() => {
+    database.sqlite.close()
+    vi.clearAllMocks()
+  })
+
+  it('returns status and typed directorError for an owned node', () => {
+    const projectId = seedProject(database.db, '流式项目')
+    database.db
+      .insert(canvasNodes)
+      .values({
+        id: 'node-1',
+        projectId,
+        type: 'shot-split',
+        stage: 'DIRECT',
+        status: 'failed',
+        position: { x: 0, y: 0 },
+        data: { directorError: { stage: 'DIRECT', message: '模型失败' } },
+      })
+      .run()
+
+    expect(getNodeStreamContext(projectId, 'node-1')).toEqual({
+      status: 'failed',
+      directorError: { stage: 'DIRECT', message: '模型失败' },
+    })
+  })
+
+  it('returns null for a node not owned by the project', () => {
+    const projectId = seedProject(database.db, '项目 A')
+    const otherId = seedProject(database.db, '项目 B')
+    database.db
+      .insert(canvasNodes)
+      .values({ id: 'node-1', projectId: otherId, type: 'script-import', position: { x: 0, y: 0 } })
+      .run()
+
+    expect(getNodeStreamContext(projectId, 'node-1')).toBeNull()
   })
 })
 

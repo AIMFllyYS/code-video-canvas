@@ -44,6 +44,7 @@ function createHarness(
       calls.push('error')
     }),
     recordStageOutput: vi.fn(),
+    persistStreamLog: vi.fn(async () => {}),
   }
   const transitionNodeStatus = vi.fn((_nodeId: string, status: string) => {
     calls.push(status)
@@ -100,6 +101,13 @@ describe('createStageRunner', () => {
         validation: 'non-empty',
       })
     )
+    expect(harness.repository.persistStreamLog).toHaveBeenCalledTimes(1)
+    expect(harness.repository.persistStreamLog).toHaveBeenCalledWith(
+      'project-1',
+      'node-1',
+      'INGEST',
+      '阶段产出'
+    )
   })
 
   it('keeps the session pointer and records failures without leaving running state', async () => {
@@ -127,6 +135,7 @@ describe('createStageRunner', () => {
       'failed',
       'error',
     ])
+    expect(harness.repository.persistStreamLog).toHaveBeenCalledTimes(1)
   })
 
   it('fails invalid persisted input before creating a model session', async () => {

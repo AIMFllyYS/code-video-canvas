@@ -11,6 +11,7 @@ import {
   type PreparedStageResult,
 } from './stage-result'
 import { storage } from '@/lib/storage'
+import { streamBus } from '@/lib/stream/stream-bus'
 import { createCheckDeterminismTool } from './tools/check-determinism'
 import { createValidateShotPlanTool } from './tools/validate-shot-plan'
 import {
@@ -38,6 +39,12 @@ interface StageRepository {
     result: PreparedStageResult,
     artifactId: string
   ): void
+  persistStreamLog(
+    projectId: string,
+    nodeId: string,
+    stage: PipelineStage,
+    text: string
+  ): Promise<void>
 }
 
 interface StageRunnerDependencies {
@@ -87,6 +94,7 @@ export function createStageRunner(
 ): StageRunner {
   return async (projectId, nodeId, stage) => {
     const context = await dependencies.repository.loadStageContext(projectId, nodeId, stage)
+    const streamKey = `${projectId}:${nodeId}`
     dependencies.transitionNodeStatus(nodeId, 'running')
     let session: DirectorSession | undefined
     let closed = false
@@ -110,6 +118,14 @@ export function createStageRunner(
         outputArtifact(context, prepared.content)
       )
       dependencies.commitResult(context, prepared, artifact)
+      // 持久化已流出的全文（回退 result.text）为可回看日志，并收尾流。
+      await dependencies.repository.persistStreamLog(
+        projectId,
+        nodeId,
+        stage,
+        streamBus.getSnapshot(streamKey).text || result.text
+      )
+      streamBus.markDone(streamKey)
       await session.close()
       closed = true
       dependencies.transitionNodeStatus(nodeId, 'success')
@@ -126,6 +142,21 @@ export function createStageRunner(
       } catch (cleanupError) {
         cleanupErrors.push(cleanupError)
       }
+      // 落已流出的部分文本（可能为空）；持久化失败不掩盖主错误，并入清理链。
+      try {
+        await dependencies.repository.persistStreamLog(
+          projectId,
+          nodeId,
+          stage,
+          streamBus.getSnapshot(streamKey).text
+        )
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError)
+      }
+      streamBus.markError(streamKey, {
+        stage,
+        message: error instanceof Error ? error.message : String(error),
+      })
       if (cleanupErrors.length > 0) {
         throw new AggregateError(
           [error, ...cleanupErrors],

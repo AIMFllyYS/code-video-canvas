@@ -98,6 +98,28 @@ describe('DirectorRuntimeRepository', () => {
     ).rejects.toThrow('pending')
   })
 
+  it('persistStreamLog 落盘为 director-stream-log 指针，空文本跳过', async () => {
+    const storage = createMockStorage()
+    const repo = new DirectorRuntimeRepository(db, storage)
+
+    await repo.persistStreamLog('project-1', 'node-1', 'INGEST', '流式全文')
+    expect(storage.put).toHaveBeenCalledWith(
+      'director-stream/project-1/node-1/ingest.log',
+      '流式全文'
+    )
+    const rows = db
+      .select()
+      .from(artifacts)
+      .where(eq(artifacts.kind, 'director-stream-log'))
+      .all()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.path).toBe('director-stream/project-1/node-1/ingest.log')
+    expect(rows[0]?.nodeId).toBe('node-1')
+
+    await repo.persistStreamLog('project-1', 'node-1', 'INGEST', '')
+    expect(storage.put).toHaveBeenCalledTimes(1)
+  })
+
   it('checks ownership, stage, and status before enqueueing', () => {
     db.update(canvasNodes)
       .set({ status: 'idle' })

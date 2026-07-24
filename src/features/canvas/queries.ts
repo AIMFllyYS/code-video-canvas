@@ -12,6 +12,12 @@ export interface CanvasNodeArtifact {
   filename: string
 }
 
+/** 可展示的 Director 阶段失败信息（源自 canvas_nodes.data.directorError）。 */
+export interface DirectorNodeError {
+  stage: string
+  message: string
+}
+
 export interface CanvasGraphNode {
   id: string
   type: CanvasNodeType
@@ -23,6 +29,7 @@ export interface CanvasGraphNode {
   laneKey: string | null
   laneRole: string | null
   artifacts: CanvasNodeArtifact[]
+  directorError?: DirectorNodeError
 }
 
 export interface CanvasGraphEdge {
@@ -74,6 +81,7 @@ export function getCanvasGraph(projectId: string): CanvasGraph {
       ...node,
       type: canvasNodeTypeSchema.parse(node.type),
       artifacts: getNodeArtifacts(projectId, node.id),
+      directorError: parseDirectorError(node.data),
     }))
   const edges = db
     .select({
@@ -95,8 +103,40 @@ export function getNodeArtifacts(projectId: string, nodeId: string): CanvasNodeA
     .where(and(eq(artifacts.projectId, projectId), eq(artifacts.nodeId, nodeId)))
     .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
     .all()
-    .filter((row) => row.kind !== 'pi-session')
+    .filter((row) => row.kind !== 'pi-session' && row.kind !== 'director-stream-log')
     .map((row) => ({ id: row.id, kind: row.kind, filename: basenameOf(row.path) }))
+}
+
+/** 从节点 data 收窄出可展示的 Director 失败信息（无 / 形状不符时返回 undefined）。 */
+export function parseDirectorError(
+  data: Record<string, unknown>
+): DirectorNodeError | undefined {
+  const raw = data.directorError
+  if (!raw || typeof raw !== 'object') return undefined
+  const record = raw as Record<string, unknown>
+  if (typeof record.stage !== 'string' || typeof record.message !== 'string') {
+    return undefined
+  }
+  return { stage: record.stage, message: record.message }
+}
+
+export interface NodeStreamContext {
+  status: CanvasGraphNode['status']
+  directorError?: DirectorNodeError
+}
+
+/** 单节点流式上下文（含项目归属校验）：不存在或不属于该项目返回 null。 */
+export function getNodeStreamContext(
+  projectId: string,
+  nodeId: string
+): NodeStreamContext | null {
+  const row = getDb()
+    .select({ status: canvasNodes.status, data: canvasNodes.data })
+    .from(canvasNodes)
+    .where(and(eq(canvasNodes.id, nodeId), eq(canvasNodes.projectId, projectId)))
+    .get()
+  if (!row) return null
+  return { status: row.status, directorError: parseDirectorError(row.data) }
 }
 
 function basenameOf(path: string): string {

@@ -23,10 +23,13 @@ export {
 export {
   getCanvasGraph,
   getExportSettings,
+  getNodeStreamContext,
   listProjects,
   type CanvasGraph,
   type CanvasGraphEdge,
   type CanvasGraphNode,
+  type DirectorNodeError,
+  type NodeStreamContext,
 } from './queries'
 export {
   computeLayout,
