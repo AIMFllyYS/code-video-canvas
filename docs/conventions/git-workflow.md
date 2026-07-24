@@ -27,16 +27,17 @@ feature/*  ──PR──▶  dev  ──(测试通过)──PR──▶  main
 格式：`type(scope): description`
 
 - **type**：`feat` / `fix` / `chore` / `docs` / `refactor` / `test` / `perf` / `build` / `ci`。
-- **scope**：用领域名（`canvas` / `director` / `render` / `ai` / `audio` / `lib`）。
+- **scope**：优先用 v3 领域或包名（`pipeline` / `ai` / `artifacts` / `canvas` /
+  `render` / `media` / `compose` / `canvas-workspace` / `navigation` / `contracts` /
+  `compiler` / `db` / `docs`）；`director`、`audio` 只允许出现在删除旧路径的迁移提交。
 - 示例：`feat(canvas): add shot node preview`、`fix(render): correct frame seek rounding`。
 
 ## 4. 当前阶段与迁移
 
-- **当前**：使用**自建本地 git 仓库**开发 demo。
-- **后续**：切换到**团队 GitHub 云端仓库**。迁移时：
-  1. 新建云端仓库并设 `main` 为默认分支，创建 `dev`；
-  2. 配置 `main` / `dev` 分支保护与 PR 审查、接入 CI；
-  3. 关联远程并推送。
+- **当前**：仓库已关联 GitHub `origin`，重构阶段仍以本地精确 commit 为施工检查点；
+  未经用户明确授权不 push。
+- **团队化前**：核验并启用 `main` / `dev` 分支保护、PR 审查和 CI；不得仅因存在
+  remote 就声称这些生产治理已经生效。
 
 ## 5. 禁止事项
 

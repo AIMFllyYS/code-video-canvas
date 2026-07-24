@@ -46,13 +46,13 @@ Agents SDK 仍主要存在于设计文档，不是可直接复用的生产实现
 
 只要不按 Canvas 节点一一创建 task，就不会。目标仅保留七类稳定任务：
 
-1. `pipeline-run`
-2. `project-plan`
-3. `shot-generate`
-4. `shot-media`
-5. `shot-render`
-6. `shot-qa`
-7. `project-compose`
+1. `cvc.pipeline.run`
+2. `cvc.project.plan`
+3. `cvc.shot.generate`
+4. `cvc.shot.media`
+5. `cvc.shot.render`
+6. `cvc.shot.qa`
+7. `cvc.project.compose`
 
 normalize、gate、compile、artifact commit 是 task 内函数。Trigger 替换自建 queue、
 retry、并发、取消与 Realtime，不再复制一套调度基础设施。
@@ -105,7 +105,7 @@ PurpleInk 的本地 bundle 命名为 `PurpleInkCompositionBundleV1`。二者不�
 | F04 | `DirectorSession.run()` 只返回 assistant 文本 | N0 先修 Tool 参数丢失 |
 | F05 | `lastAssistantText()` 丢弃 `toolCall` block | 结构化提交不能依赖最终文本 |
 | F06 | Provider/model 构造与节点类型耦合 | N3 改为 `AiTaskKind → ModelPolicy` |
-| F07 | Vision QA 直接构造 OpenAI-compatible client | N3 统一到 Pi/provider registry |
+| F07 | Vision QA 与音频域仍存在直接 provider client | N3 统一 LLM 到 Pi registry；N5 统一 TTS/ASR 到 media registry |
 | F08 | 当前 Zod 已为 4.x | 删除“Zod 3→4”迁移任务 |
 | F09 | 当前 DB 只有项目/节点/边/作业/产物/设置六类核心表 | PG schema 应保持最小，不复制 PurpleInk 全域 |
 | F10 | 本地 SQLite 存在历史项目和产物指针 | 必须备份并提供显式 importer |

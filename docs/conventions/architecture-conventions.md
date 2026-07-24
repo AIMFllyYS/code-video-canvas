@@ -1,112 +1,276 @@
-# 架构规范（Architecture Conventions）
+# CodeVideoCanvas v3 架构规范
 
-> 目录分层、模块边界、依赖方向与演进策略。全局架构见 [平台架构设计](../designs/2026-07-23-platform-architecture-design.md)。
+> 状态：Active
+> 规范来源：
+> [Architecture & Execution Spec v3](../specs/2026-07-24-refactor-v3-architecture-spec.md)
+> 本文只给出日常编码约定；冲突时以上述 Spec 的稳定规则 ID 为准。
 
-## 1. 分层
+## 1. 简单性原则
 
-| 层 | 目录 | 职责 | 不做 |
+v3 的目标是删除重复基础设施，不是堆叠新抽象：
+
+- 一个活动数据库：Postgres；
+- 一个异步编排器：Trigger.dev；
+- 一个 Agent Runtime：Pi Agent；
+- 一个 AI/LLM 模型选择入口：ModelPolicy；
+- 一个零 Agent 媒体选择入口：MediaProviderPolicy；
+- 一个 readiness 入口：ExecutionPolicy；
+- 一个 canonical source：ShotSourcePackageV1；
+- 一个终态帧时钟：HyperFrames；
+- 一个 UI 初始业务真源：ProjectRunSnapshotV1；
+- 一个任务状态账本：v3 Task Breakdown。
+
+引入新组件时必须说明它替换什么或为何属于独立边界。禁止以“未来可能需要”为理由
+加入 Redis、CQRS、事件溯源、微服务或第二 runtime。
+
+## 2. 分层与目录
+
+| 层 | 目录 | 允许 | 禁止 |
 |---|---|---|---|
-| 路由 / API | `src/app` | 路由入口、route handlers、server actions 入口 | 业务逻辑 |
-| 领域 | `src/features/*` | 按域聚合业务（canvas / director / render / ai / audio） | 跨域耦合 |
-| 通用 / 适配 | `src/lib` | db / storage / queue / gsap / determinism 等 | 领域业务 |
-| UI | `src/components/ui` | 纯展示组件 | 任何业务逻辑 |
-| server-only | `src/server` | 仅服务端工具（`import 'server-only'`） | 被客户端 import |
-| 运行时启动 | `src/instrumentation.ts` | Next Node runtime 的幂等注册/启动钩子 | 领域业务与请求逻辑 |
+| Route/UI entry | `src/app` | 路由、layout、薄 API/server action | SQL、prompt、状态机、FFmpeg |
+| Task entry | 根目录 `trigger` | payload、context、service 调用、Result 映射 | 领域逻辑、Drizzle、source parser |
+| Application/domain | `src/features/*` | use case、policy、domain service、view-model | SDK 细节横向泄漏 |
+| Contract | `packages/contracts` | browser/server-safe DTO、schema、fixture | DB/Node/SDK 副作用 |
+| Compiler | `packages/video-compiler` | 纯 source→bundle 编译 | DB、网络、Agent、clock |
+| Infrastructure | `src/lib` / `src/server` | port adapter、composition root | 产品规则 |
+| Visual primitive | `src/components` | Pencil-derived 纯展示组件 | 业务查询/状态机 |
 
-## 2. 依赖方向（单向，禁反向）
+目标领域：
 
+```text
+pipeline
+ai
+artifacts
+canvas
+render
+media
+compose
+canvas-workspace
+navigation
 ```
-app  →  features  →  lib
-                     ↑
-     components/ui ──┘（仅被引用，不引用业务）
+
+`media` 负责 TTS/ASR/SFX/subtitle、`MediaProviderPolicy`、
+`MediaProviderRegistry` 与 provider adapter；`render` 拥有 attempt-scoped
+`RenderWorkspace` 基础实现；`compose` 只负责 timeline、mix、concat、
+`ComposeWorkspace` facade 与终片验证。迁移完成后不得同时保留 `audio`、`media`、
+`compose` 三套重叠领域，也不得在 `compose` 复制第二套本地 workspace 实现。
+
+每个领域优先采用：
+
+```text
+types.ts / schemas.ts
+ports.ts
+actions.ts
+queries.ts
+services/
+components/
+__tests__/
 ```
 
-- `src/app` 只编排，不承载业务；业务下沉 `features`。
-- 跨域共享逻辑提升到 `lib`，普通领域模块不在 features 之间横向 import。
-- 显式应用编排器是唯一例外：当前仅 `features/director/stage-runner.ts` 可通过其他领域的**公开入口**组合状态机、会话与产物；不得 import 对方内部文件或直接操作其数据库细节。
-- `src/app/_dev/` → 正式代码单向；**正式代码禁止引用 `_dev/`**。
+只在确有多实现时定义 port；只有一个简单调用点时使用普通函数。
 
-## 3. 领域模块结构
+## 3. 依赖方向
 
-每个 `features/<域>/` 内部按需组织：`actions.ts`（写）、`queries.ts`（只读）、`schemas.ts`（Zod）、`types.ts`、`components/`。
+```text
+app / trigger
+      ↓
+application services
+      ↓
+domain + versioned contracts
+      ↑
+infrastructure adapters
+```
 
-- **canvas**：节点图、节点类型、画布状态。
-- **director**：video-director 六阶段编排 + Pi agent（服务端）；节点输入存于 `canvas_nodes.data.directorInput`，`stage-prompt.ts` 做类型化路由，`runtime-repository.ts` 封装持久化。
-- **render**：HyperFrames 截帧循环、ffmpeg 封装、作业运行器。
-- **ai**：StepFun `LlmAdapter`。
-- **audio**：配音 / SFX / BGM / 字幕。
+- route/task 只依赖公开 application service。
+- application service 依赖 port，不依赖具体 Drizzle/Trigger/Pi/HyperFrames client。
+- infrastructure adapter 可以依赖 domain contract，domain 不反向依赖 adapter。
+- feature 间只通过公开 contract/service 协作；禁止 import 对方 repository 私有文件。
+- UI 只消费 CVC DTO；禁止传递 Drizzle row、Trigger run、Pi message 或 provider SDK
+  response。
+- 正式代码不得 import `src/app/_dev`。
 
-## 4. 适配器抽象（面向未来演进）
+## 4. Trigger 与业务状态
 
-用接口隔离"可替换的基础设施"，Demo 用本地实现，未来换云 / 服务器只换实现：
+七个 task 是部署/资源边界，不与 Canvas 节点一一对应。运行时 ID 必须使用下面的
+`cvc.*` 全名；新增 task/queue 必须 ADR。
 
-- `LlmAdapter`：LLM 提供方（当前 StepFun）。
-- `StorageAdapter`：对象存储（当前本地 FS，未来 S3 / COS / MinIO）。
-- `DbAdapter` / `QueueAdapter`：当前 SQLite / 进程内，未来 PG / Redis。
+```text
+cvc.pipeline.run → cvc.project.plan → cvc.shot.generate
+cvc.shot.generate → cvc.shot.media
+cvc.shot.generate → cvc.shot.render → cvc.shot.qa
+cvc.shot.media + cvc.shot.qa → cvc.project.compose
+```
 
-## 5. 确定性与真源边界
+状态所有权：
 
-- 渲染发生在**服务端**（Playwright/Chromium），不在浏览器。
-- **音频是唯一时间地基**；锁定帧只来自音频实测，业务不得手改。
-- 结构化数据以 Drizzle+SQLite 为单一真源；二进制产物经 `StorageAdapter`。
-- 新产物按“复验同一内容 → StorageAdapter → SQLite 索引”提交；索引失败必须补偿删除文件。不得相信调用方传入的“已校验”布尔值。
-- Agent Tool 不得接收并决定 artifact 的 `projectId` / `nodeId` / `key`；这些授权字段只能由 stage runner 的持久执行上下文提供给可信写服务。
-- 每镜以 shot 契约（HTML + `data-*` + token）为唯一视觉合同，可从上游重建。
-- shot HTML 必须暴露 `window.__CVC_RENDER__ = { version: 1, seek(frame, fps) }`；
-  同一页面只允许串行 seek。帧序列落隔离临时目录并显式 cleanup，禁止用
-  `Buffer[]` 常驻整段 1080p 视频。
-- Render/API 遵循与 Director 相同的信任边界：路由只调用领域 enqueue/export
-  service，项目归属、artifact 路径与稳定顺序由 repository/可信服务决定。
+| 状态 | 所有者 | 用途 |
+|---|---|---|
+| `task_attempts` checkpoint/terminal | application service + PG transaction | 步骤业务真源 |
+| `pipeline_runs.status` | run projector/application service | 持久化聚合 |
+| `canvas_nodes.status` | node projection | 可重建产品视图 |
+| Trigger status | Trigger | transport/live execution |
+| Realtime event | read-only UI bridge | 临时反馈，不提交业务终态 |
 
-## 6. 演进策略
+所有业务命令使用 receipt。Trigger idempotency key 显式 global；fingerprint 由版本化
+canonicalizer、workflow、intent、实体/input hash 和适用的模型路由组成。应用不声称
+exactly-once，而以 receipt + global key + attempt fence 达到可重放副作用。
 
-- Demo：标准全栈 Next.js 单应用。
-- 规模化 / 多团队：再拆多包 Monorepo（apps/packages）与独立服务；因此现在就把领域逻辑收敛在 `features/*`、`lib/*`，保证"抽包 = 搬运"。
-- 分发：Electron 薄壳包裹同一应用（Phase 2）。
+## 5. Pi 与模型边界
 
-### 6.1 后台执行与状态机
+仅四类 `AiTaskKind`：
 
-- 入队入口先验证 project/node/stage/状态组合，再合法推进 `idle|failed|stale → pending`；runner 只执行 `pending → running → success|failed`。禁止为了省步骤直接写状态或让无效作业先入队后失败。
-- 当前 enqueue 与节点状态不是同一事务；enqueue 失败必须把已 pending 节点补偿到 failed 并记录错误。未来替换事务 outbox 时保持 `enqueueDirectorStage()` 领域 API 不变。
-- Director 作业统一由 `enqueueDirectorStage()` 创建；Next 应用在根 `src/instrumentation.ts` 的 Node runtime 中幂等注册 handler 并启动队列。
-- 阶段 prompt 必须从持久输入经原生 builder 构建；恢复执行不得依赖请求内临时对象或 Pi JSONL 反推业务输入。
+```text
+project-plan
+shot-spec
+fabricate
+vision-qa
+```
 
-## 7. 组件复用与 SSOT（/playbook 组件手册）
+`PiStructuredRunner` 是唯一生产 `Agent` import。每个 invocation：
 
-> 视觉权威源：[设计系统清单](../designs/2026-07-23-design-system-inventory.md)（Token / 颜色 / 图标 / 组件 / 布局）+ [`canvas.pen`](../designs/canvas.pen)（视觉源稿）。
+1. 解析版本化 input；
+2. 由 ModelPolicy 解析 provider/model；
+3. 创建短生命周期 Agent；
+4. 只挂一个 terminal Tool；
+5. Tool 参数 schema + semantic validate；
+6. 返回 output、resolved model、usage 和 safe trace；
+7. 结束 session。
 
-- **单一真源（SSOT）**：每个前端 UI 组件只有一份权威实现，集中在 `src/components/*`；其他页面 / 功能一律 `import` 复用，**禁止复制粘贴或重复实现视觉原语**。
-- **设计 Token 强制**：颜色 / 阴影 / 圆角 / 间距必须引用设计系统变量，**禁止硬编码 hex / rgba**。关键约束：
-  - 暗色背景 `bg` = `#0F0F0F`、`canvas-bg` = `#0A0A0A`（非纯黑）。
-  - 已删除通用色 `pink`、`indigo` 不得使用。
-  - 阴影统一：卡片/节点 `$shadow-card`，浮层/弹窗 `$shadow-float`。
-  - 阶段色按流水线语义归类（teal / purple / accent / warning / success），不再用彩虹板。
-- **图标体系**：统一 Lucide（`lucide-react`），白名单制（见设计系统 §6.2），禁 emoji；命名用 v0.400+ 标准名（如 `circle-plus`、`loader-circle`、`triangle-alert`）。
-- **组件分层（原子化）**：
-  - `components/ui/`：纯展示原语（Button / Card / Input …），无业务逻辑。
-  - `components/icons/`：Lucide 图标组件（多源自 Pencil 稿件）。
-  - **动效原语不在 `components/`**：token/config/variants 在 `src/lib/motion/`，共享收起 / 抽屉组件在 `features/navigation/collapsible-panel.tsx`（详见 §8）。
-  - `features/*/components/`：功能内组件，只能**组合** `components/ui`，不得重定义视觉原语（依赖方向单向：`features/*/components → components/ui`）。
-- **/playbook 组件手册**：应用内「活文档 / 组件画廊」（应用内版 Storybook，零额外构建工具）。新增组件时在 `src/app/playbook/registry.ts` 登记并新建 `*.demo.tsx`；`/playbook` 按分类实时渲染展示。
-- **确定性边界**：`components/*` 与 `/playbook` 属**应用 UI**，允许 hover / CSS transition / 交互动画；确定性红线（禁 rAF / 墙钟 / CSS 动画）**只约束视频 shot 渲染**（见 §5）。
-- **Pencil → 组件工作流**：Pencil 稿（`.pen`）设计 → Pencil MCP（`export_html` / `export_nodes`）取标记 / SVG → 落为 `components/ui|icons/*` 的类型化命名导出组件 → `/playbook` 注册示例 → 各页 `import` 复用。颜色/间距/圆角均引用 `.pen` 中定义的 Design Token（见设计系统 §3）。
-- **双主题**：所有颜色变量均为 `light | dark` 双值；页面根节点通过 `theme.mode` 切换，组件实现必须同时支持两主题。
+`shot-spec` checkpoint 完成后必须创建新的 fabricate Agent。结构化 repair 不跨
+invocation。服务任务不得包装成 Agent Tool 以逃避普通代码契约。
 
-## 8. 应用动效分层与降级（motion）
+safe trace 只能包含白名单事件和脱敏摘要；不持久化 raw delta、Tool 值、provider
+原始错误、prompt、source、credential 或隐藏 reasoning。
 
-> 应用 UI 动效的模块边界与新增规范；operational 精简版见 [AGENTS.md](../../AGENTS.md) 的「应用 UI 动效」。确定性红线（§5）只约束视频 shot 渲染，应用 UI 允许 motion / 过渡。
+TTS/ASR 是 `MediaTaskKind='tts'|'asr'` 的普通服务任务。只有
+`MediaProviderPolicy` 选择 provider/model，只有 `MediaProviderRegistry` 构造具体
+SpeechProvider adapter；它们不进入 Pi，也不扩充四个 `AiTaskKind`。
 
-- **技术栈**：`motion`（framer-motion 现名，`import { motion, AnimatePresence } from 'motion/react'`），React 19 兼容、SSR 安全。全局在根 `layout.tsx` 挂一次 `AppMotionConfig`（`reducedMotion="user"` + 默认 transition）。
-- **分层职责**：
+## 6. Source、compiler 与 bundle
 
-  | 层 | 位置 | 职责 |
-  |---|---|---|
-  | Token 真源 | `src/lib/motion/tokens.ts` + `globals.css` | 时长 / 缓动 / transition，JS↔CSS 双镜像（必须同步） |
-  | 全局配置 | `src/lib/motion/config.tsx` | `AppMotionConfig`：reducedMotion + 默认 transition，根 layout 挂一次 |
-  | 可复用 variants | `src/lib/motion/variants.ts` | 进入 / 离场 / 滑入的声明式 variants |
-  | 共享折叠 / 抽屉 | `features/navigation/collapsible-panel.tsx` | `AnimatedAside`（缓动宽度）/ `DrawerOverlay`（scrim + 边缘滑入），四处折叠面板复用 |
-  | 可信上下文 | `features/navigation/nav-context.tsx` | 页面发布 / 侧栏消费 `{ projectId, rendererNodeId }`（不承载动效） |
-  | 壳组合 | `app-shell` / `app-sidebar-shell` | 读 context、派生 active、组合原语（不定义新原语、不登记 /playbook） |
+```ts
+interface ShotSourcePackageV1 {
+  schemaVersion: 'cvc.shot-source/v1'
+  bodyFragment: string
+  css: string
+  setupJs: string
+  timelineJs: string
+}
+```
 
-- **新增动效规范**：只用 `motion/react` + `src/lib/motion` token；复用上表原语，禁在页面另造抽象；改时长 / 缓动只改 `tokens.ts` + `globals.css` 两处并保持同步；跟随 `prefers-reduced-motion` 降级，禁用定时器 / rAF 手搓动画绕过；实时手势进行中动画时长置 0（`TRANSITION_INSTANT`）保证 1:1 跟手。
-- **红线**：motion 只服务应用 UI，**绝不**进入 shot 渲染（`features/render/*` / shot HTML / GSAP seek 管线）。
+Normalizer 的匹配顺序固定为 strict object、完整 JSON、单一 JSON fence、唯一四段
+fragment、单一 legacy HTML，否则拒绝。前端预览与服务端复验共享 browser-safe 纯核心，
+但只有服务端结果可以提交 artifact。
+
+`timelineJs` 只向 compiler-owned paused GSAP timeline 加 tween。compiler 自行生成
+shell、root、CSP、尺寸、fps、duration、seed、asset map 与 HyperFrames 注册。
+
+CVC 输出 `CvcCompositionBundleV1`；跨项目只暴露
+`RenderableBundleDescriptorV1`。bundle hash 采用版本化 canonical manifest，file 按
+path 排序、asset hash 排序，不受输入枚举顺序影响。
+
+## 7. 门禁与 sandbox
+
+十级门禁：
+
+| Gate | 责任 |
+|---:|---|
+| G1 | normalization 唯一性 |
+| G2 | strict schema/长度 |
+| G3 | HTML/CSS/JS syntax |
+| G4 | static security |
+| G5 | static determinism |
+| G6 | compiler shell/timeline/manifest |
+| G7 | HyperFrames check |
+| G8 | 0/中/末/乱序 seek |
+| G9 | 同帧像素 hash 与非空画面 |
+| G10 | ffprobe/stream/duration/size/entity hash |
+
+G1–G5 可生成 issue codes 交给新的 fabricate repair invocation；G6–G10 是基础设施
+问题，不交给模型猜修。
+
+模型 JS 最终仍会执行，因此必须有 runtime sandbox：独立 browser context/必要时独立
+process、断网、受限 CSP、无 Node integration、bundle-root path fence、allowlisted
+assets、时间/内存/进程/输出/console 配额与错误脱敏。
+
+## 8. Artifact 与 workspace
+
+ArtifactStore：
+
+- 每次读写都接收 `WorkspaceScope`；
+- 业务只传 artifact ID，不传 raw storage key；
+- store 生成 key 并验证 workspace/project/run/attempt；
+- approved/released version 不可更新或删除；
+- 删除仅由带 capability 的 GC service 执行。
+
+RenderWorkspace：
+
+- 每个 attempt 独立 root；
+- 只接受安全相对路径；
+- 不允许 `..`、绝对路径、symlink escape；
+- 正常、失败、取消都 cleanup；
+- 绝对路径不进入 DB、日志或 UI。
+
+业务代码需要文件能力时先扩展 port/adapter，不直接散落 `node:fs/promises`。
+
+## 9. Postgres
+
+- `snake_case`、UUID、`timestamptz`；
+- workspace 业务表 `(workspace_id,id)` 复合主键；
+- 复合 FK 必须包含 `workspace_id`；
+- 状态用 text + named CHECK；
+- JSONB 只放版本化 payload/metadata；
+- 可更新聚合有 `revision` 并使用 compare-and-swap；
+- migration SQL 生成、审阅、提交；启动时不自动 generate/push。
+
+网络/provider 调用不得持有数据库 transaction。start/checkpoint/finish 各自是短 CAS
+事务。artifact index 与业务引用同一事务；外部对象写失败/DB 失败有明确补偿。
+
+SQLite 迁移只能从 Online Backup 一致性快照读取；原 DB、WAL、备份和 export manifest
+保持只读可恢复。
+
+<a id="ui-design-ssot"></a>
+
+## 10. UI 与设计 SSOT
+
+视觉顺序：
+
+```text
+canvas.pen reusable symbol
+  → components + demo
+  → /playbook registry
+  → feature/page composition
+```
+
+`.pen` 文件只能通过 Pencil MCP。没有打开目标文件时停止设计 Task。
+
+- 页面不复制视觉原语、Sidebar、TopNav 或动效实现。
+- Design Token 管理颜色/阴影/圆角/间距；Lucide 白名单管理图标。
+- 应用 UI 动效使用 `motion/react` + token，并遵循 reduced motion。
+- 视频 source 禁止使用应用 UI motion。
+- 可见字段必须有 DB/API/artifact source；无能力时显示 empty/disabled/explicit
+  placeholder。
+- Snapshot 是首次加载和断线对账真源；Realtime 只更新 live view。
+- Inspector 为数据、源码、门禁、执行四页签。
+- JSON viewer 只用 React text node，并限制 depth 6、node 500、copy 64 KiB。
+
+## 11. 文件预算
+
+| 文件类型 | 目标 | 硬上限 |
+|---|---:|---:|
+| `page.tsx` | 200 | 300 |
+| 一般生产文件 | 250 | 350 |
+| schema/repository | 按聚合拆分 | 400 |
+| 单函数 | 40 | 50 |
+
+一个文件只有一个主要变化原因。超限不是“以后再拆”的常态；对应 Task 必须在同 Track
+完成拆分或给出 Architecture-approved exception。
+
+## 12. 变更规则
+
+- 改 Product 行为：先改 Product Spec，再追溯 Architecture/Task。
+- 改长期架构：新增或 supersede ADR，再改 Architecture Spec。
+- 改施工方法：改 Harness。
+- 改当前状态：只改 Task Breakdown。
+- Issue 只能补充证据和步骤，不自行改变规范合同。
+- 已完成 Task 不回写改义；新问题建新 Task/issue 并关联 supersedes。

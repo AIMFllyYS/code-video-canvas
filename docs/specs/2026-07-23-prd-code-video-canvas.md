@@ -1,5 +1,10 @@
 # 产品需求文档（PRD）— CodeVideoCanvas
 
+> [!IMPORTANT]
+> **状态：Superseded / Frozen Demo v1。** v3 产品行为以
+> [Product Spec v3](./2026-07-24-refactor-v3-product-spec.md) 为唯一权威。本文只保留
+> 2026-07-23 Demo 基线与历史需求证据，不得据此启动新的 v3 Goal。
+
 > 文档类型：Product Requirements Document
 > 版本：v1.0
 > 创建：2026-07-23

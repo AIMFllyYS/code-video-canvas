@@ -44,7 +44,7 @@ depends_on:
 | `ARCH-DEC-002` | Trigger.dev 是唯一异步编排器 |
 | `ARCH-DEC-003` | Pi Agent 是 CVC 唯一 Agent Runtime |
 | `ARCH-DEC-004` | 禁止引入 OpenAI Agents SDK 主链路或 fallback |
-| `ARCH-DEC-005` | 模型调用只允许四种 `AiTaskKind` |
+| `ARCH-DEC-005` | AI/LLM 调用只允许四种 `AiTaskKind`；TTS/ASR 由零 Agent 的 `MediaTaskKind` 单独路由 |
 | `ARCH-DEC-006` | 标准渲染链是 source → compiler → bundle → HyperFrames |
 | `ARCH-DEC-007` | Postgres 保存业务事实；Trigger 保存执行事实 |
 | `ARCH-DEC-008` | PurpleInk 只共享 DTO/Port/Compiler/Render 合同 |
@@ -132,11 +132,16 @@ app / trigger
 
 - canvas → Trigger/Pi/Drizzle/HyperFrames；
 - ai/domain → CanvasNodeType；
-- render → director；
+- render → `ai`/`pipeline` implementation；
+- media → Pi/compose implementation；
+- compose → provider client/`ai` implementation；
 - compiler → Next/DB/Trigger/Pi；
 - UI → server repository/provider；
 - task → Drizzle table；
 - API → provider client/artifact path。
+
+现有 `src/features/director/**` 仅是迁移源，必须由 N3/N7 清退，不能作为目标依赖名或
+第二 Agent Runtime 保留。
 
 ### `ARCH-MOD-005` 文件职责
 
@@ -175,12 +180,13 @@ cvc.project.compose
 
 | Trigger task | Canvas/业务投影 |
 |---|---|
-| `project.plan` | `script-import`、`shot-split`；事务性 fan-out |
-| `shot.generate` | Shot 合同 checkpoint → `shot-script`；source checkpoint → `shot-codegen` |
-| `shot.media` | 独立提交 `shot-sfx`、`shot-subtitle` 子结果 |
-| `shot.render` | 更新 code 节点的 render substate 和 render artifact |
-| `shot.qa` | `shot-qa` |
-| `project.compose` | `score`、`export` |
+| `cvc.pipeline.run` | 无直接节点；只拥有 run 聚合与 child 编排 |
+| `cvc.project.plan` | `script-import`、`shot-split`；事务性 fan-out |
+| `cvc.shot.generate` | Shot 合同 checkpoint → `shot-script`；source checkpoint → `shot-codegen` |
+| `cvc.shot.media` | 独立提交 `shot-sfx`、`shot-subtitle` 子结果 |
+| `cvc.shot.render` | 更新 code 节点的 render substate 和 render artifact |
+| `cvc.shot.qa` | `shot-qa` |
+| `cvc.project.compose` | `score`、`export` |
 
 一个 task 更新多个节点时，必须分 checkpoint 事务提交。后半失败不得回滚已持久化且
 仍有效的前半 artifact。
@@ -192,10 +198,11 @@ cvc.project.compose
 
 ### `EXEC-DAG-005` Shot 依赖
 
-`shot.media` 必须消费 `shot.generate` 已提交的 `ShotSpecV1`，因此执行边为
-`shot.generate → shot.media`，不是 `project.plan → shot.media`。`shot.generate`
-成功后，`shot.media` 与 `shot.render` 可并行；`project.compose` 同时等待 media
-结果与 `shot.qa`。
+`cvc.shot.media` 必须消费 `cvc.shot.generate` 已提交的 `ShotSpecV1`，因此执行边为
+`cvc.shot.generate → cvc.shot.media`，不是
+`cvc.project.plan → cvc.shot.media`。`cvc.shot.generate` 成功后，
+`cvc.shot.media` 与 `cvc.shot.render` 可并行；`cvc.project.compose` 同时等待 media
+结果与 `cvc.shot.qa`。
 
 ---
 
@@ -274,18 +281,40 @@ Trigger status 只用于 live execution view。业务状态由 task application 
 
 所有 fingerprint 使用版本化 canonical JSON 后 SHA-256。输入必须包括
 canonicalizer version、workflow version、用户 intent（retry/regenerate/rerender）、
-实体/输入 artifact hash，以及模型任务适用的 model policy revision、已解析
-provider/model。对象 key 排序，禁止把 `JSON.stringify()` 的运行时偶然顺序当公共
-协议。
+实体、输入 artifact hash 与当前任务适用的 schema/compiler/contract pins。AI task
+还必须包括 model policy revision 与已解析 provider/model；media task 还必须包括
+media route revision 与已解析 provider/model。对象 key 排序，禁止把
+`JSON.stringify()` 的运行时偶然顺序当公共协议；不适用的 route 字段必须省略，不能
+用空字符串制造另一种表示。
 
 ### `EXEC-CMD-003` Task key
 
-```text
-sha256(
-  canonicalizerVersion + workflowVersion + intent + taskId +
-  workspaceId + entityType + entityId + sorted(inputArtifactHashes) +
-  modelPolicyRevision + resolvedProviderAndModelWhenApplicable
-)
+```ts
+sha256(canonicalJsonV1({
+  canonicalizerVersion,
+  workflowVersion,
+  intent,
+  taskId,
+  workspaceId,
+  entityType,
+  entityId,
+  inputArtifactHashes: sortedInputArtifactHashes,
+  versionPins: applicableVersionPins,
+  ...(aiTask
+    ? { aiRoute: {
+        policyRevision: modelPolicyRevision,
+        provider: resolvedAiProvider,
+        modelId: resolvedAiModelId,
+      } }
+    : {}),
+  ...(mediaTask
+    ? { mediaRoute: {
+        routeRevision: mediaRouteRevision,
+        provider: resolvedMediaProvider,
+        modelId: resolvedMediaModelId,
+      } }
+    : {}),
+}))
 ```
 
 所有 CVC pipeline/task key 都显式创建 global scope；禁止依赖 SDK 默认 scope。
@@ -809,6 +838,7 @@ CLI/FFmpeg 提供位于 attempt root 内的安全相对路径；绝对路径不�
 | `artifacts` | aggregate type/id、kind、version、lifecycle、schema、storage、size/hash、attempt、supersedes；组合唯一版本 |
 | `command_receipts` | UUID id、command、idempotency key、fingerprint、status、result；`(workspace_id,idempotency_key)` unique |
 | `model_routes` | `(workspace_id,ai_task_kind)` unique、provider/model、revision；不存 secret |
+| `media_routes` | `(workspace_id,media_task_kind)` unique；`tts/asr` provider/model/revision；不存 secret |
 | `provider_credentials` | workspace/provider、ciphertext、key_version、verified_at；无明文 fallback |
 | `ai_invocations` | run/attempt/task、`invocation_no`、`repair_no`、provider/model、input/output hash、usage、trace artifact |
 
@@ -925,7 +955,25 @@ export interface MediaManifestV1 {
 
 ### `CONTRACT-MEDIA-002`
 
-模型不得猜音频时长。TTS/ASR/provider receipt 与实际媒体 probe 是时间事实。
+```ts
+export const MEDIA_TASK_KINDS = ['tts', 'asr'] as const
+export type MediaTaskKind = (typeof MEDIA_TASK_KINDS)[number]
+
+export interface SpeechProvider {
+  synthesize(input: SynthesizeSpeechInput, signal?: AbortSignal):
+    Promise<SpeechProviderReceiptV1>
+  transcribe(input: TranscribeSpeechInput, signal?: AbortSignal):
+    Promise<SpeechProviderReceiptV1>
+}
+```
+
+只有 `MediaProviderPolicy.resolve(mediaTaskKind, workspaceSettings)` 可以选择媒体
+provider/model，只有 `MediaProviderRegistry` 可以构造具体 adapter。`shot-media`
+application service 不读取 env、不构造 StepFun client，也不按 provider 分支。TTS/ASR
+是零 Agent 的服务任务，不扩充四个 `AiTaskKind`。
+
+模型不得猜音频时长。TTS/ASR/provider receipt 与实际媒体 probe 是时间事实；发生冲突
+时以实体 probe 为准并记录稳定 issue code。
 
 ### `CONTRACT-MEDIA-003`
 

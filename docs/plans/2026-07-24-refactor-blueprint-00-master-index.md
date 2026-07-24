@@ -33,9 +33,9 @@ SQLite + 进程内队列 + 自建逐帧渲染的 Demo 管线，重构为：
 | D1 | 数据库 | SQLite → **Postgres，本地 Docker 起步** |
 | D2 | 执行编排 | 进程内队列/SSE → **Trigger.dev Cloud 控制面 + `trigger dev` 本地执行** |
 | D3 | Agent Runtime | **继续使用 Pi Agent**；不引入 OpenAI Agents SDK |
-| D4 | 模型路由 | 仅 `ModelPolicy` 按 `AiTaskKind` 决定 provider/model |
+| D4 | 模型路由 | LLM 仅由 `ModelPolicy/AiTaskKind` 选择；TTS/ASR 仅由 `MediaProviderPolicy/MediaTaskKind` 选择 |
 | D5 | 模型任务 | 仅四类：`project-plan`、`shot-spec`、`fabricate`、`vision-qa` |
-| D6 | 服务任务 | normalize、gate、compile、render、audio、compose、verify 均不得进入 Agent loop |
+| D6 | 服务任务 | normalize、gate、compile、render、media、compose、verify 均不得进入 Agent loop |
 | D7 | 模型产物 | `ShotSourcePackageV1` 是 canonical；完整 HTML/代码块只是兼容输入 |
 | D8 | 渲染 | `video-compiler` 生成 `CvcCompositionBundleV1`，并暴露 `RenderableBundleDescriptorV1`；HyperFrames 为默认 renderer |
 | D9 | 帧时钟 | HyperFrames 终态只保留一套 seek/frame clock；旧 `__CVC_RENDER__@v1` 仅迁移期兼容 |
@@ -48,11 +48,13 @@ SQLite + 进程内队列 + 自建逐帧渲染的 Demo 管线，重构为：
 
 ---
 
-## 3. 文档权威层级
+## 3. 文档职责与读取顺序
 
-发生冲突时，按下列顺序裁决：
+下表用于定位某类问题的 owner 和强制读取顺序，不授予代理在冲突时自行挑选文档的
+权限。发现两个活动规范给出不兼容要求时，必须停止受影响施工、登记
+`DOC-CONFLICT`，按 ADR → owner Spec → Harness/Task/Issue 修正规范后再继续。
 
-| 优先级 | 文档 | 回答的问题 |
+| 顺序 | 文档 | 回答的问题 |
 |---:|---|---|
 | 1 | `AGENTS.md` | AI 代理现在允许/禁止做什么 |
 | 2 | `docs/specs/2026-07-24-refactor-v3-product-spec.md` | 产品必须实现什么 |

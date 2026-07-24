@@ -1,5 +1,10 @@
 # AI 开发 Harness —— 系统架构与协作规范总纲
 
+> [!IMPORTANT]
+> **状态：Superseded / Frozen Demo v1。** v3 施工规则以
+> [Codex Goal Harness v3](./2026-07-24-refactor-v3-codex-harness.md) 为唯一权威。
+> 本文中的 SQLite、进程内队列与旧 Director/Render 约定只作历史证据。
+
 > Created: 2026-07-23
 > Updated: 2026-07-23
 > Status: approved（作为 Demo 阶段实施的操作准绳；随执行推进持续修订）

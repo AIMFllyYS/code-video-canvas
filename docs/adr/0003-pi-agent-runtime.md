@@ -20,9 +20,12 @@ runtime/session/trace 类型，不能消除应用层 schema 与语义门禁。
 5. 只允许四类模型任务；
 6. 每项任务使用单一 terminal submit Tool；
 7. Tool 验证参数是权威产物，文本不是；
-8. 每个 task attempt 使用短生命周期会话，内容修复最多两轮；
-9. JSONL 仅作可选诊断 artifact，不是业务/恢复真源；
-10. 前端只展示安全执行轨迹，不展示隐藏 reasoning。
+8. 每个模型 invocation 使用独立短生命周期会话；`shot-spec` checkpoint 后必须
+   新建 fabricate Agent，二者不共享 messages/Tool/repair 历史；
+9. 内容修复最多两轮，且只在当前 invocation 内；
+10. JSONL 仅作可选诊断 artifact，不是业务/恢复真源；
+11. safe trace 不包含 raw assistant delta、Tool 参数值、provider 原始错误、prompt、
+    source、credential 或隐藏 reasoning。
 
 ## Consequences
 
@@ -52,5 +55,7 @@ runtime/session/trace 类型，不能消除应用层 schema 与语义门禁。
 - 仅一个生产文件 import Pi `Agent`；
 - 仅四个 `AiTaskKind`；
 - terminal Tool transcript tests 覆盖文本、Tool、失败和 repair；
+- shot-spec/fabricate 使用两个 invocation 且 checkpoint retry 不重复计费；
+- safe trace redaction 与 size/depth bounds 有合同测试；
 - 服务任务 source scan 无 Agent import；
 - provider/model 与设置页和 invocation record 一致。

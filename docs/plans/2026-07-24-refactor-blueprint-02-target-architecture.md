@@ -12,9 +12,9 @@
 1. **一个事实一个真源**：业务事实进 Postgres；执行事实由 Trigger 提供。
 2. **Canvas DAG 是产品视图，不是调度器实现。**
 3. **Trigger task 只按重试、并发、资源隔离边界拆分。**
-4. **仅四类任务调用模型。**
+4. **仅四类 `AiTaskKind` 调用 LLM。**
 5. **仅一个模块可以 import Pi `Agent`。**
-6. **模型选择只发生在 `ModelPolicy`。**
+6. **LLM 选择只发生在 `ModelPolicy`；TTS/ASR 选择只发生在 `MediaProviderPolicy`。**
 7. **模型输出永远是不可信输入。**
 8. **Canonical source 是结构化 fragments，不是自由 HTML。**
 9. **编译器拥有 shell、时钟、尺寸、duration、seed 和资产装配。**
@@ -108,12 +108,13 @@ flowchart TB
 │  │  │     ├─ pi-structured-runner.ts
 │  │  │     ├─ provider-registry.ts
 │  │  │     └─ terminal-tools.ts
-│  │  ├─ artifact/
+│  │  ├─ artifacts/
 │  │  │  ├─ source-normalizer.ts
 │  │  │  ├─ gate-runner.ts
 │  │  │  ├─ artifact-service.ts
 │  │  │  └─ repository.ts
 │  │  ├─ canvas/
+│  │  ├─ canvas-workspace/
 │  │  ├─ pipeline/
 │  │  │  ├─ execution-policy.ts
 │  │  │  ├─ run-service.ts
@@ -125,10 +126,17 @@ flowchart TB
 │  │  │  ├─ legacy-provider.ts
 │  │  │  ├─ render-workspace.ts
 │  │  │  └─ verify.ts
+│  │  ├─ media/
+│  │  │  ├─ media-manifest.ts
+│  │  │  ├─ media-provider-policy.ts
+│  │  │  ├─ media-provider-registry.ts
+│  │  │  ├─ speech-provider.ts
+│  │  │  ├─ shot-media-service.ts
+│  │  │  └─ subtitle-build.ts
 │  │  ├─ compose/
-│  │  │  ├─ audio-align.ts
-│  │  │  ├─ subtitle-build.ts
+│  │  │  ├─ timeline.ts
 │  │  │  ├─ mix.ts
+│  │  │  ├─ concat.ts
 │  │  │  ├─ compose-service.ts
 │  │  │  └─ verify.ts
 │  │  └─ navigation/
@@ -169,9 +177,13 @@ infrastructure adapters
 硬约束：
 
 - `features/canvas` 不 import Trigger、Pi、Drizzle、HyperFrames；
+- `features/canvas-workspace` 只消费公开 Canvas/Pipeline DTO，不承载仓储或执行逻辑；
 - `features/ai/domain` 不 import CanvasNodeType；
-- `features/render` 不 import director/pipeline 实现；
-- `features/compose` 只消费 artifact/render contracts；
+- `features/render` 不 import `features/ai`/`features/pipeline` 实现；
+- `features/media` 负责 TTS/ASR/SFX/subtitle 与 provider adapter，不 import Pi 或
+  compose 实现；
+- `features/compose` 只消费 artifact/render/media contracts，不创建 provider 或
+  模型客户端；
 - `packages/video-compiler` 不 import Next、DB、Trigger、Pi；
 - Trigger task 只调用公开 application service，不直接写 Drizzle 查询；
 - API route 不拼 artifact path，不直接创建 provider/model/client；
@@ -183,13 +195,13 @@ infrastructure adapters
 
 ```mermaid
 flowchart TD
-  Run["pipeline-run"]
-  Plan["project-plan<br/>Pi: project-plan"]
-  Generate["shot-generate × N<br/>Pi: shot-spec → fabricate"]
-  Media["shot-media × N<br/>TTS/ASR/subtitle"]
-  Render["shot-render × N<br/>normalize → gate → compile → HF"]
-  QA["shot-qa × N<br/>rules + Pi vision-qa"]
-  Compose["project-compose<br/>mix → concat → verify"]
+  Run["cvc.pipeline.run"]
+  Plan["cvc.project.plan<br/>Pi: project-plan"]
+  Generate["cvc.shot.generate × N<br/>Pi: shot-spec → fabricate"]
+  Media["cvc.shot.media × N<br/>TTS/ASR/subtitle"]
+  Render["cvc.shot.render × N<br/>normalize → gate → compile → HF"]
+  QA["cvc.shot.qa × N<br/>rules + Pi vision-qa"]
+  Compose["cvc.project.compose<br/>mix → concat → verify"]
 
   Run --> Plan
   Plan --> Generate
@@ -203,7 +215,7 @@ flowchart TD
 ### 5.1 为什么 `shot-spec` 和 `fabricate` 不拆成两个 Trigger task
 
 二者共用 Trigger task、AI 并发边界和 shot 上下文，但必须是两个独立、短生命周期的
-Pi invocation/session，各自只挂自己的 terminal Tool。`shot-generate` 先完成
+Pi invocation/session，各自只挂自己的 terminal Tool。`cvc.shot.generate` 先完成
 `shot-spec` invocation 并事务性提交 `ShotSpecV1` checkpoint，再新建 Agent 执行
 `fabricate` invocation。若 worker crash，重试发现同一 input hash 的 spec 已存在就
 跳过第一次付费调用。
@@ -216,10 +228,10 @@ Pi invocation/session，各自只挂自己的 terminal Tool。`shot-generate` �
 
 | queue | 初始并发 | 任务 |
 |---|---:|---|
-| `ai` | 2 | project-plan、shot-generate、shot-qa |
-| `render` | 1 | shot-render |
-| `media` | 2 | shot-media |
-| `compose` | 1 | project-compose |
+| `ai` | 2 | `cvc.project.plan`、`cvc.shot.generate`、`cvc.shot.qa` |
+| `render` | 1 | `cvc.shot.render` |
+| `media` | 2 | `cvc.shot.media` |
+| `compose` | 1 | `cvc.project.compose` |
 
 只有真实限额/资源数据证明需要时才拆分 vision queue 或增加 concurrency key。
 
@@ -227,13 +239,36 @@ Pi invocation/session，各自只挂自己的 terminal Tool。`shot-generate` �
 
 Trigger task key：
 
-```text
-sha256(
-  canonicalizerVersion + workflowVersion + intent + taskType +
-  workspaceId + entityId + sorted(inputArtifactHashes) +
-  modelPolicyRevision + resolvedProviderAndModelWhenApplicable
-)
+```ts
+sha256(canonicalJsonV1({
+  canonicalizerVersion,
+  workflowVersion,
+  intent,
+  taskId,
+  workspaceId,
+  entityType,
+  entityId,
+  inputArtifactHashes: sortedInputArtifactHashes,
+  versionPins: applicableVersionPins,
+  ...(aiTask
+    ? { aiRoute: {
+        policyRevision: modelPolicyRevision,
+        provider: resolvedAiProvider,
+        modelId: resolvedAiModelId,
+      } }
+    : {}),
+  ...(mediaTask
+    ? { mediaRoute: {
+        routeRevision: mediaRouteRevision,
+        provider: resolvedMediaProvider,
+        modelId: resolvedMediaModelId,
+      } }
+    : {}),
+}))
 ```
+
+AI task 必须携带 `aiRoute`，media task 必须携带 `mediaRoute`；其他 task 省略不适用
+route 字段。禁止把空字符串当作省略值。
 
 业务命令使用 `command_receipts`，保存：
 
@@ -266,11 +301,14 @@ dispatch Trigger；若进程在事务提交后、dispatch/回写前崩溃，重�
 ### 6.1 公开合同
 
 ```ts
-export type AiTaskKind =
-  | 'project-plan'
-  | 'shot-spec'
-  | 'fabricate'
-  | 'vision-qa'
+export const AI_TASK_KINDS = [
+  'project-plan',
+  'shot-spec',
+  'fabricate',
+  'vision-qa',
+] as const
+
+export type AiTaskKind = (typeof AI_TASK_KINDS)[number]
 
 export interface AiTaskRequest<TInput> {
   task: AiTaskKind
@@ -278,8 +316,9 @@ export interface AiTaskRequest<TInput> {
   context: {
     workspaceId: string
     projectId: string
-    shotId?: string
+    runId: string
     attemptId: string
+    shotId?: string
   }
   signal?: AbortSignal
 }
@@ -365,6 +404,22 @@ export type SafeTraceEventV1 =
 `TraceMapper` 中截断并脱敏；结构化扩展只能使用 `SafeJsonValue`。前端 JSON viewer
 只用 React text node 渲染，默认限制 depth 6、node 500、copy 64 KiB。
 
+### 6.5 非 Agent 媒体模型
+
+TTS/ASR 不扩充 `AiTaskKind`，也不进入 Pi loop。它们使用
+`MediaTaskKind = 'tts' | 'asr'`：
+
+```text
+shot-media service
+  → MediaProviderPolicy    唯一选择 provider/model
+  → MediaProviderRegistry  唯一构造具体 SpeechProvider adapter
+  → provider receipt
+  → entity media probe
+```
+
+feature/task/UI 不得直接构造 StepFun client 或读取媒体模型 env。Provider receipt 只
+记录 provider/model/request ID/声明值 hash；真实 duration 以实体 probe 为准。
+
 ---
 
 ## 7. SourceNormalizer
@@ -438,7 +493,11 @@ export interface CompileShotInputV1 {
     seed: string
   }
   assets: readonly AssetRefV1[]
-  compilerVersion: string
+  versions: {
+    workflow: string
+    compiler: string
+    sourceSchema: 'cvc.shot-source/v1'
+  }
 }
 ```
 
@@ -480,8 +539,10 @@ export interface CvcCompositionBundleV1 {
     fps: number
     durationSeconds: number
     sourceHash: string
-    compilerVersion: string
+    assetHashes: readonly string[]
     workflowVersion: string
+    compilerVersion: string
+    requiredHyperframesVersion: string
     provenance: ArtifactProvenanceV1
   }
   renderable: RenderableBundleDescriptorV1
@@ -569,10 +630,10 @@ export interface RenderWorkspace {
   materialize(
     scope: WorkspaceScope,
     artifactId: string,
-    target: WorkspaceHandle,
+    workspace: WorkspaceHandle,
     relativePath: string
   ): Promise<string>
-  cleanup(target: WorkspaceHandle): Promise<void>
+  cleanup(workspace: WorkspaceHandle): Promise<void>
 }
 ```
 
@@ -600,6 +661,7 @@ key。远端 store 不承诺 `localPath()`；需要本地路径的 CLI/FFmpeg �
 | `artifacts` | 不可变版本化聚合产物 | aggregate type/id、kind、version、lifecycle、hash、attempt、supersedes |
 | `command_receipts` | API 命令幂等 | UUID id；`(workspace_id,idempotency_key)` unique；fingerprint 冲突检测 |
 | `model_routes` | 非秘密模型路由配置 | `(workspace_id,ai_task_kind)` unique |
+| `media_routes` | 非 Agent 媒体模型路由 | `(workspace_id,media_task_kind)` unique；`tts/asr` |
 | `provider_credentials` | 加密 provider credential | ciphertext、key_version、verified_at；禁止明文 fallback |
 | `ai_invocations` | Pi invocation/repair 审计 | `invocation_no`、`repair_no`、provider/model/usage；非通用 event log |
 
@@ -617,7 +679,7 @@ key。远端 store 不承诺 `localPath()`；需要本地路径的 CLI/FFmpeg �
 - artifact lifecycle 仅 `draft/approved/released/rejected`，唯一版本约束为
   `(workspace_id,aggregate_type,aggregate_id,kind,version)`；
 - DB trigger 阻止 `approved/released` artifact 被 update/delete；
-- `model_routes` 不存 secret；credential 使用应用层 authenticated encryption，
+- `model_routes`/`media_routes` 不存 secret；credential 使用应用层 authenticated encryption，
   master key 仅来自 server-only env/secret manager；
 - `content_hash` 是实体内容 SHA-256，不得用 input key 冒充。
 
@@ -668,6 +730,7 @@ export type PipelineRunStatus =
 ```ts
 export interface ProjectRunSnapshotV1 {
   schemaVersion: 1
+  workspaceId: string
   projectId: string
   workflowVersion: string
   run: {
@@ -676,6 +739,7 @@ export interface ProjectRunSnapshotV1 {
     triggerRunId?: string
     startedAt?: string
     finishedAt?: string
+    failure?: FailureSummaryV1
   } | null
   nodes: readonly NodeRunViewV1[]
   shots: readonly ShotRunViewV1[]

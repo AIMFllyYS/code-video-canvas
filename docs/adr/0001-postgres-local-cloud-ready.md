@@ -17,8 +17,11 @@
 3. Drizzle schema 使用 `pg-core` 和 tracked SQL migration；
 4. workspace 业务表使用 `(workspace_id,id)` 复合键；
 5. 本轮自动创建单一 local workspace，不实现登录；
-6. SQLite 只用于一次性只读 export/import，不保留双写或 fallback；
-7. 生产数据库供应商在部署阶段选择，不进入领域代码。
+6. 迁移前使用 SQLite Online Backup API 生成活动 WAL 的一致性快照；禁止直接复制
+   `app.db` 冒充备份；
+7. SQLite 只用于一次性只读 export/import，不保留双写或 fallback；
+8. model route 与加密 provider credential 分表；缺 master key 时禁止明文 fallback；
+9. 生产数据库供应商在部署阶段选择，不进入领域代码。
 
 ## Consequences
 
@@ -48,4 +51,5 @@
 - 跨 workspace FK 被拒绝；
 - receipt/fingerprint 与 attempt fencing 有 integration test；
 - runtime source scan 无 `better-sqlite3`；
-- SQLite import 有计数/hash 对账报告。
+- SQLite backup 通过 `PRAGMA quick_check`、逐表计数与 SHA-256；
+- SQLite import 有主键/计数/hash 对账报告。

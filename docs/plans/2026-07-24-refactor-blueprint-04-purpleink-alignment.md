@@ -5,7 +5,11 @@
 > 仓库：`scottcwy/PurpleInk`（私有）
 > 固定快照：`penguin@68f09e7543872091e25578770f2c7fb60edfe6d8`、
 > `firenze@7accc18391411716fc9b0fd63aca4c45c9725f0f`
-> 访问说明：GitHub connected app 当前无私库权限；本次使用已认证 `gh api` 只读取证
+> 快照链接：[penguin](https://github.com/scottcwy/PurpleInk/tree/68f09e7543872091e25578770f2c7fb60edfe6d8)、
+> [firenze](https://github.com/scottcwy/PurpleInk/tree/7accc18391411716fc9b0fd63aca4c45c9725f0f)
+> 访问说明：已先尝试 GitHub MCP；当前凭据无法访问该私库，随后使用本机已认证
+> `gh api` 对上述固定 commit 做只读复核。结论以 commit 快照为准，不以分支浮动状态
+> 为准。
 
 ---
 
@@ -43,6 +47,18 @@ Agent Runtime 是明确例外：
 | 生产性 | 原型证据 | 合同较成熟，部署与 worker 仍有缺口 |
 
 因此旧结论“penguin 只是 landing、firenze 已实现 Trigger+Agents SDK”均不准确。
+
+固定快照证据：
+
+| 结论 | 仓库路径 |
+|---|---|
+| penguin 含独立 capture/render server | `server/src/capture/*`、`server/src/compose/*`、`server/src/server/job-store.ts` |
+| penguin 使用独立 server lockfile | 根 `package.json`、`server/package.json`、`server/package-lock.json` |
+| firenze 有 PG 与复合键/attempt migration | `db/migrations/0005_workspace_composite_primary_keys.sql`、`0006_capture_attempt_fencing.sql` |
+| firenze runner 的模型 seam 是注入的 `direct()` | `packages/launch-video-runner/src/runner.mjs` |
+| firenze 有独立 compiler/bundle schema | `packages/video-compiler/src/*`、`schemas/composition-bundle-v1.schema.json` |
+| firenze 有 sandbox/redaction 参考实现 | `packages/playwright-capture-worker/src/network-policy.mjs`、`trace-redaction.mjs` |
+| 根依赖未接入 Trigger/Agents SDK | 固定 commit 的根 `package.json` 与 workspace package manifests |
 
 ---
 
@@ -92,8 +108,7 @@ unique(workspace_id, aggregate_id, version)
 复用验收顺序，而不是直接复制脚本实现：
 
 ```text
-lint/check
-→ inspect/snapshot
+check --snapshots
 → render
 → ffprobe 尺寸/时长/流
 → signalstats/非空帧

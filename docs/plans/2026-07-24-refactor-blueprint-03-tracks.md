@@ -180,11 +180,17 @@ N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行�
 核心任务：
 
 - N5.1 版本化 audio/subtitle/media manifest；
-- N5.2 TTS/ASR、音频对齐与字幕构建；
+- N5.2 MediaProviderPolicy/Registry、TTS/ASR、音频对齐与字幕构建；
 - N5.3 SFX/BGM/voice mix 与 shot concat；
 - N5.4 final verify：视频/音频/字幕流、时长、非空帧、hash；
 - N5.5 attempt workspace、取消和失败清理；
 - N5.6 artifact commit 与 Finalize 节点投影。
+
+职责固定为 `features/media` 管生成、识别、字幕与 provider adapter；
+`features/render` 继续拥有 N4 建立的 attempt-scoped `RenderWorkspace`；
+`features/compose` 管 timeline、mix、concat、`ComposeWorkspace` facade 与终片验证。
+N5 结束时不得保留一个与二者重叠的活动 `features/audio` 域，也不得复制第二套
+本地 workspace。
 
 **退出门**：
 
@@ -232,10 +238,11 @@ N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行�
 
 - N7.1 锁定 workflow/compiler/schema/contract 版本；
 - N7.2 真实本地 PG + Trigger dev + Pi + HyperFrames + FFmpeg E2E；
-- N7.3 retry/cancel/crash/resume/idempotency/迁移恢复测试；
-- N7.4 golden frame、最终媒体、UI 浏览器证据；
-- N7.5 删除 legacy renderer、SQLite runtime、queue/stream 和过渡 adapter；
-- N7.6 更新文档状态和交付报告。
+- N7.3 retry/cancel/crash/reconciler/idempotency/状态所有权测试；
+- N7.4 跨 workspace、attempt workspace 与 generated-source sandbox；
+- N7.5 golden frame、最终媒体与真实 UI 浏览器证据；
+- N7.6 删除 legacy renderer、SQLite runtime、queue/stream 和过渡 adapter，
+  复核 30 项验收并交付。
 
 **退出门**：
 
@@ -264,7 +271,7 @@ N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行�
 | A09 | 取消映射为业务 `cancelled` | N2 | integration test |
 | A10 | stale attempt publish 被拒绝，retry 跳过同 fingerprint checkpoint | N2/N3 | attempt test |
 | A11 | 旧 queue/stream runtime import 为 0 | N2 | `rg` scan |
-| A12 | 模型选择只在 ModelPolicy | N3 | import/source test |
+| A12 | LLM 选择只在 ModelPolicy，TTS/ASR 只在 MediaProviderPolicy | N3/N5 | import/source test |
 | A13 | 仅 PiStructuredRunner import `Agent` | N3 | `rg` scan |
 | A14 | Tool args 是结构化产物 | N0/N3 | transcript test |
 | A15 | safe trace 不含 raw delta/参数/错误，viewer depth/node/byte/copy 有界 | N3/N6 | DTO/browser test |
@@ -273,7 +280,7 @@ N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行�
 | A18 | 明确四段代码可确定提取 | N4 | normalizer test |
 | A19 | 多 JSON/未知 script/额外正文被拒绝 | N4 | negative tests |
 | A20 | 跨 workspace/raw-key/bundle-root 逃逸、网络/eval/墙钟/rAF/随机均被拒绝 | N4 | store/sandbox/gate tests |
-| A21 | canonical manifest 不受输入枚举顺序影响且 bundle hash 稳定 | N4 | deterministic test |
+| A21 | canonical manifest/bundle hash 稳定，CVC bundle 通过共享 descriptor conformance | N4 | deterministic + conformance test |
 | A22 | HyperFrames check 为 0 finding | N4 | CLI log |
 | A23 | 0/中/末/乱序 seek 可用 | N4 | smoke snapshots |
 | A24 | 同帧双拍像素 hash 相同 | N4 | hash report |

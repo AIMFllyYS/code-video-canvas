@@ -11,7 +11,8 @@ CVC 当前让模型生成接近可执行的完整 HTML，并用自建 `window.__
 确定性门禁分叉。
 
 PurpleInk Firenze 的 compiler 输入是受约束 Plan，CVC 的核心是 AI 生成代码，二者
-不能直接共用 compiler 输入，但可以共享 Bundle 和 Render Receipt。
+不能直接共用 compiler 输入或本地 bundle schema，但可以共享
+`RenderableBundleDescriptorV1` 和 Render Receipt。
 
 ## Decision
 
@@ -25,7 +26,13 @@ PurpleInk Firenze 的 compiler 输入是受约束 Plan，CVC 的核心是 AI 生
 7. G6–G10 覆盖 compile、check、seek、pixel hash、media probe；
 8. `__CVC_RENDER__@v1` 只存在于迁移期 legacy provider；
 9. parity 通过后删除 legacy provider；
-10. PurpleInk 只与 CVC 对齐 bundle/render contracts。
+10. standalone composition root 使用显式像素尺寸、`data-composition-id` 与
+    `data-duration`，不包 `<template>`；唯一全时长 `.clip` 使用显式 track；
+11. composition 只同步注册一个
+    `window.__timelines[compositionId] = gsap.timeline({ paused: true })`，key 必须与
+    root ID 完全一致；`timelineJs` 只能向它添加有限 tween；
+12. HyperFrames 拥有 `<audio>/<video>` 播放，模型代码不得自行 play/seek；
+13. PurpleInk 只与 CVC 对齐 renderable descriptor/render contracts。
 
 ## Consequences
 

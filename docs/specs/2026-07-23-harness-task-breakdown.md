@@ -1,5 +1,10 @@
 # AI 开发 Harness —— 任务拆解与 Goal 模式执行清单
 
+> [!IMPORTANT]
+> **状态：Superseded / Frozen Demo v1 ledger。** v3 唯一任务状态与依赖账本是
+> [v3 Task Breakdown](./2026-07-24-refactor-v3-task-breakdown.md)。本文 checkbox
+> 不得继续更新，也不得作为 N0–N7 的完成证据。
+
 > Created: 2026-07-23
 > Updated: 2026-07-23
 > Status: approved（配套 [`2026-07-23-ai-development-harness.md`](./2026-07-23-ai-development-harness.md) 使用）
