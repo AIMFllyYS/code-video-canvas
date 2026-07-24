@@ -85,9 +85,28 @@ app  →  features  →  lib
 - **组件分层（原子化）**：
   - `components/ui/`：纯展示原语（Button / Card / Input …），无业务逻辑。
   - `components/icons/`：Lucide 图标组件（多源自 Pencil 稿件）。
-  - `components/motion/`（可选）：应用内交互动效原语。
+  - **动效原语不在 `components/`**：token/config/variants 在 `src/lib/motion/`，共享收起 / 抽屉组件在 `features/navigation/collapsible-panel.tsx`（详见 §8）。
   - `features/*/components/`：功能内组件，只能**组合** `components/ui`，不得重定义视觉原语（依赖方向单向：`features/*/components → components/ui`）。
 - **/playbook 组件手册**：应用内「活文档 / 组件画廊」（应用内版 Storybook，零额外构建工具）。新增组件时在 `src/app/playbook/registry.ts` 登记并新建 `*.demo.tsx`；`/playbook` 按分类实时渲染展示。
 - **确定性边界**：`components/*` 与 `/playbook` 属**应用 UI**，允许 hover / CSS transition / 交互动画；确定性红线（禁 rAF / 墙钟 / CSS 动画）**只约束视频 shot 渲染**（见 §5）。
 - **Pencil → 组件工作流**：Pencil 稿（`.pen`）设计 → Pencil MCP（`export_html` / `export_nodes`）取标记 / SVG → 落为 `components/ui|icons/*` 的类型化命名导出组件 → `/playbook` 注册示例 → 各页 `import` 复用。颜色/间距/圆角均引用 `.pen` 中定义的 Design Token（见设计系统 §3）。
 - **双主题**：所有颜色变量均为 `light | dark` 双值；页面根节点通过 `theme.mode` 切换，组件实现必须同时支持两主题。
+
+## 8. 应用动效分层与降级（motion）
+
+> 应用 UI 动效的模块边界与新增规范；operational 精简版见 [AGENTS.md](../../AGENTS.md) 的「应用 UI 动效」。确定性红线（§5）只约束视频 shot 渲染，应用 UI 允许 motion / 过渡。
+
+- **技术栈**：`motion`（framer-motion 现名，`import { motion, AnimatePresence } from 'motion/react'`），React 19 兼容、SSR 安全。全局在根 `layout.tsx` 挂一次 `AppMotionConfig`（`reducedMotion="user"` + 默认 transition）。
+- **分层职责**：
+
+  | 层 | 位置 | 职责 |
+  |---|---|---|
+  | Token 真源 | `src/lib/motion/tokens.ts` + `globals.css` | 时长 / 缓动 / transition，JS↔CSS 双镜像（必须同步） |
+  | 全局配置 | `src/lib/motion/config.tsx` | `AppMotionConfig`：reducedMotion + 默认 transition，根 layout 挂一次 |
+  | 可复用 variants | `src/lib/motion/variants.ts` | 进入 / 离场 / 滑入的声明式 variants |
+  | 共享折叠 / 抽屉 | `features/navigation/collapsible-panel.tsx` | `AnimatedAside`（缓动宽度）/ `DrawerOverlay`（scrim + 边缘滑入），四处折叠面板复用 |
+  | 可信上下文 | `features/navigation/nav-context.tsx` | 页面发布 / 侧栏消费 `{ projectId, rendererNodeId }`（不承载动效） |
+  | 壳组合 | `app-shell` / `app-sidebar-shell` | 读 context、派生 active、组合原语（不定义新原语、不登记 /playbook） |
+
+- **新增动效规范**：只用 `motion/react` + `src/lib/motion` token；复用上表原语，禁在页面另造抽象；改时长 / 缓动只改 `tokens.ts` + `globals.css` 两处并保持同步；跟随 `prefers-reduced-motion` 降级，禁用定时器 / rAF 手搓动画绕过；实时手势进行中动画时长置 0（`TRANSITION_INSTANT`）保证 1:1 跟手。
+- **红线**：motion 只服务应用 UI，**绝不**进入 shot 渲染（`features/render/*` / shot HTML / GSAP seek 管线）。

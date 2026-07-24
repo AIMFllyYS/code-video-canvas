@@ -86,6 +86,7 @@ src/
     queue/             进程内持久队列
     gsap/              GSAP↔seek 确定性桥
     determinism/       确定性 lint / 守卫
+    motion/            应用 UI 动效 token/config/variants（JS↔CSS 镜像，仅应用层）
   components/
     ui/                纯展示原语（Button / Card …）
     icons/             Lucide 图标组件（白名单制，源自 Pencil）
@@ -113,6 +114,27 @@ docs/  scripts/  public/
 - Render 路由不得自行查表/拼 artifact 路径，只调用可信 enqueue/export service；Director/Render 共用根 `instrumentation.ts` 启动的单例队列。
 - UI 作业轮询必须按 projectId 隔离；浏览器只使用 artifact id 下载 URL，不得
   暴露 StorageAdapter key、本机绝对路径或让页面自行拼 artifact 路径。
+
+### 应用 UI 动效（motion）— 新增动效规范
+
+> 何时读：新增/修改任何收起展开、抽屉、页面过渡、骨架、hover 态等应用动效前。**红线**：这套规范只服务应用 UI，`features/render/*` / shot HTML / GSAP seek 管线仍受上面的确定性红线约束（禁 rAF / 墙钟 / CSS 动画）。
+
+- **只用 motion + token**：动效一律 `import { motion, AnimatePresence } from 'motion/react'` + `src/lib/motion` 的 token（`DURATION` / `EASE` / `TRANSITION_BASE|ENTER|EXIT|INSTANT`）。**禁**硬编码毫秒 / 贝塞尔，**禁**裸写 CSS `transition:` / `animation:`（走 token 的 Tailwind `transition-colors` 等 utility 除外），**禁**从 `framer-motion` 包名导入（统一 `motion/react`）。
+- **先复用原语，别造平行抽象**：收起 / 展开用 `collapsible-panel` 的 `AnimatedAside`（缓动宽度）或缓动列宽；抽屉（窄屏 / 自动收起）用 `DrawerOverlay`（scrim 淡入 + 边缘滑入 / 滑出）；进入 / 离场 / 滑入用 `variants.ts`。同类需求扩展这些原语，不在页面里另写一套。
+- **改参数只改真源**：调整时长 / 缓动只动 `src/lib/motion/tokens.ts` + `globals.css` 两处，且必须同步（JS 镜像 = CSS 变量），不在组件里就地改数。
+- **降级是硬要求**：全局 `AppMotionConfig`（`reducedMotion="user"`，只在根 `layout.tsx` 挂一次）+ `globals.css` 的 `prefers-reduced-motion` 已兜底；新动效不得用 `setTimeout` / `setInterval` / rAF 手搓动画绕过降级。
+- **手势 1:1**：实时手势（拖拽调宽等）进行中把 transition 时长置 0（`TRANSITION_INSTANT`）保证跟手，仅释放后的状态切换才缓动。
+- **职责边界**（改动效 / 侧栏前先对号入座，别越界）：
+
+  | 位置 | 职责 | 不做 |
+  |---|---|---|
+  | `src/lib/motion/tokens.ts`（+ `globals.css`） | duration/ease/transition 唯一事实源（JS↔CSS 双镜像） | 组件逻辑 |
+  | `src/lib/motion/config.tsx`（`AppMotionConfig`） | 全局 reducedMotion + 默认 transition，根 layout 挂一次 | 局部动效 |
+  | `src/lib/motion/variants.ts` | 可复用进入 / 离场 / 滑入 variants | 布局 / 业务 |
+  | `features/navigation/collapsible-panel.tsx` | 收起展开 + 抽屉的**唯一**共享动效组件（`AnimatedAside` / `DrawerOverlay`） | 页面特定业务 |
+  | `features/navigation/nav-context.tsx` | 页面发布 / 侧栏消费可信 `{ projectId, rendererNodeId }` | 承载动效 |
+  | `app-shell` / `app-sidebar-shell` | 读 context、`usePathname()` 派生 active、组合已登记原语 | 定义新视觉 / 动效原语、登记 `/playbook` |
+  | 页面 `src/app/(app)/**` | 发布 nav-context + 渲染右侧内容 | 渲染壳、复制侧栏、重复动效实现 |
 
 ### Next.js 16.2+
 
@@ -156,6 +178,7 @@ docs/  scripts/  public/
 - 命名导出优先（page/layout 除外）；strict 模式禁 `any`，用 `unknown` + 收窄。
 - Tailwind 处理样式，`clsx`/`cn()` 处理条件 className。
 - **设计 Token 强制**：颜色/阴影/圆角/间距必须引用设计系统变量（见 [设计系统清单](./docs/designs/2026-07-23-design-system-inventory.md)），**禁止硬编码 hex / rgba**；暗色背景 `#0F0F0F`（非纯黑）；已删除色 `pink`/`indigo` 不得使用。
+- **动效走 motion + token**：新增交互动效只用 `motion/react` + `src/lib/motion` token，复用 `collapsible-panel` / `variants`，禁硬编码时长 / 贝塞尔，跟随 `prefers-reduced-motion` 降级；motion 绝不进 shot 渲染（详见 Non-Obvious Patterns「应用 UI 动效」）。
 - **图标**：统一使用 Lucide 白名单内图标（`lucide-react`），禁 emoji；命名以设计系统 §6.3 标准名为准（如 `circle-plus` 而非 `plus-circle`）。
 - 新功能必须写测试；改动后跑 `pnpm lint`。
 - 调试/原型放 `src/app/_dev/`，完成后迁回正式路由并清理。
@@ -175,6 +198,7 @@ docs/  scripts/  public/
 - 组件复用：是否重复实现了 `components/ui` 已有的视觉原语；新组件是否登记 `/playbook`。
 - **设计 Token 违规**：是否散落硬编码 hex/rgba 颜色（应引用 token）；是否使用了已删除色（pink/indigo）；阴影是否统一用 `shadow-card`/`shadow-float`。
 - **图标违规**：是否使用了 Lucide 白名单外图标或 emoji；图标名是否用旧名（如 `plus-circle` 应为 `circle-plus`）。
+- **动效违规**：是否硬编码毫秒 / 贝塞尔或裸写 CSS `transition`/`animation`（应引用 `--duration-*`/`--ease-*` 或 `src/lib/motion` token）；是否手搓定时器动画绕过 `prefers-reduced-motion` 降级；是否重复实现 `collapsible-panel` 已有的收起 / 抽屉；motion 是否误入 shot 渲染管线。
 
 ## Git Workflow
 

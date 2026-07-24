@@ -156,6 +156,17 @@ y≈5803    Zone D · 暗色页面（对齐 S1–S6 正下方）
 - 抽屉（窄屏 / 自动收起）用 `AnimatePresence` 的 `DrawerOverlay`：scrim 淡入淡出 + 面板从边缘滑入/滑出。
 - 骨架 shimmer 用 `--animate-shimmer`（1.6s ease-in-out 无限），仅在真实懒加载 / 异步等待时出现。
 
+职责分层（改动效前对号入座；新增只扩展以下层、不在页面另造抽象）：
+
+| 层 | 位置 | 职责 |
+|---|---|---|
+| Token 真源 | `src/lib/motion/tokens.ts` + `globals.css` | 时长 / 缓动 / transition（JS↔CSS 双镜像，必须同步） |
+| 全局配置 | `src/lib/motion/config.tsx` | `AppMotionConfig`：reducedMotion + 默认 transition，根 layout 挂一次 |
+| 可复用 variants | `src/lib/motion/variants.ts` | 进入 / 离场 / 滑入 |
+| 共享折叠 / 抽屉 | `features/navigation/collapsible-panel.tsx` | `AnimatedAside`（缓动宽度）/ `DrawerOverlay`（scrim + 滑入） |
+
+完整模块边界与新增规范见 [架构规范 §8](../conventions/architecture-conventions.md) 与 AGENTS.md「应用 UI 动效」。
+
 ---
 
 ## 4. 组件体系（Zone B · 30 reusable）

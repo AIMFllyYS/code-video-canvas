@@ -36,6 +36,7 @@
 
 - 一律 Tailwind CSS；条件 className 用 `clsx` / `cn()`。
 - 不用 CSS Modules（除非覆盖第三方组件）。
+- **应用 UI 动效**：走 `motion/react` + `src/lib/motion` token（`--duration-*` / `--ease-*`），复用 `collapsible-panel` / `variants`，禁硬编码时长 / 贝塞尔，跟随 `prefers-reduced-motion` 降级（详见[架构规范 §8](./architecture-conventions.md)）。注意：§3 禁 CSS `animation`/`transition` 只约束**视频 shot 渲染**，应用 UI 不受此限。
 
 ## 6. 密钥与安全边界
 
