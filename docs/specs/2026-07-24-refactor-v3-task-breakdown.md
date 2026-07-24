@@ -241,11 +241,17 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   runtime unit 2 files / 8 tests、全量 88 files / 422 tests、lint/typecheck/build/
   `verify:v3` 与独立终审均 PASS；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n12)
-- [ ] **N1.3 repository async 化与逐域 Postgres cutover** —
-  `task_state=in_progress; status=ready; blocked_by=none; preflight=30498d8`;
+- [x] **N1.3 repository async 化与逐域 Postgres cutover** —
+  `task_state=done; status=ready; blocked_by=none; commit=18a7fda; preflight=b746b86; scope_doc=6407479`;
+  evidence=`docs/evidence/refactor-v3/n1/postgres-repository-cutover.md`；异步 PG
+  repository 已覆盖 Canvas/artifact/audio/Director/render/AI/settings/legacy
+  queue；真实 PG 14 files / 69 tests、常规 81 files / 371 tests、lint/typecheck、
+  CLI credential envelope import、diff/UTF-8/secret/import-boundary/runtime SQLite
+  扫描全部 PASS；旧 attempt、跨 workspace queue 饥饿与 audio 并发补偿均有 PG/并发
+  负测；浏览器/视觉 E2E 按用户要求留到 N7；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n13)
 - [ ] **N1.4 SQLite export、Postgres import 与计数/hash 对账** —
-  `task_state=todo; status=blocked; blocked_by=N1.3`;
+  `task_state=todo; status=ready; blocked_by=none; preflight=18a7fda`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n14)
 - [ ] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
   `task_state=todo; status=ready; blocked_by=none; preflight=513bb1d`;
