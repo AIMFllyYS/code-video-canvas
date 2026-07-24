@@ -214,6 +214,7 @@ Expected: commit 只含 contracts/config；无业务编排、DB schema 或 Key�
 - Create: `src/features/pipeline/contracts/task-source-boundary.test.ts`
 - Create: `src/features/pipeline/execution-context.ts`
 - Create: `src/features/pipeline/progress/progress-sink.ts`
+- Create: `src/features/pipeline/services/task-service.ts`
 - Create: `src/features/pipeline/services/pipeline-run-service.ts`
 - Create: `src/features/pipeline/services/project-plan-service.ts`
 - Create: `src/features/pipeline/services/shot-generate-service.ts`
@@ -280,6 +281,8 @@ typed stream writer 注入 context；下游 Pi、Playwright/HyperFrames、FFmpeg
 这些 service 才能组合 repository、Director、renderer、media；task shell 不得
 下沉这些细节。N3/N4/N5 后续替换 service 内部 adapter，不改变 task ID/payload。
 service 返回 `TaskResultV1` 所需的 artifact ID/checkpoint hash，绝不返回本机路径。
+六个领域 service 必须复用 `task-service.ts` 的唯一 result mapper/port 合同，禁止为
+每个 task 复制一套仅 task ID 不同的平行 wrapper。
 
 - [ ] **Step 4: 实现七个 task shell 与稳定错误映射**
 
