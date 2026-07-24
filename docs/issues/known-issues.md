@@ -90,9 +90,9 @@ flowchart TB
 |---|---|---|---|---|---|
 | [`issue-09-stream-singleton-split-brain-and-replay`](./issue-09-stream-singleton-split-brain-and-replay.md) | P0 | 5 | 无 | 修复 streamBus/queue/db 模块级单例 split-brain + SSE useLive 判定 + 终态回放兜底，流式面板不再永久"正在连接 AI 流… 0 字" | **已完成**（2026-07-24） |
 | [`issue-10-stepfun-config-resolver-and-model-settings`](./issue-10-stepfun-config-resolver-and-model-settings.md) | P0 | 5 | 无 | `getStepfunConfig()` 统一 settings>env>默认 三层解析，设置页支持 4 类模型配置并消灭 `step-1-8k` 等假值 | **已完成**（2026-07-24，`208e6a3`） |
-| [`issue-11-one-click-pipeline-auto-advance`](./issue-11-one-click-pipeline-auto-advance.md) | P1 | 6 | 软依赖 issue-09（联调验收） | `advancePipeline` 消费 DAG 边链式自动推进 + autopilot 开关 + 顶栏一键启动接线 + Inspector 按钮文案修正 | **实现完成**（2026-07-24；68 files / 299 tests，真实 API/浏览器验收待本 Goal 末端统一执行） |
-| [`issue-12-tts-asr-vision-model-wiring-gap`](./issue-12-tts-asr-vision-model-wiring-gap.md) | P2 | 7 | issue-10 | TTS/ASR/Vision 三类模型从"定义了零引用"到真实接线（配音/字幕时间轴/多模态验收） | **实现完成**（2026-07-24；73 files / 324 tests，真实外部 API/浏览器验收待本 Goal 末端统一执行） |
-| [`issue-13-fabricate-gate-feedback-retry`](./issue-13-fabricate-gate-feedback-retry.md) | P2 | 7 | 建议 issue-11 后串行 | FABRICATE 确定性门禁失败时在同会话内有界反馈重试（违规明细回注模型），减少人工冷启动重试 | **已完成**（2026-07-24；同会话最多 2 轮反馈，并同构覆盖 SHOT_SPEC） |
+| [`issue-11-one-click-pipeline-auto-advance`](./issue-11-one-click-pipeline-auto-advance.md) | P1 | 6 | 软依赖 issue-09（联调验收） | `advancePipeline` 消费 DAG 边链式自动推进 + autopilot 开关 + 顶栏一键启动接线 + Inspector 按钮文案修正 | **已完成**（2026-07-24；真实 Gemini/StepFun 项目一键推进至 19/19 success 并产出终片） |
+| [`issue-12-tts-asr-vision-model-wiring-gap`](./issue-12-tts-asr-vision-model-wiring-gap.md) | P2 | 7 | issue-10 | TTS/ASR/Vision 三类模型从"定义了零引用"到真实接线（配音/字幕时间轴/多模态验收） | **已完成**（2026-07-24；3 份真实 TTS/ASR/Vision 产物组经端测确认） |
+| [`issue-13-fabricate-gate-feedback-retry`](./issue-13-fabricate-gate-feedback-retry.md) | P2 | 7 | 建议 issue-11 后串行 | FABRICATE 确定性门禁失败时在同会话内有界反馈重试（违规明细回注模型），减少人工冷启动重试 | **已完成**（2026-07-24；同会话最多 2 轮反馈，真实流程 4 个会话触发反馈并继续推进） |
 
 ### 第二轮并行执行建议
 
@@ -136,3 +136,4 @@ flowchart TB
 | 2026-07-24（issue-09 完成） | 三根因叠加修复：①streamBus/queue/queue-init 标志/db-cache 四处进程内单例全部 globalThis 锚定（`__cvc*` 前缀），消灭 Next.js HMR split-brain；②`StreamBus` 将订阅者拆为独立 `listeners` Map，`subscribe` 只读回放快照、绝不隐式建 entry（不变式：仅 publish/markDone/markError 建 entry），且订阅先于首个 delta 仍能收到增量；③SSE `useLive` 由 `has()` 改 `isActive()` + 终态节点订到空快照时合并回放持久化日志兜底；前端 hook 快照 done 主动 close 双保险。新增 6 个测试（stream-bus 3 / SSE 路由 1 / queue-init 2）；全量 65 files/265 tests 绿，lint/tsc/build 通过，grep 核验无残留裸单例 |
 | 2026-07-24（issue-12 实现完成） | `shot-sfx` 接入真实 StepFun TTS 并登记 MP3/元数据，`shot-subtitle` 从同 lane 配音执行 StepFun ASR SSE 并登记词级字幕轨道；`shot-qa` 先跑确定性规则 QA，再以 25%/60%/95% 抽帧执行结构化 Vision QA，逐项门禁 `mustShow/mustAvoid` 并登记报告。副作用经独立端口动态加载，索引失败补偿删除 StorageAdapter 字节；全量 73 files/324 tests、lint/tsc/build 通过 |
 | 2026-07-24（issue-13 完成） | FABRICATE 与 SHOT_SPEC 的可信 artifact 门禁失败会在同一 DirectorSession 内最多反馈 2 轮，逐条回注违规并要求完整重交；耗尽后真实错误包含重试次数和最后明细。网络/schema/存储错误不重试；全量 73 files/329 tests、lint/tsc/build 通过 |
+| 2026-07-24（issue-11~13 统一端测收口） | 新增 Gemini 独立 provider 与 9 类节点路由，StepFun TTS/ASR 保持固定；真实页面创建 3 分镜项目并一键推进至 19/19 success，产出 3 份 render/TTS/ASR/Vision 产物组与 24 秒 1080×1920 H.264 终片。修复 FINALIZE 前未准备 final-mp4、Gemini 3 thought signature、FABRICATE 裸 HTML 协议、成功节点历史错误残留展示及刷新后终片显示 0% 等端测缺陷；最终全量 77 files/348 tests、lint/tsc/build 通过 |

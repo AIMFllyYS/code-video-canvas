@@ -6,7 +6,7 @@
 | Wave | 7（**硬依赖 issue-10**：必须先有统一 config resolver 才有可信的模型配置来源） |
 | 依赖 | issue-10（`getStepfunConfig()` 提供 ttsModel/asrModel/visionModel） |
 | 关联证据 | grep 核实：`STEPFUN_TTS_MODEL` / `STEPFUN_ASR_MODEL` / `STEPFUN_VISION_MODEL` 在 `src/` 内 0 处引用 |
-| 状态 | **实现完成**（2026-07-24；真实外部 API 与浏览器端测在 issue-11~13 + Gemini 统一验收阶段执行） |
+| 状态 | **已完成并通过真实外部 API/浏览器端到端验收**（2026-07-24） |
 
 ## 现状核查
 
@@ -90,6 +90,15 @@ issue-10 的边界是"配置值备好、可解析、可在设置页配置"；本
   打开 SQLite 或引入重型 Vision 依赖。
 - 新鲜验证：`pnpm lint`、`pnpm tsc --noEmit`、73 files / 324 tests、
   `pnpm build` 全部通过。
+- 真实端测对 3 条分镜分别生成 3 份 StepFun MP3、3 份
+  `voiceover-metadata`、3 份真实 ASR `subtitle-track` 与 3 份
+  Gemini `qa-vision-report`；报告记录 provider/model、逐项合同结果与
+  25%/60%/95% 三帧 artifact 指针。规则 QA 与 Vision QA 均写回同一
+  `shot-qa` 真实状态，其中语义不通过会诚实显示为未通过，不伪造成勾选。
+- 本 issue 的完成边界是“音频/字幕/视觉产物真实生成并登记”。当前
+  `exportProject()` 仍只拼接视频分镜与既有 music artifact，尚未把逐镜
+  `voiceover-audio` 混入终片；因此本次 24 秒最终 MP4 是 video-only，
+  配音 MP3 作为独立可信产物存在。该边界未用静态 UI 或文字伪装成已混音。
 
 ## 与其他 issue 的并行性
 

@@ -9,7 +9,9 @@
 - `issue-11`、`issue-12`、`issue-13` 是本次施工的上位规格；禁止改变 DAG 边定义、队列职责、确定性门禁或 `StorageAdapter` 边界。
 - 所有状态推进由服务端可信 DB 数据决定，客户端只触发开始/停止和显示服务端状态。
 - Director 继续使用项目原生 Pi `Agent + JsonlSessionRepo`，不引入 Skills/Extensions。
-- Gemini 使用项目已有 `openai` 与 `pi-ai` 的 OpenAI-compatible 通路，不增加运行时依赖。
+- Gemini Key 校验与 Vision 使用官方 OpenAI-compatible 通路；Director 的 Pi
+  tool-calling 会话使用 `pi-ai` 已有的原生 `google-generative-ai` API，以完整
+  保留 Gemini 3 函数调用要求的 thought signature，不增加运行时依赖。
 - Key 只允许进入 SQLite `settings` 或被 Git 忽略的 `.env.local`，不得返回客户端、写日志或提交。
 
 ## Architecture
@@ -72,7 +74,9 @@ FABRICATE 使用 `buildFabricateRetryPrompt()`；SHOT_SPEC 使用同构 `buildSh
 - 节点 route 保存为 settings JSON，结构为 `{ nodeType: { provider, model } }`，经 Zod 严格校验。
 - 无显式 route 时：若 Gemini Key 可用，则轻量节点使用 fast、复杂代码/镜头/视觉节点使用 primary；否则回退现有 StepFun chat model，避免破坏仅配置 StepFun 的用户。
 - Pi session 按服务端可信 `nodeType` 构造对应 provider/model；Key 由 runtime 闭包提供，不写入 model 对象或 session JSONL。
-- Google 新模型不发送已弃用的 `temperature/top_p/top_k`；Pi model 标记为非 reasoning，避免自动注入不必要参数。
+- Google 新模型不发送 `temperature/top_p/top_k`；Pi 的 Gemini model 使用原生
+  `google-generative-ai` API 并标记 `reasoning: true`，让工具调用往返保留
+  thought signature。StepFun 继续使用 OpenAI Completions API。
 
 音频边界不随 route 改变：TTS/ASR 始终读取 StepFun 配置；`shot-sfx`/`shot-subtitle` 的 Director 文本规划仍可选 Gemini，但实体音频调用保持 StepFun。
 

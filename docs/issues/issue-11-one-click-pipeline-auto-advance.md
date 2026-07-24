@@ -6,7 +6,7 @@
 | Wave | 6（建议 issue-09 先落地——本 issue 的链式执行会放大 split-brain 流式问题的暴露面） |
 | 依赖 | 软依赖 issue-09（非阻塞：文件零重叠，可并行开发，但联调验收建议在 issue-09 合并后进行） |
 | 关联证据 | 顶栏"全部渲染"按钮 `disabled` 死按钮；Inspector 按钮文案"全部渲染"实际只执行单节点 |
-| 状态 | **实现完成，待本 Goal 末端真实 API/浏览器统一验收**（2026-07-24） |
+| 状态 | **已完成并通过真实 API/浏览器端到端验收**（2026-07-24） |
 
 ## 现状核查
 
@@ -98,7 +98,7 @@ export function advancePipeline(projectId: string, completedNodeId: string): voi
 
 **完成条件**：
 
-- [ ] 新建项目 → 填稿 → 点一次"一键启动" → INGEST → fan-out → 各通道 SHOT_SPEC → FABRICATE(render) → ASSEMBLE → FINALIZE 全自动推进（真实模型/浏览器验收安排在本 Goal 末端统一执行）
+- [x] 新建项目 → 填稿 → 点一次"一键启动" → INGEST → fan-out → 各通道 SHOT_SPEC → FABRICATE(render) → ASSEMBLE → FINALIZE 全自动推进
 - [x] 中途某节点 failed：其下游不入队，其他分镜通道继续；重试成功后链路续跑
 - [x] autopilot 关闭时行为与现状完全一致（手动单点执行不触发链式推进）
 - [x] advance 规则单测：多入度等待 / 幂等防重 / 失败分支停止 / autopilot 开关
@@ -113,6 +113,14 @@ export function advancePipeline(projectId: string, completedNodeId: string): voi
 - `POST/DELETE /api/director/pipeline` 支持开启、续跑和停止；停止不伪装为取消已经入队的任务。
 - 顶栏死按钮已替换为真实“一键启动/停止自动推进”，Inspector 单节点动作更名为“执行此阶段”。
 - 新增/扩展测试后，全量 `68 files / 299 tests` 通过；`pnpm lint`、`pnpm tsc --noEmit`、`pnpm build` 均退出 0。
+- 真实端测项目 `Gemini 多模型真实端测 2026-07-24` 由页面创建并一键启动，
+  服务端自动推进到 `19/19` 节点全部 `success`；3 条分镜通道均完成
+  SHOT_SPEC、FABRICATE、render、配音、字幕与 QA，最后生成并提交
+  `final-mp4`。
+- 端测纠正了一个真实时序缺陷：`export` FINALIZE 之前先由可信
+  `exportProject()` 生成 `final-mp4`，再入队 FINALIZE，满足 issue-01 已拍板的
+  前置契约。导出页刷新后会恢复最新可信终片、100% 状态与 `final.mp4` 链接，
+  不再把既有成片显示为 0%，也不再用固定 62% 伪装导出进度。
 
 ## 与其他 issue 的并行性
 

@@ -82,6 +82,10 @@ session.run(prompt) → prepareStageResult() → writeValidatedArtifact()
   `recordStageError`、SSE 终态与 Inspector 会读取同一真实错误。
 - 新鲜验证：`pnpm lint`、`pnpm tsc --noEmit`、73 files / 329 tests、
   `pnpm build` 全部通过。
+- 真实 Gemini 流程的 30 份 Pi 会话中有 4 份会话留下可信门禁反馈，
+  合计 7 次反馈痕迹；这些会话在原上下文内修正后继续推进，没有冷启动丢失
+  shot contract。最终 3 个 SHOT_SPEC 与 3 个 FABRICATE 节点均成功，
+  FABRICATE 产物以裸 HTML 提交并满足 `window.__CVC_RENDER__@v1`。
 
 ## 与其他 issue 的并行性
 

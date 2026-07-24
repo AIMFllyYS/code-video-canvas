@@ -1707,9 +1707,9 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 | `issue-08-export-service-storage-adapter-boundary` | P2 | 2 | 无 | ✅ 已完成（2026-07-24，`19fe79b`）：`export-service.ts` 裸 `fs` 改走 `StorageAdapter` |
 | `issue-09-stream-singleton-split-brain-and-replay` | P0 | 5 | 无 | ✅ 已完成（2026-07-24）：统一 stream/queue/db 进程内单例并补终态回放 |
 | `issue-10-stepfun-config-resolver-and-model-settings` | P0 | 5 | 无 | ✅ 已完成（2026-07-24，`208e6a3`）：StepFun 六项配置统一 resolver + 设置页真实值 |
-| `issue-11-one-click-pipeline-auto-advance` | P1 | 6 | 软依赖 issue-09 | ◐ 实现完成（2026-07-24）：服务端 DAG 自动推进 + 项目 autopilot + 一键启停；真实端测待本 Goal 统一执行 |
-| `issue-12-tts-asr-vision-model-wiring-gap` | P2 | 7 | issue-10 | ◐ 实现完成（2026-07-24）：真实 TTS 配音 + ASR 词级字幕 + 规则/Vision 双层 QA；真实端测待本 Goal 统一执行 |
-| `issue-13-fabricate-gate-feedback-retry` | P2 | 7 | 建议 issue-11 后串行 | ✅ 已完成（2026-07-24）：FABRICATE/SHOT_SPEC 门禁同会话最多 2 轮有界反馈重试 |
+| `issue-11-one-click-pipeline-auto-advance` | P1 | 6 | 软依赖 issue-09 | ✅ 已完成（2026-07-24）：服务端 DAG 自动推进 + 项目 autopilot + 一键启停；真实 3 分镜项目端测 19/19 success |
+| `issue-12-tts-asr-vision-model-wiring-gap` | P2 | 7 | issue-10 | ✅ 已完成（2026-07-24）：真实 TTS 配音 + ASR 字幕 + 规则/Vision 双层 QA；三条分镜外部 API 产物已核验 |
+| `issue-13-fabricate-gate-feedback-retry` | P2 | 7 | 建议 issue-11 后串行 | ✅ 已完成（2026-07-24）：FABRICATE/SHOT_SPEC 门禁同会话最多 2 轮有界反馈重试；真实流程已触发并恢复 |
 
 推进顺序遵循 Wave 分组（同 Wave 内可并行）：Wave 1（issue-01/02）→ Wave 2（issue-03/04/07/08，可与 Wave 1 尾声并行）→ Wave 3（issue-05）→ Wave 4（issue-06）→ Wave 5（issue-09/10）→ Wave 6（issue-11）→ Wave 7（issue-12/13）。
 
