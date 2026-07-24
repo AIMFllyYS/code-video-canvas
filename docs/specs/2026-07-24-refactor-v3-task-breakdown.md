@@ -260,7 +260,13 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   secret、绝对机器路径与 staged scope 门禁通过；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n14)
 - [ ] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
-  `task_state=todo; status=ready; blocked_by=none; preflight=513bb1d`;
+  `task_state=in_progress; status=blocked; blocked_by=external-trigger-auth; checkpoint=3a94299; preflight=513bb1d`;
+  evidence=`docs/evidence/refactor-v3/n1-spikes.json` 与
+  `docs/evidence/refactor-v3/n1/trigger-realtime.md`；真实 Pi terminal Tool 与
+  HyperFrames doctor/check/5 snapshots/render/ffprobe/decode 均通过；Trigger
+  `cvc.pipeline.run`、typed stream 与真实 probe 已实现并通过静态门禁，但本机无
+  Trigger.dev 登录态、project ref 或 server key，浏览器亦无已认证会话，故未生成
+  run ID、未伪造通过，`--verify-evidence` 正确以 `TRIGGER_PASSED_INVALID` 失败；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n15)
 - [ ] **N1.6 移除 runtime SQLite，仅保留只读 migration 工具** —
   `task_state=todo; status=blocked; blocked_by=N1.3,N1.4,N1.5`;
