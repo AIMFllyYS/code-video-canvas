@@ -1,38 +1,29 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
 import OpenAI from 'openai'
-import { getDb } from '@/lib/db/client'
-import { settings } from '@/lib/db/schema'
+import { getSettingValue, getStepfunConfig, setSettingValue, STEPFUN_SETTINGS_KEYS } from './config'
 import type { ChatMessage, ChatOptions, LlmAdapter } from './types'
 
-const SETTINGS_KEY = 'stepfun_api_key'
-
-/** 读取本地保存的 StepFun Key（仅服务端）。 */
+/** 读取本地保存的 StepFun Key（仅服务端；只读 settings 表，不回退 env）。 */
 export function getStoredApiKey(): string | null {
-  const row = getDb().select().from(settings).where(eq(settings.key, SETTINGS_KEY)).get()
-  return row?.value ?? null
+  return getSettingValue(STEPFUN_SETTINGS_KEYS.apiKey)
 }
 
 /** 保存 StepFun Key（仅服务端；永不进前端 bundle）。 */
 export function saveApiKey(apiKey: string): void {
-  getDb()
-    .insert(settings)
-    .values({ key: SETTINGS_KEY, value: apiKey })
-    .onConflictDoUpdate({ target: settings.key, set: { value: apiKey } })
-    .run()
+  setSettingValue(STEPFUN_SETTINGS_KEYS.apiKey, apiKey)
 }
 
-function createClient(apiKey: string): OpenAI {
-  const baseUrl = process.env.STEPFUN_BASE_URL ?? 'https://api.stepfun.com/v1'
+function createClient(apiKey: string, baseUrl: string): OpenAI {
   return new OpenAI({ apiKey, baseURL: baseUrl })
 }
 
-/** 校验 Key 是否可用（用与真实对话一致的最小 chat 探测）。 */
+/** 校验 Key 是否可用（用与真实对话一致的最小 chat 探测；端点/模型走统一 resolver）。 */
 export async function validateKey(apiKey: string): Promise<boolean> {
+  const config = getStepfunConfig()
   try {
-    await createClient(apiKey).chat.completions.create(
+    await createClient(apiKey, config.baseUrl).chat.completions.create(
       {
-        model: process.env.STEPFUN_CHAT_MODEL ?? 'step-3.5-flash',
+        model: config.chatModel,
         messages: [{ role: 'user', content: 'ping' }],
         max_tokens: 1,
       },
@@ -54,16 +45,16 @@ export function createLlmFromSettings(): StepfunAdapter | null {
   return key ? new StepfunAdapter(key) : null
 }
 
-/** StepFun LLM 适配器（OpenAI 兼容端点）。 */
+/** StepFun LLM 适配器（OpenAI 兼容端点；端点/模型统一走 `getStepfunConfig()`）。 */
 export class StepfunAdapter implements LlmAdapter {
   private readonly client: OpenAI
 
   constructor(apiKey: string) {
-    this.client = createClient(apiKey)
+    this.client = createClient(apiKey, getStepfunConfig().baseUrl)
   }
 
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<string> {
-    const model = options.model ?? process.env.STEPFUN_CHAT_MODEL ?? 'step-3.5-flash'
+    const model = options.model ?? getStepfunConfig().chatModel
     const res = await this.client.chat.completions.create({
       model,
       messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],

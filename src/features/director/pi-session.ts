@@ -11,13 +11,10 @@ import {
   type Model,
 } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
-import { getStoredApiKey } from '@/features/ai/stepfun-adapter'
+import { getStepfunConfig } from '@/features/ai/config'
 import { streamBus } from '@/lib/stream/stream-bus'
 import { STAGE_META } from './pipeline'
 import { DirectorSessionStore, type SessionStoreInput } from './session-store'
-
-const DEFAULT_BASE_URL = 'https://api.stepfun.com/v1'
-const DEFAULT_MODEL = 'step-3.5-flash'
 
 export interface DirectorToolResult {
   content: string
@@ -68,9 +65,7 @@ export async function createDirectorSession(
       streamFn: (model, agentContext, options) =>
         runtime.models.streamSimple(model, agentContext, options),
       getApiKey: (provider) =>
-        provider === 'stepfun'
-          ? getStoredApiKey() ?? process.env.STEPFUN_API_KEY
-          : undefined,
+        provider === 'stepfun' ? getStepfunConfig().apiKey ?? undefined : undefined,
       sessionId: stored.id,
       toolExecution: 'sequential',
     })
@@ -144,12 +139,12 @@ function adaptDirectorTool(tool: DirectorTool): AgentTool {
 }
 
 function createStepfunRuntime() {
-  const baseUrl = process.env.STEPFUN_BASE_URL ?? DEFAULT_BASE_URL
-  const model = createStepfunModel(baseUrl, process.env.STEPFUN_CHAT_MODEL ?? DEFAULT_MODEL)
+  const config = getStepfunConfig()
+  const model = createStepfunModel(config.baseUrl, config.chatModel)
   const provider = createProvider({
     id: 'stepfun',
     name: 'StepFun',
-    baseUrl,
+    baseUrl: config.baseUrl,
     auth: { apiKey: envApiKeyAuth('StepFun API key', ['STEPFUN_API_KEY']) },
     models: [model],
     api: openAICompletionsApi(),

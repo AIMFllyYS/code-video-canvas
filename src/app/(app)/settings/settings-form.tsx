@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -10,10 +11,60 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TextField } from '@/components/ui/text-field'
 import { Toggle } from '@/components/ui/toggle'
 import { Toast } from '@/components/ui/toast'
+import type { StepfunConfigView, StepfunModelField } from '@/features/ai/config'
 import { usePublishNavContext } from '@/features/navigation/nav-context'
 import { ThemeControl } from './theme-control'
 
 type ValidationState = 'unconfigured' | 'validating' | 'valid' | 'invalid'
+
+const MODEL_FIELD_LABELS: Record<StepfunModelField, string> = {
+  baseUrl: '端点',
+  chatModel: 'Chat 模型',
+  ttsModel: 'TTS 模型',
+  asrModel: 'ASR 模型',
+  visionModel: 'Vision 模型',
+}
+
+const MODEL_FIELD_ORDER: StepfunModelField[] = [
+  'baseUrl',
+  'chatModel',
+  'ttsModel',
+  'asrModel',
+  'visionModel',
+]
+
+type ModelDraft = Record<StepfunModelField, string>
+
+const EMPTY_DRAFT: ModelDraft = {
+  baseUrl: '',
+  chatModel: '',
+  ttsModel: '',
+  asrModel: '',
+  visionModel: '',
+}
+
+interface SettingsResponse {
+  configured?: boolean
+  models?: StepfunConfigView
+  renderConcurrency?: number
+  storageDir?: string
+}
+
+/** settings 表已保存覆盖值时回显该值；否则留空，由 placeholder 展示 env/默认生效值。 */
+function draftFromModels(models: StepfunConfigView | undefined): ModelDraft {
+  if (!models) return EMPTY_DRAFT
+  return MODEL_FIELD_ORDER.reduce((acc, field) => {
+    acc[field] = models[field].source === 'settings' ? models[field].value : ''
+    return acc
+  }, { ...EMPTY_DRAFT })
+}
+
+function placeholderFor(field: StepfunConfigView[StepfunModelField] | undefined): string {
+  if (!field) return ''
+  if (field.source === 'env') return `${field.value}（跟随环境变量）`
+  if (field.source === 'default') return `${field.value}（内置默认）`
+  return field.value
+}
 
 export function SettingsForm({
   projectId,
@@ -28,12 +79,25 @@ export function SettingsForm({
   const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState<string>()
 
+  const [models, setModels] = useState<StepfunConfigView>()
+  const [draft, setDraft] = useState<ModelDraft>(EMPTY_DRAFT)
+  const [modelSaving, setModelSaving] = useState(false)
+  const [modelSaved, setModelSaved] = useState(false)
+  const [renderConcurrency, setRenderConcurrency] = useState<number>()
+  const [storageDir, setStorageDir] = useState<string>()
+
   usePublishNavContext({ projectId, rendererNodeId })
 
   useEffect(() => {
     void fetch('/api/settings')
-      .then((response) => response.json() as Promise<{ configured?: boolean }>)
-      .then(({ configured }) => setState(configured ? 'valid' : 'unconfigured'))
+      .then((response) => response.json() as Promise<SettingsResponse>)
+      .then((body) => {
+        setState(body.configured ? 'valid' : 'unconfigured')
+        setModels(body.models)
+        setDraft(draftFromModels(body.models))
+        setRenderConcurrency(body.renderConcurrency)
+        setStorageDir(body.storageDir)
+      })
       .catch(() => setState('unconfigured'))
       .finally(() => setInitializing(false))
   }, [])
@@ -66,6 +130,26 @@ export function SettingsForm({
     )
   }
 
+  async function saveModelSettings() {
+    setModelSaving(true)
+    setModelSaved(false)
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(draft),
+      })
+      const body = (await response.json()) as SettingsResponse
+      if (response.ok) {
+        setModels(body.models)
+        setDraft(draftFromModels(body.models))
+        setModelSaved(true)
+      }
+    } finally {
+      setModelSaving(false)
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col gap-6 overflow-y-auto px-4 py-10">
         <h1 className="text-[28px] font-bold">设置</h1>
@@ -88,19 +172,61 @@ export function SettingsForm({
           </SettingsRow>
           <SettingsSeparator />
           <SettingsRow label="显示 Key"><Toggle checked={reveal} onCheckedChange={setReveal} /></SettingsRow>
+          {MODEL_FIELD_ORDER.map((field) => (
+            <div key={field}>
+              <SettingsSeparator />
+              <SettingsRow label={MODEL_FIELD_LABELS[field]}>
+                {initializing ? (
+                  <Skeleton className="h-9 w-[260px] rounded-md" />
+                ) : (
+                  <TextField
+                    aria-label={MODEL_FIELD_LABELS[field]}
+                    value={draft[field]}
+                    onChange={(event) =>
+                      setDraft((prev) => ({ ...prev, [field]: event.target.value }))
+                    }
+                    placeholder={placeholderFor(models?.[field])}
+                    className="w-[260px]"
+                  />
+                )}
+              </SettingsRow>
+            </div>
+          ))}
           <SettingsSeparator />
-          <SettingsRow label="模型" value="step-1-8k" />
-          <SettingsSeparator />
-          <SettingsRow label="端点" value="https://api.stepfun.com/v1" />
+          <SettingsRow label="模型设置">
+            <span className="text-[13px] text-label-tertiary">留空回退环境变量/内置默认</span>
+            <Button size="sm" variant="gray" onClick={saveModelSettings} disabled={modelSaving}>
+              保存
+            </Button>
+            {modelSaved && <StatusPill variant="rendered" label="已保存" />}
+          </SettingsRow>
         </SettingsSection>
         <SettingsSection title="渲染">
-          <SettingsRow label="渲染并发数" value="4" />
+          <SettingsRow
+            label="渲染并发数"
+            value={renderConcurrency ? `${renderConcurrency}（CPU 核数，暂不可配置）` : undefined}
+          />
           <SettingsSeparator />
-          <SettingsRow label="默认分辨率" value="1080×1920" />
+          <SettingsRow label="导出分辨率">
+            {projectId ? (
+              <Link
+                href={`/canvas/export?projectId=${encodeURIComponent(projectId)}`}
+                className="text-[13px] text-accent underline-offset-2 hover:underline"
+              >
+                按项目在导出页配置
+              </Link>
+            ) : (
+              <span className="text-[13px] text-label-tertiary">按项目在导出页配置</span>
+            )}
+          </SettingsRow>
           <SettingsSeparator />
-          <SettingsRow label="存储位置" value="~/CodeVideoCanvas/projects" />
+          <SettingsRow label="存储位置" value={storageDir ?? undefined} />
           <SettingsSeparator />
-          <SettingsRow label="崩溃续渲"><Toggle checked readOnly /></SettingsRow>
+          <SettingsRow label="崩溃续渲">
+            {/* Demo 占位：队列作业状态已落 SQLite，但暂无崩溃后自动重新入队的恢复逻辑，
+                见 docs/issues/issue-10-*.md；不得用恒 checked 的 Toggle 伪装为已实现。 */}
+            <span className="text-[13px] text-label-tertiary">尚未实现（Demo 占位）</span>
+          </SettingsRow>
         </SettingsSection>
         <SettingsSection title="外观">
           <SettingsRow label="主题">

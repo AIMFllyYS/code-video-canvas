@@ -1,14 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { createDb, type Db } from '@/lib/db/migrate'
 import { StepfunAdapter, validateKey } from './stepfun-adapter'
 
-const { createMock, openAiConstructorMock } = vi.hoisted(() => ({
+const { createMock, openAiConstructorMock, getDbMock } = vi.hoisted(() => ({
   createMock: vi.fn().mockResolvedValue({
     choices: [{ message: { content: 'mocked content' } }],
   }),
   openAiConstructorMock: vi.fn(),
+  getDbMock: vi.fn<() => Db>(),
 }))
 
 vi.mock('server-only', () => ({}))
+vi.mock('@/lib/db/client', () => ({ getDb: getDbMock }))
 
 vi.mock('openai', () => {
   class MockAPIError extends Error {
@@ -32,14 +35,18 @@ vi.mock('openai', () => {
 
 describe('StepfunAdapter', () => {
   const originalEnv = { ...process.env }
+  let database: ReturnType<typeof createDb>
 
   beforeEach(() => {
     vi.clearAllMocks()
     process.env = { ...originalEnv }
+    database = createDb(':memory:')
+    getDbMock.mockReturnValue(database.db)
   })
 
   afterEach(() => {
     process.env = originalEnv
+    database.sqlite.close()
   })
 
   it('should initialize OpenAI client with correct baseURL from environment', () => {
@@ -103,14 +110,18 @@ describe('StepfunAdapter', () => {
 
 describe('validateKey', () => {
   const originalEnv = { ...process.env }
+  let database: ReturnType<typeof createDb>
 
   beforeEach(() => {
     vi.clearAllMocks()
     process.env = { ...originalEnv }
+    database = createDb(':memory:')
+    getDbMock.mockReturnValue(database.db)
   })
 
   afterEach(() => {
     process.env = originalEnv
+    database.sqlite.close()
   })
 
   it('should return true when the chat probe succeeds', async () => {

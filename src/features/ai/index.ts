@@ -7,3 +7,13 @@ export {
   saveApiKey,
   validateKey,
 } from './stepfun-adapter'
+export {
+  describeStepfunConfig,
+  getStepfunConfig,
+  saveStepfunModelSettings,
+  type StepfunConfig,
+  type StepfunConfigSource,
+  type StepfunConfigView,
+  type StepfunModelField,
+  type StepfunModelSettingsInput,
+} from './config'
