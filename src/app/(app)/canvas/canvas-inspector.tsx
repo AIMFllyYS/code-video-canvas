@@ -1,6 +1,7 @@
 'use client'
 
-import { ChevronRight, FileCode, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronRight, FileCode, LoaderCircle, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArtifactChip } from '@/components/ui/artifact-chip'
 import { Button } from '@/components/ui/button'
@@ -79,7 +80,7 @@ export function CanvasInspector({
   const body = node ? (
     <InspectorBody
       node={node}
-      progress={node.status === 'success' ? 100 : node.status === 'running' ? 62 : 0}
+      projectId={projectId}
       submitting={submitting}
       error={error}
       onExecute={execute}
@@ -179,7 +180,7 @@ function EmptyInspector({
 
 function InspectorBody({
   node,
-  progress,
+  projectId,
   submitting,
   error,
   onExecute,
@@ -187,7 +188,7 @@ function InspectorBody({
   showCollapse,
 }: {
   node: CanvasGraphNode
-  progress: number
+  projectId: string
   submitting: boolean
   error?: string
   onExecute: () => void
@@ -219,25 +220,58 @@ function InspectorBody({
         <SettingsSeparator />
         <SettingsRow label="执行阶段" value={node.stage ?? '未配置'} />
         <SettingsSeparator />
-        <SettingsRow label="内容哈希" value="待生成" />
+        <SettingsRow
+          label="内容哈希"
+          value={node.contentHash ? node.contentHash.slice(0, 12) : '待生成'}
+        />
       </SettingsGroup>
       <div>
-        <p className="mb-2 text-[13px] font-semibold text-label-secondary">分镜合同 shot-plan</p>
-        <div className="flex flex-wrap gap-2">
-          <ArtifactChip icon={FileCode} filename="shot-plan.json" />
-          <ArtifactChip icon={FileCode} filename="script-units.json" />
-        </div>
+        <p className="mb-2 text-[13px] font-semibold text-label-secondary">关联产物</p>
+        {node.artifacts.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {node.artifacts.map((artifact) => (
+              <ArtifactChip
+                key={artifact.id}
+                icon={FileCode}
+                filename={ARTIFACT_FILENAME[artifact.kind] ?? artifact.filename}
+                href={`/api/artifacts/${artifact.id}?projectId=${projectId}`}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-[13px] text-label-tertiary">暂无产物</p>
+        )}
       </div>
-      <ProgressBar value={progress} label="生成进度" className="w-full" />
+      {node.status === 'success' && <ProgressBar value={100} label="生成进度" className="w-full" />}
+      {node.status === 'running' && (
+        <div className="flex w-full items-center gap-2 rounded-sm bg-fill px-3 py-2">
+          <LoaderCircle className="h-3.5 w-3.5 animate-spin text-accent" />
+          <span className="text-[13px] text-label-secondary">生成中，进度无法预估</span>
+        </div>
+      )}
       <Button variant="tinted" icon={RefreshCw} onClick={onExecute} disabled={submitting}>
         {node.type === 'shot-codegen' ? '重渲此镜' : '全部渲染'}
       </Button>
       {node.type === 'shot-codegen' && (
-        <Button variant="gray">查看代码</Button>
+        <Link href={`/canvas/shot/${node.id}?projectId=${projectId}`}>
+          <Button variant="gray">查看代码</Button>
+        </Link>
       )}
       {error && <Toast variant="error" title="失败" body={error} className="w-full" />}
     </div>
   )
+}
+
+/** 已知产物 kind 的展示层友好文件名；真实 key 内含内容哈希，直接展示会破坏布局。 */
+const ARTIFACT_FILENAME: Record<string, string> = {
+  'director-ingest': 'script-units.json',
+  'director-direct': 'style-bible.md',
+  'director-shot-spec': 'shot-plan.json',
+  'director-fabricate': 'shot.html',
+  'director-assemble': 'assemble-plan.json',
+  'director-finalize': 'finalize-report.json',
+  'render-mp4': 'render.mp4',
+  'final-mp4': 'final.mp4',
 }
 
 const STATUS_VARIANT: Record<CanvasGraphNode['status'], StatusPillVariant> = {

@@ -1,19 +1,27 @@
 import 'server-only'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
-import { canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
+import { artifacts, canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
 import { canvasNodeTypeSchema } from './schemas'
 import type { CanvasNodeType, Project } from './types'
+
+export interface CanvasNodeArtifact {
+  id: string
+  kind: string
+  filename: string
+}
 
 export interface CanvasGraphNode {
   id: string
   type: CanvasNodeType
   status: typeof canvasNodes.$inferSelect.status
   stage: string | null
+  contentHash: string | null
   data: Record<string, unknown>
   position: { x: number; y: number }
   laneKey: string | null
   laneRole: string | null
+  artifacts: CanvasNodeArtifact[]
 }
 
 export interface CanvasGraphEdge {
@@ -41,6 +49,7 @@ export function getCanvasGraph(projectId: string): CanvasGraph {
       type: canvasNodes.type,
       status: canvasNodes.status,
       stage: canvasNodes.stage,
+      contentHash: canvasNodes.contentHash,
       data: canvasNodes.data,
       position: canvasNodes.position,
       laneKey: canvasNodes.laneKey,
@@ -49,7 +58,11 @@ export function getCanvasGraph(projectId: string): CanvasGraph {
     .from(canvasNodes)
     .where(eq(canvasNodes.projectId, projectId))
     .all()
-    .map((node) => ({ ...node, type: canvasNodeTypeSchema.parse(node.type) }))
+    .map((node) => ({
+      ...node,
+      type: canvasNodeTypeSchema.parse(node.type),
+      artifacts: getNodeArtifacts(projectId, node.id),
+    }))
   const edges = db
     .select({
       id: canvasEdges.id,
@@ -60,4 +73,21 @@ export function getCanvasGraph(projectId: string): CanvasGraph {
     .where(eq(canvasEdges.projectId, projectId))
     .all()
   return { nodes, edges }
+}
+
+/** 某节点当前真实存在的产物列表（按最新优先），排除内部会话指针。 */
+export function getNodeArtifacts(projectId: string, nodeId: string): CanvasNodeArtifact[] {
+  return getDb()
+    .select({ id: artifacts.id, kind: artifacts.kind, path: artifacts.path })
+    .from(artifacts)
+    .where(and(eq(artifacts.projectId, projectId), eq(artifacts.nodeId, nodeId)))
+    .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
+    .all()
+    .filter((row) => row.kind !== 'pi-session')
+    .map((row) => ({ id: row.id, kind: row.kind, filename: basenameOf(row.path) }))
+}
+
+function basenameOf(path: string): string {
+  const segments = path.split('/')
+  return segments[segments.length - 1] || path
 }

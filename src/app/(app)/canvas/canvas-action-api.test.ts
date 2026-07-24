@@ -38,10 +38,12 @@ function node(overrides: Partial<CanvasGraphNode>): CanvasGraphNode {
     type: 'script-import',
     status: 'idle',
     stage: null,
+    contentHash: null,
     data: {},
     position: { x: 0, y: 0 },
     laneKey: null,
     laneRole: null,
+    artifacts: [],
     ...overrides,
   }
 }
