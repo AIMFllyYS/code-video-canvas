@@ -17,6 +17,7 @@ import { SearchFieldDemo } from '@/components/ui/search-field.demo'
 import { SegmentedControlDemo } from '@/components/ui/segmented-control.demo'
 import { SettingsGroupDemo } from '@/components/ui/settings-group.demo'
 import { SettingsRowDemo } from '@/components/ui/settings-row.demo'
+import { SkeletonDemo } from '@/components/ui/skeleton.demo'
 import { TimelineTrackDemo } from '@/components/ui/timeline-track.demo'
 import { StatusPillDemo } from '@/components/ui/status-pill.demo'
 import { TextAreaDemo } from '@/components/ui/text-area.demo'
@@ -40,8 +41,8 @@ export interface PlaybookEntry {
 
 export const PENCIL_REUSABLE_SYMBOL_COUNT = 30
 export const PENCIL_COMPONENT_FAMILY_COUNT = 27
-/** Pencil 族之外的交互原语（如 ResizeHandle）计入 UI 登记总数。 */
-export const UI_COMPONENT_FAMILY_COUNT = 28
+/** Pencil 族之外的交互原语（如 ResizeHandle / Skeleton）计入 UI 登记总数。 */
+export const UI_COMPONENT_FAMILY_COUNT = 29
 export const PENCIL_CONSOLIDATION_NOTE =
   'Button/Primary、Tinted、Gray、Destructive 四个 Pencil symbols 由一个 Button 组件的 variant 承载。'
 
@@ -69,6 +70,7 @@ export const PLAYBOOK_ENTRIES: PlaybookEntry[] = [
   { id: 'segmented-control', name: 'SegmentedControl', category: 'ui', Demo: SegmentedControlDemo },
   { id: 'settings-group', name: 'SettingsGroup', category: 'ui', Demo: SettingsGroupDemo },
   { id: 'settings-row', name: 'SettingsRow', category: 'ui', Demo: SettingsRowDemo },
+  { id: 'skeleton', name: 'Skeleton', category: 'ui', Demo: SkeletonDemo },
   { id: 'shot-node', name: 'ShotNode', category: 'ui', Demo: ShotNodeDemo },
   { id: 'stage-node', name: 'StageNode', category: 'ui', Demo: StageNodeDemo },
   { id: 'status-pill', name: 'StatusPill', category: 'ui', Demo: StatusPillDemo },

@@ -36,13 +36,13 @@ const EXPECTED_PENCIL_FAMILIES = [
   'top-bar',
 ] as const
 
-const EXPECTED_UI_FAMILIES = [...EXPECTED_PENCIL_FAMILIES, 'resize-handle'] as const
+const EXPECTED_UI_FAMILIES = [...EXPECTED_PENCIL_FAMILIES, 'resize-handle', 'skeleton'] as const
 
 describe('Track P playbook registry', () => {
   it('accounts for 30 Pencil symbols as 27 component families plus interaction chrome', () => {
     expect(PENCIL_REUSABLE_SYMBOL_COUNT).toBe(30)
     expect(PENCIL_COMPONENT_FAMILY_COUNT).toBe(27)
-    expect(UI_COMPONENT_FAMILY_COUNT).toBe(28)
+    expect(UI_COMPONENT_FAMILY_COUNT).toBe(29)
     expect(entriesByCategory('ui').map(({ id }) => id).sort()).toEqual(
       [...EXPECTED_UI_FAMILIES].sort()
     )
