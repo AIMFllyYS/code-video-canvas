@@ -106,6 +106,9 @@ out_intellij/
 .cursorrules
 .kiro/
 
+# Design-package preview renders are local references, not versioned sources.
+/docs/designs/archive/**/images/*.png
+
 # ========================
 # IDE - Sublime Text
 # ========================
