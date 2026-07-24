@@ -44,7 +44,7 @@ depends_on:
 | `ARCH-DEC-002` | Trigger.dev 是唯一异步编排器 |
 | `ARCH-DEC-003` | Pi Agent 是 CVC 唯一 Agent Runtime |
 | `ARCH-DEC-004` | 禁止引入 OpenAI Agents SDK 主链路或 fallback |
-| `ARCH-DEC-005` | AI/LLM 调用只允许四种 `AiTaskKind`；TTS/ASR 由零 Agent 的 `MediaTaskKind` 单独路由 |
+| `ARCH-DEC-005` | AI/LLM 任务只允许四种 `AiTaskKind`；TTS/ASR 等媒体模型调用由零 Agent 的 `MediaTaskKind` 单独路由 |
 | `ARCH-DEC-006` | 标准渲染链是 source → compiler → bundle → HyperFrames |
 | `ARCH-DEC-007` | Postgres 保存业务事实；Trigger 保存执行事实 |
 | `ARCH-DEC-008` | PurpleInk 只共享 DTO/Port/Compiler/Render 合同 |

@@ -1,13 +1,13 @@
 ---
 doc_id: CVC-TASKS-V3
-version: 3.0.0
+version: 3.1.0
 status: active
-effective_date: 2026-07-24
+effective_date: 2026-07-25
 normative_scope: refactor-v3-task-ledger
 depends_on:
   - CVC-PRODUCT-V3@3.0.0
   - CVC-ARCH-V3@3.0.0
-  - CVC-HARNESS-V3@3.0.0
+  - CVC-HARNESS-V3@3.1.0
 ---
 
 # CodeVideoCanvas Refactor v3 Task Breakdown
@@ -52,8 +52,8 @@ evidence 索引。
 | 状态 | 含义 | 允许动作 |
 |---|---|---|
 | `blocked` | 前置 Track、外部服务或权威合同门禁未满足 | 只做只读核验和 blocker 记录 |
-| `ready` | 前置退出门均有证据，可启动一次 Track Goal | 运行 preflight 后转 `in_progress` |
-| `in_progress` | 当前 Goal 正在按 Task 顺序施工 | 逐 Task RED→GREEN→commit |
+| `ready` | 前置退出门均有证据，Master Goal 可进入该 Track | 运行 Track preflight 后转 `in_progress` |
+| `in_progress` | Master Goal 正在本 Track 按 Task 顺序施工 | 逐 Task RED→GREEN→commit |
 | `done` | 全 Task 完成且 Tier B/专项门禁通过 | 冻结完成条件与 evidence |
 | `superseded` | 已有 ADR/新账本项明确取代 | 保留历史，不复用 Task ID |
 
@@ -86,19 +86,20 @@ evidence 索引。
 
 ## 3. Track 当前状态
 
-| Track | 当前状态 | Blocked by | Goal 范围 | 详细 Issue |
+| Track | 当前状态 | Blocked by | 阶段范围 | 详细 Issue |
 |---|---|---|---|---|
 | N0 | `ready` | 无 | 基线封账与止血 | [`issue-n0-baseline-and-bleeding-fixes.md`](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md) |
 | N1 | `blocked` | N0 | Postgres 地基与 Spike | [`issue-n1-postgres-foundation-and-spikes.md`](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md) |
 | N2 | `blocked` | N1 | Trigger 接管执行 | [`issue-n2-trigger-orchestration.md`](../issues/refactor-v3/issue-n2-trigger-orchestration.md) |
-| N3 | `blocked` | N1、N2 | Pi structured runtime | [`issue-n3-pi-agent-runtime.md`](../issues/refactor-v3/issue-n3-pi-agent-runtime.md) |
-| N4 | `blocked` | N1、N2 | Source/compiler/HyperFrames | [`issue-n4-artifact-compiler-hyperframes.md`](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md) |
-| N5 | `blocked` | N3、N4 | 媒体与合成闭环 | [`issue-n5-compose-closure.md`](../issues/refactor-v3/issue-n5-compose-closure.md) |
+| N3 | `blocked` | N2 | Pi structured runtime | [`issue-n3-pi-agent-runtime.md`](../issues/refactor-v3/issue-n3-pi-agent-runtime.md) |
+| N4 | `blocked` | N3 | Source/compiler/HyperFrames | [`issue-n4-artifact-compiler-hyperframes.md`](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md) |
+| N5 | `blocked` | N4 | 媒体与合成闭环 | [`issue-n5-compose-closure.md`](../issues/refactor-v3/issue-n5-compose-closure.md) |
 | N6 | `blocked` | N5 | UI 真实性与代码治理 | [`issue-n6-ui-truth-and-governance.md`](../issues/refactor-v3/issue-n6-ui-truth-and-governance.md) |
 | N7 | `blocked` | N6 | 全链路证据与清退 | [`issue-n7-e2e-and-cutover.md`](../issues/refactor-v3/issue-n7-e2e-and-cutover.md) |
 
-一次 Goal 只执行一个 Track。N3/N4 仅在 N1/N2 contracts 与 payload 稳定后可局部并行；
-它们不得同时修改公共 contracts。
+一次 Master Goal 覆盖 N0–N7；本表每行是该 Goal 内部的顺序阶段与 checkpoint，不是
+独立 Goal。顺序固定为 N0→N1→N2→N3→N4→N5→N6→N7。Track 内可按冲突矩阵并行
+无共享写入的 Task，但不得跨 Track 跳过依赖；公共 contracts 始终单 writer。
 
 ---
 
@@ -108,12 +109,9 @@ evidence 索引。
 flowchart LR
   N0["N0 基线封账"] --> N1["N1 Postgres + Spikes"]
   N1 --> N2["N2 Trigger orchestration"]
-  N1 --> N3["N3 Pi runtime"]
-  N1 --> N4["N4 Compiler + HyperFrames"]
   N2 --> N3
-  N2 --> N4
-  N3 --> N5["N5 Media + Compose"]
-  N4 --> N5
+  N3["N3 Pi runtime"] --> N4["N4 Compiler + HyperFrames"]
+  N4 --> N5["N5 Media + Compose"]
   N5 --> N6["N6 UI truth"]
   N6 --> N7["N7 E2E + Cutover"]
 ```
@@ -232,64 +230,64 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
 ### Track N3 — Pi Agent structured runtime
 
 - [ ] **N3.1 建立 AiTaskKind、typed contracts、ModelPolicy 与 ProviderRegistry** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N2`;
   [details](../issues/refactor-v3/issue-n3-pi-agent-runtime.md#task-n31)
 - [ ] **N3.2 实现 PiStructuredRunner、单 terminal Tool、有界 safe trace 与 cancellation** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N2`;
   [details](../issues/refactor-v3/issue-n3-pi-agent-runtime.md#task-n32)
 - [ ] **N3.3 迁移 project plan 与双 invocation shot-generate checkpoint** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N2`;
   [details](../issues/refactor-v3/issue-n3-pi-agent-runtime.md#task-n33)
 - [ ] **N3.4 迁移 vision QA 到 structured runtime** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N2`;
   [details](../issues/refactor-v3/issue-n3-pi-agent-runtime.md#task-n34)
 - [ ] **N3.5 设置页编辑 ModelPolicy 并证明实际 provider/model** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N2`;
   [details](../issues/refactor-v3/issue-n3-pi-agent-runtime.md#task-n35)
 - [ ] **N3.6 将 Pi 纳入 production dependency 并完成 provider smoke** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N2`;
   [details](../issues/refactor-v3/issue-n3-pi-agent-runtime.md#task-n36)
 
 ### Track N4 — Source, compiler and HyperFrames
 
 - [ ] **N4.1 browser-safe extractor 与唯一 SourceNormalizer** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N3`;
   [details](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md#task-n41)
 - [ ] **N4.2 ShotSourcePackageV1、Patch 与 G1–G5** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N3`;
   [details](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md#task-n42)
 - [ ] **N4.3 packages/video-compiler 纯编译边界** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N3`;
   [details](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md#task-n43)
 - [ ] **N4.4 CvcCompositionBundleV1、RenderableBundleDescriptorV1、canonical hash 与 provenance** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N3`;
   [details](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md#task-n44)
 - [ ] **N4.5 HyperFrames CLI provider 与 G6–G10** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N3`;
   [details](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md#task-n45)
 - [ ] **N4.6 legacy parity/fallback 并默认切换 HyperFrames** —
-  `task_state=todo; status=blocked; blocked_by=N1,N2`;
+  `task_state=todo; status=blocked; blocked_by=N3`;
   [details](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md#task-n46)
 
 ### Track N5 — Media and compose closure
 
 - [ ] **N5.1 版本化 audio、subtitle 与 media manifest** —
-  `task_state=todo; status=blocked; blocked_by=N3,N4`;
+  `task_state=todo; status=blocked; blocked_by=N4`;
   [details](../issues/refactor-v3/issue-n5-compose-closure.md#task-n51)
 - [ ] **N5.2 MediaProviderPolicy/Registry、TTS/ASR、音频对齐与字幕构建** —
-  `task_state=todo; status=blocked; blocked_by=N3,N4`;
+  `task_state=todo; status=blocked; blocked_by=N4`;
   [details](../issues/refactor-v3/issue-n5-compose-closure.md#task-n52)
 - [ ] **N5.3 SFX/BGM/voice mix 与 Shot concat** —
-  `task_state=todo; status=blocked; blocked_by=N3,N4`;
+  `task_state=todo; status=blocked; blocked_by=N4`;
   [details](../issues/refactor-v3/issue-n5-compose-closure.md#task-n53)
 - [ ] **N5.4 final verify：流、时长、尺寸、非空帧与实体 hash** —
-  `task_state=todo; status=blocked; blocked_by=N3,N4`;
+  `task_state=todo; status=blocked; blocked_by=N4`;
   [details](../issues/refactor-v3/issue-n5-compose-closure.md#task-n54)
 - [ ] **N5.5 attempt workspace、取消与失败清理** —
-  `task_state=todo; status=blocked; blocked_by=N3,N4`;
+  `task_state=todo; status=blocked; blocked_by=N4`;
   [details](../issues/refactor-v3/issue-n5-compose-closure.md#task-n55)
 - [ ] **N5.6 artifact commit 与 Finalize 产品投影** —
-  `task_state=todo; status=blocked; blocked_by=N3,N4`;
+  `task_state=todo; status=blocked; blocked_by=N4`;
   [details](../issues/refactor-v3/issue-n5-compose-closure.md#task-n56)
 
 ### Track N6 — UI truth and governance
@@ -381,63 +379,39 @@ workflowVersion/commit/证据分类。N7.6 只复核，不替 owner Track 伪造
 
 ## 8. Goal Prompt 参数合同
 
-调用者必须在启动 Goal 前提供以下具体参数；模板变量由调用器替换为真实值后再执行：
+Refactor v3 只使用覆盖全部 Track 的 Master Goal。唯一完整 prompt 维护在
+[Codex Harness §15](./2026-07-24-refactor-v3-codex-harness.md#15-master-goal-启动模板)；
+不得复制后改成单 Track Goal。启动和恢复时由 Codex 现场解析以下参数：
 
 | 参数 | 约束 |
 |---|---|
-| `TRACK_ID` | `N0`–`N7` 中一个，且本账本状态为 `ready` |
-| `BASELINE_BRANCH` | 当前真实 branch |
-| `BASELINE_SHA` | 开工前真实 `git rev-parse HEAD` |
-| `ISSUE_PATH` | 本文件 Track 表中的精确 Issue 路径 |
-| `EVIDENCE_ROOT` | `docs/evidence/refactor-v3/${TRACK_ID_LOWER}` |
-| `WORKTREE_SCOPE` | 当前 Track 允许修改路径的完整列表 |
+| `GOAL_MODE` | 固定 `master` |
+| `TRACK_RANGE` | 固定 `N0..N7`，严格顺序推进 |
+| `BASELINE_BRANCH` | Master Goal 和每个 Track 开始时的当前真实 branch |
+| `BASELINE_SHA` | Master Goal 和每个 Track 开始时现场读取的真实 HEAD |
+| `CURRENT_TRACK` | 本账本首个未完成 Task 所属 Track；首次为 `N0` |
+| `ISSUE_PATH` | 当前 Track 表中的精确 Issue 路径，每次 Track checkpoint 重取 |
+| `EVIDENCE_ROOT` | `docs/evidence/refactor-v3/n0` 至 `n7`，按当前 Track 隔离 |
+| `WORKTREE_SCOPE` | 当前 Task/Track 允许修改路径；不得用全 Goal 范围绕开卡片边界 |
 | `PENCIL_DOCUMENT` | N6 固定 `docs/designs/canvas.pen`；其他 Track 固定 `not-applicable` |
 | `REAL_AI_POLICY` | N1 为一次 Pi terminal-Tool spike；N3 为每已配置 provider 一次 Track smoke；N7 为一次 live FABRICATE；其他调用 fixture |
 | `ALLOW_PUSH` | 固定 `false` |
 | `COMMIT_EACH_TASK` | 固定 `true` |
+| `AUTO_ADVANCE_TRACKS` | 固定 `true`；Track closeout 后在同一 Goal 继续 |
 
-标准 Goal prompt：
+Master Goal 最低执行合同：
 
 ```text
-Goal: 完成 CodeVideoCanvas Refactor v3 Track ${TRACK_ID}
+GOAL_MODE=master
+TRACK_RANGE=N0..N7
+AUTO_ADVANCE_TRACKS=true
+COMMIT_EACH_TASK=true
+ALLOW_PUSH=false
 
-Baseline:
-- Branch: ${BASELINE_BRANCH}
-- Commit: ${BASELINE_SHA}
-- Product: CVC-PRODUCT-V3@3.0.0
-- Architecture: CVC-ARCH-V3@3.0.0
-- Harness: CVC-HARNESS-V3@3.0.0
-- Ledger: CVC-TASKS-V3@3.0.0
-
-Read in order:
-1. AGENTS.md
-2. docs/specs/2026-07-24-refactor-v3-product-spec.md
-3. docs/specs/2026-07-24-refactor-v3-architecture-spec.md
-4. docs/specs/2026-07-24-refactor-v3-codex-harness.md
-5. docs/specs/2026-07-24-refactor-v3-task-breakdown.md Track ${TRACK_ID}
-6. ${ISSUE_PATH}
-7. 当前 Task 明列的源码、测试、ADR、设计源与前序 evidence
-
-Parameters:
-- Evidence root: ${EVIDENCE_ROOT}
-- Worktree scope: ${WORKTREE_SCOPE}
-- Pencil document: ${PENCIL_DOCUMENT}
-- Real AI policy: ${REAL_AI_POLICY}
-- Commit each Task: ${COMMIT_EACH_TASK}
-- Push allowed: ${ALLOW_PUSH}
-
-Execution:
-- 执行当前 Track 的全部 Task，严格按 Issue 顺序和 allowed/prohibited scope。
-- 每个 Task 先 RED、再 GREEN、再 focused verification、U+FFFD/diff/secret scan。
-- 每个完成 Task 创建精确本地 Conventional Commit；禁止 git add -A。
-- 只在真实证据齐全后更新本账本 checkbox、task_state、commit 与 evidence。
-- 不自动串联下一个 Track，不 push。
-
-Exit:
-- 当前 Track 全 Task done，有 commit/evidence。
-- Tier B 与 Track 专项 gate 退出 0。
-- worktree 中用户/其他会话修改保持不变。
-- closeout 报告明确 fixture/live/transport/workflow 的证据边界。
+执行 N0→N7 全部 48 个 Task。Track 是同一 Goal 内的阶段/checkpoint；每个 Track 完成
+Tier B、专项门禁、账本与 closeout 后自动进入下一 Track。只从首个未完成 Task 恢复，
+不重做已冻结工作。不得因单个 Track 完成、工作量大、测试慢或上下文压缩而结束 Goal。
+只有 48 Task、N0–N7、Tier C、A01–A30 和最终 delivery report 全部成立才能 complete。
 ```
 
 N6 额外开工条件：Pencil MCP
@@ -483,8 +457,8 @@ invocation 必须在 provider 调用前被拒绝。
 - [ ] Track 开工前重新核验实际 branch/SHA/worktree，不沿用旧快照。
 - [ ] 只勾选有 commit 和真实命令证据的 Task。
 - [ ] 前序公开合同需要变化时先停工，按 ADR → Architecture → 本账本 → Issue 顺序处理。
-- [ ] N3/N4 并行时公共 contract 文件单 writer；`canvas.pen`、Playbook registry、schema、
-  lockfile、Trigger config、账本与 Git commit 始终串行。
+- [ ] 不跨 Track 并行；Track 内并行工作必须无共享写入。公共 contract、`canvas.pen`、
+  Playbook registry、schema、lockfile、Trigger config、账本与 Git commit 始终串行。
 - [ ] 中文文件以 UTF-8 保存；每 Task/Track 完成扫描 U+FFFD。
 - [ ] 真实 API 报告严格区分 transport、terminal Tool、业务 workflow 与 deterministic
   fixture；Key 原文不进入任何 evidence、commit、终端摘要或回复。

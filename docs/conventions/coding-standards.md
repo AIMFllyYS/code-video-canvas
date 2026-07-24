@@ -11,15 +11,24 @@
 - 优先**命名导出**（`page.tsx` / `layout.tsx` 等 Next.js 约定文件除外）。
 - 领域私有类型靠近使用处；跨域、browser/server-safe 且需要版本化的合同放
   `packages/contracts`，只从包公开入口导入，禁止 deep import。
+- feature/package 通过 `index.ts`、包根导出或 application service 暴露公共能力；
+  跨域禁止 deep import repository、schema、infrastructure 或私有文件。
 - 外部输入（AI 返回、文件、请求体）一律先过 **Zod** 校验再进业务。
+- 新建 contract、service、hook 或组件前先搜索并复用，遵循 DRY/YAGNI；没有多个真实
+  消费者或实现时，不预建抽象层。
 
 ## 2. React / Next.js
 
 - 默认 **Server Component**；仅在需要交互 / 浏览器 API 时加 `'use client'`，且尽量放**叶子组件**。
-- `page.tsx` ≤ 200 行（硬上限 300），超出拆到 `features/`；单函数 ≤ 50 行。
+- `page.tsx` 目标/硬上限 200/300 行；一般生产文件 250/350；schema/repository
+  硬上限 400；单函数 ≤50 行。超限或职责混杂按职责真实拆分，禁止用 re-export 壳或
+  循环依赖规避。
 - 重客户端组件用 `next/dynamic` 懒加载。
 - `params` / `searchParams` / `cookies()` / `headers()` **必须 `await`**（Next 16）。
 - `error.tsx` 必须 `'use client'`；同目录不能同时有 `route.ts` 与 `page.tsx`。
+- 产品页面统一置于 `src/app/(app)`，由共享 layout 只挂一次 AppShell；页面通过
+  `nav-context` 发布可信上下文，不复制 AppShell、Sidebar 或 TopNav。`/playbook`
+  保持在路由组外。
 
 ## 3. 确定性渲染规则（本项目核心红线）
 
@@ -43,10 +52,12 @@
 - 一律 Tailwind CSS；条件 className 用 `clsx` / `cn()`。
 - 不用 CSS Modules（除非覆盖第三方组件）。
 - **应用 UI 动效**：走 `motion/react` + `src/lib/motion` token（`--duration-*` /
-  `--ease-*`），复用 `collapsible-panel` / `variants`，禁硬编码时长 / 贝塞尔，
-  跟随 `prefers-reduced-motion` 降级（详见
+  `--ease-*`），根 layout 只挂一次 `AppMotionConfig`，复用 `collapsible-panel` /
+  `variants`，禁硬编码时长 / 贝塞尔 / timer，跟随 `prefers-reduced-motion` 降级（详见
   [架构规范 §10](./architecture-conventions.md#ui-design-ssot)）。注意：§3 禁
   CSS `animation`/`transition` 只约束**视频 shot 渲染**，应用 UI 不受此限。
+- 新视觉组件严格按 Pencil reusable symbol → 可复用组件与 demo → `/playbook`
+  登记 → 页面通过公共导出复用；`/playbook` 不是业务组件实现目录。
 
 ## 6. 密钥与安全边界
 

@@ -33,14 +33,17 @@ v3 已锁定：
 1. 本文件；
 2. [Product Spec v3](./docs/specs/2026-07-24-refactor-v3-product-spec.md)；
 3. [Architecture & Execution Spec v3](./docs/specs/2026-07-24-refactor-v3-architecture-spec.md)；
-4. [Codex Goal Harness v3](./docs/specs/2026-07-24-refactor-v3-codex-harness.md)；
-5. [v3 Task Breakdown](./docs/specs/2026-07-24-refactor-v3-task-breakdown.md) 中当前 Track；
+4. [Codex Goal Harness v3.1](./docs/specs/2026-07-24-refactor-v3-codex-harness.md)；
+5. [v3.1 Task Breakdown](./docs/specs/2026-07-24-refactor-v3-task-breakdown.md) 中当前 Track；
 6. `docs/issues/refactor-v3/issue-n*.md` 中对应实施计划；
 7. 当前 Task 指向的设计源、合同与测试。
 
-一次 Codex Goal = 一个 Track。Task Breakdown 是唯一状态账本；Issue 只定义详细施工
-步骤。旧 2026-07-23 PRD/Harness/Task Breakdown、`docs/designs/tasks.md` 和旧
-known-issues 只保留历史证据，不指导 v3 新施工。
+一次 Codex Goal = 完整完成 N0–N7。Track 是该 Goal 内部按顺序推进的阶段与退出门，
+不是八个独立 Goal；Task 是 Track 内的最小施工单元。Goal 从 Task Breakdown 中首个
+未完成 Task 恢复，每个 Track 收口后重新读取当前权威、核验真实基线并自动进入下一
+Track，直到 N7 完成前不得因“工作量大”提前结束 Goal。Task Breakdown 是唯一状态
+账本；Issue 只定义详细施工步骤。旧 2026-07-23 PRD/Harness/Task Breakdown、
+`docs/designs/tasks.md` 和旧 known-issues 只保留历史证据，不指导 v3 新施工。
 
 若这些活动文档冲突，停止相关实现并报告 `DOC-CONFLICT`；不得按日期或个人偏好猜测。
 
@@ -53,9 +56,13 @@ known-issues 只保留历史证据，不指导 v3 新施工。
 - 真实付费模型调用按 Harness 预算集中执行，不在每个 Task 重复烧调用。
 - fixture、录制 transcript、真实模型调用必须分别标注；fixture FABRICATE 不能宣称
   真实 AI E2E。
+- 每个 Task 独立 RED→GREEN→验证→本地 commit；每个 Track 独立完成 Tier B、账本
+  对账和 closeout，但 Track closeout 不等于 Goal complete。
 - 范围不足时先改 Spec/Task，不顺手扩写架构。
 - 保留用户已有修改；共享权威文档、schema/migrations、package/lock、`canvas.pen`
   必须串行修改。
+- 新建 contract、service、hook 或组件前先搜索并复用现有公开能力；遵循 DRY/YAGNI，
+  禁止为同一职责新增平行 wrapper、第二套状态模型或“以后可能需要”的抽象。
 
 ## 4. 目标目录与依赖方向
 
@@ -90,7 +97,8 @@ src/app + trigger → application services → domain/contracts → ports
 ```
 
 - `src/app` 与根目录 `trigger` 不放 SQL、prompt、source parser、FFmpeg 参数或业务状态机。
-- feature 通过公开 contract/port 协作，不 import 对方 repository 内部。
+- 每个 feature/package 只通过 `index.ts`、包根导出或明确 application service 暴露
+  公共能力；跨域禁止 deep import 对方 repository、schema、infrastructure 或私有文件。
 - Drizzle 只存在于数据适配层；Trigger SDK 只存在于 task/dispatcher/realtime adapter。
 - Pi `Agent` 只允许在 `pi-structured-runner.ts` 的生产实现导入。
 - compiler 不 import DB、Trigger、Pi、ArtifactStore、clock 或 UI。
@@ -234,11 +242,15 @@ input/hover/scroll dependent state
 - `docs/designs/canvas.pen` 是视觉 SSOT；`.pen` 只能通过 Pencil MCP 读取/修改，禁止
   shell Read/Grep。
 - 没有打开 `.pen` editor 时，Pencil Task 必须停止，不得伪造设计同步。
-- 新视觉组件顺序固定：Pencil reusable symbol → `/playbook` 登记/demo → 页面复用。
-- 页面只组合已登记视觉原语，禁止复制 Sidebar、TopNav 或组件实现。
+- 新视觉组件顺序固定：Pencil reusable symbol → 可复用组件实现与 demo →
+  `/playbook` 登记 → 页面通过公共导出复用。`/playbook` 是唯一组件登记/展示路由，
+  不是业务实现存放处；其他页面不得从 route 私有文件 deep import。
+- `(app)` 共享 layout 只挂载一次 `AppShell`/Sidebar；页面通过 `nav-context` 发布可信
+  路由上下文并只组合已登记视觉原语，禁止复制 AppShell、Sidebar、TopNav 或组件实现。
 - 颜色、间距、圆角、阴影用 design token；图标用 Lucide 白名单，禁 emoji。
-- 应用 UI 动效用 `motion/react` + `src/lib/motion` token，遵循 reduced motion；
-  motion 不进入视频渲染。
+- 根 layout 只挂载一次 `AppMotionConfig`；应用 UI 动效统一用 `motion/react`、
+  `src/lib/motion` token 与既有 `collapsible-panel`/variants，禁止页面硬编码时长、
+  贝塞尔、timer 或平行动效原语；必须遵循 reduced motion，且 motion 不进入视频渲染。
 - 每个可见字段必须追溯到 Snapshot/artifact/API；禁止固定假百分比、恒真 QA、
   无链接 artifact 或可点但无行为的控件。
 - Inspector 固定为数据、源码、门禁、执行四页签。
@@ -251,6 +263,9 @@ input/hover/scroll dependent state
 - 一般生产文件目标 ≤250 行，硬上限 350。
 - schema/repository 按聚合拆分，硬上限 400。
 - 单函数 ≤50 行；一个文件只有一个主要变化原因。
+- 碰到硬上限或职责混杂，必须在当前 Task 按 domain/application/infrastructure/UI
+  职责真实拆分并复用公共代码；禁止只套 re-export 壳、转移大段代码或制造循环依赖来
+  规避行数门禁。
 - TypeScript strict，禁 `any`；使用 `unknown` + 收窄。
 - 默认 Server Component；`'use client'` 尽量下沉叶子。
 - Next.js 使用 `proxy.ts`，不用 `middleware.ts`；异步 `params/searchParams/cookies/
@@ -274,7 +289,7 @@ Task 使用 Issue 卡中的 focused 命令。Track 收口至少运行：
 
 ```powershell
 pnpm lint
-pnpm tsc --noEmit
+pnpm typecheck
 pnpm test
 pnpm build
 git diff --check
@@ -290,7 +305,8 @@ git diff --check
 2. 扫描 U+FFFD、secret、禁止依赖和越界 import；
 3. 将 Task 状态与证据写回唯一 Task Breakdown；
 4. 按 Issue 的 commit boundary 本地 commit；
-5. 不自动进入下一个 Track。
+5. Track 退出门通过后重新核验权威文档、实际 branch/SHA/worktree 与下一 Track
+   readiness，在同一 Goal 内继续；只有 N7 Tier C 与总验收全部通过才能结束 Goal。
 
 ## 14. Git 与破坏性操作
 

@@ -84,7 +84,9 @@ infrastructure adapters
 - route/task 只依赖公开 application service。
 - application service 依赖 port，不依赖具体 Drizzle/Trigger/Pi/HyperFrames client。
 - infrastructure adapter 可以依赖 domain contract，domain 不反向依赖 adapter。
-- feature 间只通过公开 contract/service 协作；禁止 import 对方 repository 私有文件。
+- 每个 feature/package 通过 `index.ts`、包根导出或明确 application service 暴露公共
+  能力；跨域只从该入口 import，禁止 deep import 对方 repository、schema、
+  infrastructure 或其他私有文件。
 - UI 只消费 CVC DTO；禁止传递 Drizzle row、Trigger run、Pi message 或 provider SDK
   response。
 - 正式代码不得 import `src/app/_dev`。
@@ -244,9 +246,16 @@ canvas.pen reusable symbol
 
 `.pen` 文件只能通过 Pencil MCP。没有打开目标文件时停止设计 Task。
 
-- 页面不复制视觉原语、Sidebar、TopNav 或动效实现。
+- 可复用视觉组件实现在 `src/components` 或所属 feature，通过公共导出复用；
+  `/playbook` 是唯一登记与真实 demo 路由，不是业务组件实现目录。
+- 所有产品页面统一位于 `src/app/(app)` 路由组，由共享 layout 只挂载一次
+  `AppShell`/Sidebar；页面通过 `nav-context` 发布可信上下文并只替换内容区。
+  `/playbook` 保持在该路由组之外。
+- 页面不复制视觉原语、AppShell、Sidebar、TopNav 或动效实现。
 - Design Token 管理颜色/阴影/圆角/间距；Lucide 白名单管理图标。
-- 应用 UI 动效使用 `motion/react` + token，并遵循 reduced motion。
+- 根 layout 只挂一次 `AppMotionConfig`。应用 UI 动效使用 `motion/react`、
+  `src/lib/motion` token 与共享 `collapsible-panel`/variants；页面不得硬编码时长、
+  贝塞尔、timer 或建立平行动效原语，并必须遵循 reduced motion。
 - 视频 source 禁止使用应用 UI motion。
 - 可见字段必须有 DB/API/artifact source；无能力时显示 empty/disabled/explicit
   placeholder。
@@ -263,8 +272,11 @@ canvas.pen reusable symbol
 | schema/repository | 按聚合拆分 | 400 |
 | 单函数 | 40 | 50 |
 
-一个文件只有一个主要变化原因。超限不是“以后再拆”的常态；对应 Task 必须在同 Track
-完成拆分或给出 Architecture-approved exception。
+一个文件只有一个主要变化原因。新增能力前先搜索并复用现有公开 contract、service、
+hook、组件和动效原语，遵循 DRY/YAGNI。超限或职责混杂不是“以后再拆”的常态；对应
+Task 必须在同 Track 按 domain/application/infrastructure/UI 职责真实拆分，或给出
+Architecture-approved exception。禁止用纯 re-export 壳、搬移大段代码或循环依赖规避
+行数门禁。
 
 ## 12. 变更规则
 

@@ -1,7 +1,7 @@
 # CodeVideoCanvas 重构蓝图 v3 · 第三册：N0–N7 Track 路线
 
 > 状态：Accepted
-> 执行单位：一次 Codex Goal = 一个 Track
+> 执行单位：一次 Codex Goal = 完整 N0–N7；Track 是 Goal 内部阶段/checkpoint
 > 唯一状态账本：`docs/specs/2026-07-24-refactor-v3-task-breakdown.md`
 > 详细任务卡：`docs/issues/refactor-v3/issue-n*.md`
 
@@ -31,23 +31,24 @@
 flowchart LR
   N0 --> N1
   N1 --> N2
-  N1 --> N3
-  N1 --> N4
   N2 --> N3
-  N2 --> N4
-  N3 --> N5
+  N3 --> N4
   N4 --> N5
   N5 --> N6
   N6 --> N7
 ```
 
-N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行：
+N3 先建立 `AiTaskRuntime → ShotSourcePackageV1` 的真实生产输出，N4 再消费该合同完成：
 
-- N3 负责 `AiTaskRuntime → ShotSourcePackageV1`；
-- N4 负责
-  `ShotSourcePackageV1 → CvcCompositionBundleV1 → RenderableBundleDescriptorV1 → RenderReceiptV1`。
+```text
+ShotSourcePackageV1
+  → CvcCompositionBundleV1
+  → RenderableBundleDescriptorV1
+  → RenderReceiptV1
+```
 
-二者禁止同时修改同一合同文件；公共 contract 变更由先完成的一方提交，另一方只消费。
+这两个 Track 串行，避免 fabricate/source 合同存在双 writer；并行只发生在单个 Track 内
+明确无共享写入的 Task。
 
 ---
 
@@ -293,9 +294,9 @@ N5 结束时不得保留一个与二者重叠的活动 `features/audio` 域，�
 
 ---
 
-## 12. Track Goal 启动规则
+## 12. Master Goal 的 Track 推进规则
 
-每次启动前，Codex 必须：
+Master Goal 首次启动，并在进入每个 Track 前，Codex 必须：
 
 1. 读取 `AGENTS.md`；
 2. 读取 Product Spec、Architecture Spec、Harness；
@@ -304,8 +305,10 @@ N5 结束时不得保留一个与二者重叠的活动 `features/audio` 域，�
 5. 运行该卡的 baseline；
 6. 按 Task 顺序施工；
 7. 每个 Task 做 Task-Light 验证；
-8. Track 结束做 Track Gate 并本地 commit；
+8. Track 结束做 Track Gate、closeout 与本地 commit；
 9. 只更新 Task Breakdown 状态和 Issue 完成证据；
-10. 不推送，除非用户另行明确授权。
+10. 下一 Track ready 后在同一 Goal 内自动继续，不等待重新启动；
+11. 不推送，除非用户另行明确授权。
 
 任何 Track 发现必须修改前序公开合同，应停止并回报，不允许在后序 Track 偷改架构。
+只有 N0–N7、48 个 Task、Tier C 与 A01–A30 全部完成，Master Goal 才能结束。

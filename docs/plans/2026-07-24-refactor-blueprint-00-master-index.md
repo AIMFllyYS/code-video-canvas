@@ -22,7 +22,7 @@ SQLite + 进程内队列 + 自建逐帧渲染的 Demo 管线，重构为：
 2. 每种状态只有一个权威来源；
 3. 模型、编排、编译、渲染互不越界；
 4. 失败可以定位、重试、取消和恢复；
-5. 后续 Codex Goal 能按 Track 连续施工，不再依赖临场猜测。
+5. 单个 Codex Goal 能以 Track 为阶段连续完成 N0–N7，不再依赖临场猜测。
 
 ---
 
@@ -97,7 +97,8 @@ SQLite + 进程内队列 + 自建逐帧渲染的 Demo 管线，重构为：
 
 ## 6. Codex Goal 执行入口
 
-一次 Codex Goal 对应一个 Track，而不是一张 Task 卡：
+一次 Codex Goal 覆盖完整 N0–N7；Track 是该 Goal 内部的阶段、退出门与恢复
+checkpoint，Task 是最小施工单元：
 
 ```text
 N0 基线封账与止血
@@ -117,9 +118,9 @@ N6 UI 真实性、Pencil/Playbook 与代码治理
 N7 全链路验收、清退旧路径与 workflowVersion 锚点
 ```
 
-允许的并行仅在 Track Issue 明确标注时成立。默认依赖顺序是
-`N0 → N1 → N2 → N3/N4 → N5 → N6 → N7`；N3 与 N4 只有公开合同稳定后
-才可局部并行。
+Goal 严格按 `N0 → N1 → N2 → N3 → N4 → N5 → N6 → N7` 自动推进；每个
+Track 先完成全部 Task、Tier B、专项门禁、账本与 closeout，再进入下一 Track。允许的
+并行仅限 Track Issue 明确标注且无共享写入的 Track 内工作，不跨 Track 跳过依赖。
 
 ---
 

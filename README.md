@@ -6,8 +6,8 @@
 ## 当前状态
 
 仓库已完成 **v3 重构文档基线**，代码实施尚未开始。现有 Demo v1 代码仍可能运行在
-SQLite、进程内队列和 legacy renderer 上；后续按 N0–N7 Codex Goal 逐步迁移，不能把
-目标架构误报为当前已落地功能。
+SQLite、进程内队列和 legacy renderer 上；后续由一个 Codex Goal 按 N0–N7 阶段逐步
+迁移，不能把目标架构误报为当前已落地功能。
 
 v3 目标栈：
 
@@ -56,7 +56,7 @@ pnpm。Postgres/Trigger/HyperFrames 的 v3 本地命令将在对应 N1/N2/N4 Tra
 
 ```powershell
 pnpm lint
-pnpm tsc --noEmit
+pnpm typecheck
 pnpm test
 pnpm build
 ```
@@ -100,8 +100,8 @@ cvc.project.compose
 1. [v3 Master Index](./docs/plans/2026-07-24-refactor-blueprint-00-master-index.md)
 2. [Product Spec v3](./docs/specs/2026-07-24-refactor-v3-product-spec.md)
 3. [Architecture & Execution Spec v3](./docs/specs/2026-07-24-refactor-v3-architecture-spec.md)
-4. [Codex Goal Harness v3](./docs/specs/2026-07-24-refactor-v3-codex-harness.md)
-5. [v3 Task Breakdown](./docs/specs/2026-07-24-refactor-v3-task-breakdown.md)
+4. [Codex Goal Harness v3.1](./docs/specs/2026-07-24-refactor-v3-codex-harness.md)
+5. [v3.1 Task Breakdown](./docs/specs/2026-07-24-refactor-v3-task-breakdown.md)
 6. [N0–N7 Track Plans](./docs/issues/refactor-v3/)
 7. [Architecture Decisions](./docs/adr/)
 8. [Architecture Conventions](./docs/conventions/architecture-conventions.md)
@@ -129,8 +129,29 @@ cvc.project.compose
 | N6 | Pencil/Playbook、真实 Run UI、Inspector 与文件治理 |
 | N7 | workflowVersion、全链路 E2E、恢复验收与旧路径清退 |
 
-一次 Codex Goal 只执行一个 Track。状态只在 v3 Task Breakdown 维护；详细步骤由对应
-Track Plan 定义。
+一次 Codex Goal 覆盖完整 N0–N7。Track 是该 Goal 内部的阶段、依赖门禁、验证边界与
+恢复 checkpoint，不是独立 Goal；每个 Track 收口后在同一 Goal 内继续，只有 N7 Tier C
+和 A01–A30 全部完成才能结束。状态只在 v3 Task Breakdown 维护，详细步骤由对应 Track
+Plan 定义。
+
+## 工程治理摘要
+
+- 每个 feature/package 只通过 `index.ts`、包根导出或明确 application service 暴露
+  公共能力；跨域禁止 deep import repository、schema、infrastructure 或私有文件。
+- 新建代码前先搜索并复用已有 contract、service、hook、组件与动效原语，遵循
+  DRY/YAGNI，禁止为同一职责建立第二套抽象。
+- 产品页面统一由 `src/app/(app)/layout.tsx` 挂载一次 AppShell；页面发布路由上下文并
+  只替换内容区，不复制 AppShell、Sidebar 或 TopNav。
+- 新视觉组件严格遵循 Pencil reusable symbol → 可复用组件/demo → `/playbook`
+  登记 → 页面通过公共导出复用；`/playbook` 是组件登记与展示路由，不是业务实现目录。
+- UI 动效统一复用 `motion/react`、`src/lib/motion` token、
+  `collapsible-panel`/variants 与根级 `AppMotionConfig`；禁止页面硬编码动效参数或另造
+  平行原语，且 motion 不进入视频渲染。
+- `page.tsx` 目标/硬上限为 200/300 行，一般生产文件为 250/350 行，
+  schema/repository 硬上限 400 行，单函数硬上限 50 行。超限或职责混杂必须在当前
+  Task 按职责真实拆分，不能用 re-export 壳或循环依赖规避。
+- 用户可见状态必须来自 Snapshot、artifact 或 API；未实现能力明确显示 empty、
+  disabled 或 placeholder，不用固定假值伪装成功。
 
 ## 贡献与安全
 

@@ -1,8 +1,8 @@
 ---
 doc_id: CVC-HARNESS-V3
-version: 3.0.0
+version: 3.1.0
 status: active
-effective_date: 2026-07-24
+effective_date: 2026-07-25
 normative_scope: codex-goal-execution
 supersedes:
   - CVC-AI-DEVELOPMENT-HARNESS-2026-07-23
@@ -71,18 +71,42 @@ depends_on:
 
 ## 3. Goal / Track / Task 模型
 
-### 3.1 一次 Goal = 一个 Track
+### 3.1 一次 Goal = 完整 N0–N7
 
-默认一次 Codex Goal 完成 N0–N7 中一个 Track 的全部 Task。Task 不是独立 Goal。
+一次 CodeVideoCanvas Refactor v3 Codex Goal 覆盖
+`N0 → N1 → N2 → N3 → N4 → N5 → N6 → N7` 的完整施工与验收。Track 不是独立
+Goal，而是同一 Goal 内部的顺序阶段、依赖门禁、验证边界和恢复 checkpoint；Task 是
+Track 内的最小施工单元。
 
-只有 Task Breakdown 预先定义的 Track Segment 才能拆成多个 Goal。执行中觉得“太大”
-不能自行拆分或跳过；先修改 Task Breakdown 并取得确认。
+不得因为工作量大、测试慢、上下文压缩或一个 Track 已完成而结束 Goal、等待用户重新
+启动，或把后续 Track 拆成另一个 Goal。
 
-### 3.2 Goal 不自动串联
+### 3.2 Track 自动推进
 
-一个 Track 完成后 Goal 结束。下一个 Track 必须重新读取规范、检查基线并启动新 Goal。
+Goal 从 Task Breakdown 中首个未完成 Task 开始。只有当前 Track 全部 Task `done`、
+Task commit/evidence 已登记、Tier B 与 Track 专项门禁通过后，才可将当前 Track 标为
+`done` 并按依赖把下一 Track 转为 `ready`。随后在同一 Goal 内自动进入下一 Track。
 
-### 3.3 Track 状态
+Track 顺序固定；不得跳过、倒序或把 N3/N4 作为跨 Track 并行施工。Track 内仅可按
+`HAR-PAR-001..004` 并行无共享写入的工作。
+
+### 3.3 Track checkpoint 与恢复
+
+每个 Track 开始必须重新核验活动规范版本、账本状态、依赖、Issue、真实
+branch/SHA/worktree、环境和 baseline。后续 Track 的 baseline SHA 取前一 Track
+closeout 后的真实 HEAD，不在 Master Goal 启动时预先伪造。
+
+每个 Track 完成后生成独立 closeout 报告并本地提交，但外层 Goal 保持 active。恢复
+执行时以 Task Breakdown、已存在 commit 和 evidence 为准，从首个未完成 Task 继续，
+不重做已冻结 Task，不覆盖用户工作。
+
+### 3.4 Master Goal 完成
+
+只有 N0–N7 全部 Track `done`、全部 48 个 Task 有 commit/evidence、每个 Track Tier B
+与专项门禁通过、N7 Tier C 和 A01–A30 全部成立、最终 delivery report 完成时，才能
+将 Goal 标为 `complete`。
+
+### 3.5 Track 状态
 
 ```text
 blocked → ready → in_progress → done
@@ -92,7 +116,7 @@ ready/in_progress → superseded
 
 只有 `CVC-TASKS-V3` 可以修改状态。
 
-### 3.4 Task 状态
+### 3.6 Task 状态
 
 ```text
 todo → in_progress → done
@@ -105,7 +129,10 @@ todo/in_progress → superseded
 
 ---
 
-## 4. Goal 开工门禁
+## 4. Master Goal 与 Track 开工门禁
+
+Master Goal 首次启动和每个 Track checkpoint 恢复都必须执行本节；不得沿用上一个
+Track 的旧快照。
 
 ### `HAR-PREFLIGHT-001` 文档
 
@@ -133,8 +160,8 @@ git diff --cached --stat
 - 已存在修改的归属；
 - 是否需要 feature branch/worktree。
 
-未经用户授权不 push、不建 PR。进入代码 Track 时按仓库 Git 规范使用
-`feature/refactor-n<track>-<name>`；如果用户明确要求在当前分支施工，记录该授权。
+未经用户授权不 push、不建 PR。进入代码 Master Goal 时按仓库 Git 规范使用
+`feature/refactor-v3` 或安全 worktree；如果用户明确要求在当前分支施工，记录该授权。
 
 ### `HAR-PREFLIGHT-003` 环境
 
@@ -513,39 +540,118 @@ Evidence: pnpm test -- <focused files>
 
 ---
 
-## 15. Goal 启动模板
+## 15. Master Goal 启动模板
+
+以下是 Refactor v3 的唯一标准 Goal prompt。启动时由 Codex 读取真实 branch、HEAD 和
+worktree；禁止把文档编写时的 SHA 当成未来执行基线。
 
 ```text
-Goal: 完成 CodeVideoCanvas Refactor v3 Track <N?>
+Goal: 完整完成 CodeVideoCanvas Refactor v3 的 N0–N7 全部 48 个 Task
 
-Baseline:
-- Branch: <branch>
-- Commit: <sha>
+Parameters:
+- GOAL_MODE=master
+- TRACK_RANGE=N0..N7
+- AUTO_ADVANCE_TRACKS=true
+- COMMIT_EACH_TASK=true
+- ALLOW_PUSH=false
+
+Goal contract:
+- 这是一个覆盖 N0 → N1 → N2 → N3 → N4 → N5 → N6 → N7 的 Master Goal。
+- Track 只是本 Goal 内部的阶段、依赖门禁、验证边界与恢复 checkpoint，不是独立 Goal。
+- 每个 Track closeout 后自动进入下一 Track；不得等待用户再次启动，不得因工作量大、
+  测试慢、上下文压缩或单个 Track 完成而提前结束。
+- 只有 N7 Tier C、A01–A30 与最终交付全部通过，才能将 Goal 标记 complete。
+- 若运行环境提供持久 Goal 状态，整个 N0–N7 共用同一个 active objective；只有 §17
+  的真实 blocker 达到运行环境阈值时才标记 blocked。
+- 完成 preflight 后立即施工；规范已经覆盖的日常技术选择自主决策，不以汇报计划或
+  非阻塞问题代替继续执行。
+
+Authority:
 - Product: CVC-PRODUCT-V3@3.0.0
 - Architecture: CVC-ARCH-V3@3.0.0
-- Harness: CVC-HARNESS-V3@3.0.0
+- Harness: CVC-HARNESS-V3@3.1.0
+- Ledger: CVC-TASKS-V3@3.1.0
 
-Read first:
-1. AGENTS.md
-2. docs/specs/2026-07-24-refactor-v3-product-spec.md
-3. docs/specs/2026-07-24-refactor-v3-architecture-spec.md
-4. docs/specs/2026-07-24-refactor-v3-codex-harness.md
-5. docs/specs/2026-07-24-refactor-v3-task-breakdown.md Track <N?>
-6. docs/issues/refactor-v3/issue-<n?>-<name>.md
+Master preflight:
+1. 完整读取 AGENTS.md、Product Spec、Architecture Spec、本 Harness、Task Breakdown。
+2. 运行 git status --short --branch、git log -5 --oneline、git diff --stat、
+   git diff --cached --stat，现场读取真实 branch 与 HEAD。
+3. 将所有既有 staged/unstaged/untracked 文件先视为用户工作；不删除、不覆盖、不移动、
+   不 stage。需要隔离时使用安全 feature branch/worktree。
+4. 找到 Task Breakdown 中首个未完成 Task；若已有 commit/evidence，先对账再恢复，
+   不重做已冻结工作。
+5. 初始与每个 Track 开始都重新核验规范版本、依赖、ready 状态、对应 Issue、环境、
+   baseline 和 allowed/prohibited scope；发现活动规范冲突登记 DOC-CONFLICT。
 
-Scope:
-- Execute all Task cards in Track order.
-- Follow each card's allowed/prohibited files.
-- Commit each completed Task or explicit phase locally.
-- Do not push.
+Track loop:
+1. 严格串行推进 N0、N1、N2、N3、N4、N5、N6、N7，不跳过、不倒序。
+2. 每个 Track 完整读取对应 docs/issues/refactor-v3/issue-n*.md 与当前 Task 引用。
+3. 每个 Task 执行 Tier 0 → RED → GREEN → focused verification → Tier A。
+4. 严守 Create/Modify/Delete/禁止范围；范围不足先修正规范/Task，不顺手扩写。
+5. 每个完成 Task 精确 stage，创建本地 Conventional Commit，并立即把 checkbox、
+   task_state、commit 和 evidence 写回唯一 Task Breakdown；禁止 git add -A。
+6. 每个 Track 执行 Tier B 与专项门禁，生成 closeout/evidence checkpoint 并本地提交。
+7. 当前 Track 全部成立后才标记 done、把下一 Track 转为 ready，并在本 Goal 内继续。
+8. 根代理是账本、共享合同、schema/migration、lockfile、Trigger config、canvas.pen、
+   Playbook registry 与 Git 的唯一 writer；子代理只做边界不重叠的实现或只读审计。
 
-Exit:
-- All Track tasks done with commit/evidence.
-- Tier B and Track-specific gate pass.
-- Task Breakdown and Issue evidence synchronized.
+Architecture and code governance:
+- 活动技术栈固定为 Next.js + Postgres + Trigger.dev + Pi Agent +
+  video-compiler + HyperFrames；禁止引入 OpenAI Agents SDK 主链路或 fallback。
+- AI/LLM 业务只调用统一 AiTaskRuntime，ModelPolicy 独占 provider/model 选择；
+  TTS/ASR 由零 Agent 的 MediaProviderPolicy 单独路由。
+- Trigger 只保留七个稳定 task；ExecutionPolicy 是唯一 readiness 入口。
+- ShotSourcePackageV1 → normalizer/G1–G10 → video-compiler → HyperFrames 是唯一主链。
+- 新建前先搜索并复用；遵循 DRY/YAGNI。跨域只从 index.ts、包根导出或 application
+  service import，禁止 deep import 私有 repository/schema/infrastructure。
+- page.tsx 目标/硬上限 200/300，一般生产文件 250/350，schema/repository 400，
+  单函数 50；超限或职责混杂在当前 Task 按职责真实拆分，禁止 re-export 壳规避。
+
+UI and Pencil:
+- 到 N6 先用 Pencil MCP get_editor_state(include_schema: true) 证明
+  docs/designs/canvas.pen 已在编辑器打开；失败则 N6 blocked，不改 .pen/Playbook/页面。
+- .pen 只通过 Pencil MCP 访问，禁止 shell Read/Grep。
+- 新视觉组件严格执行 Pencil reusable symbol → 可复用组件/demo → /playbook 登记 →
+  页面通过公共导出复用。
+- (app) 共享 layout 只挂一次 AppShell；页面只发布 nav-context 并组合已登记组件。
+- UI motion 只复用 motion/react、src/lib/motion token、AppMotionConfig、
+  collapsible-panel/variants，遵循 reduced motion，绝不进入视频渲染。
+- 每个可见字段都追溯 Snapshot/artifact/API；未实现能力明确显示占位，不伪造状态。
+
+Verification:
+- 每 Task：定向测试、相关 lint/typecheck、contract/source scan、git diff --check、
+  U+FFFD 扫描；涉及配置/日志时做 secret scan。
+- 每 Track：pnpm lint、pnpm typecheck、pnpm test、pnpm build、git diff --check，
+  加 N0–N7 对应专项门禁。
+- N7：Tier C 真实浏览器、一次真实模型 FABRICATE、真实 HyperFrames render、最终 MP4、
+  ffprobe/decode、golden frame/contact sheet、migration/restore 和 delivery report。
+- fixture、transport、terminal Tool、真实 workflow 与真实像素证据分别标注；低层证据
+  不得冒充高层证据。
+
+Paid AI budget:
+- N1：一次 Pi terminal-Tool spike。
+- N3：每个已配置 provider 至多一次 Track smoke。
+- N7：exactly one live FABRICATE；第二次 paid invocation 在 provider 调用前拒绝。
+- 其他模型路径使用 fixture/recorded transcript；不输出 Key，只记录变量名和脱敏结果。
+
+Git and safety:
+- 每个 Task 或明确文档阶段本地 Conventional Commit；commit body 写 Task/Spec/Evidence。
+- 不 push、不创建 PR、不 force push，不用 reset --hard 或 checkout 丢弃用户修改。
+- 删除旧 runtime 前证明替代路径通过、引用为 0；数据迁移先做并验证可恢复备份。
+
+Blocked and recovery:
+- 仅 Harness §17 的真实条件可阻塞；工作量大、测试慢、需要继续分析不是 blocker。
+- 当前顺序 Track blocked 时不得跳到后续 Track；记录 blocker、最后成功 commit/evidence、
+  恢复前置和下一条安全命令。
+- 恢复时重新读取规范与真实仓库状态，从账本首个未完成 Task 继续。
+
+Final exit:
+- N0–N7 全部 Track done，48 个 Task 全有真实 commit/evidence。
+- 每 Track Tier B/专项门禁通过；N7 Tier C 与 A01–A30 全部通过。
+- U+FFFD、secret、prohibited dependency/import、legacy reference 门禁通过。
+- 用户既有工作保持不变；delivery report 明确 live/fixture/transport/workflow 边界。
+- 未 push。满足以上全部条件后才将 Master Goal 标记 complete。
 ```
-
-实际 prompt 填入真实 branch/sha，不使用占位文本启动 Goal。
 
 ---
 

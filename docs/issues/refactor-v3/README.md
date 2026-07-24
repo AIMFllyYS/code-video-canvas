@@ -9,8 +9,9 @@
 5. [Task Breakdown](../../specs/2026-07-24-refactor-v3-task-breakdown.md)
 6. 当前 `issue-n*.md`
 
-一次 Codex Goal 只执行一个 Track。Task 状态只在 Task Breakdown 更新；本目录的
-checkbox 是执行步骤，不是独立状态账本。
+一次 Codex Goal 覆盖完整 N0–N7；本目录的 Track 是该 Goal 内部按依赖推进的阶段、
+退出门和恢复 checkpoint，不是独立 Goal。Task 状态只在 Task Breakdown 更新；本目录
+的 checkbox 是执行步骤，不是独立状态账本。每个 Track closeout 后在同一 Goal 内继续。
 
 | Track | 计划 |
 |---|---|
