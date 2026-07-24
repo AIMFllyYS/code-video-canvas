@@ -5,7 +5,7 @@
 | 优先级 | P1 |
 | Wave | 2（`docs/specs/2026-07-23-harness-task-breakdown.md` Track H） |
 | 依赖 | 无（可独立开工）；`score`/`export`/`shot-sfx`/`shot-subtitle`/`shot-qa` 五类节点的展示完整性依赖 issue-01 修复后才有真实数据可显示，但不阻塞本 issue 对 `script-import`/`shot-split`/`shot-script`/`shot-codegen` 四类节点先行修复 |
-| 状态 | 待施工 |
+| 状态 | **已完成**（2026-07-24，代码提交 `fe7c1b2`） |
 
 ## 背景
 
@@ -89,8 +89,15 @@
 - `src/features/director/**`（不改 Director 输入契约，那是 issue-01 的范围）
 
 **完成条件**：
-- [ ] 内容哈希字段来自 `canvas_nodes.contentHash` 真实值，无写死字符串
-- [ ] 分镜合同 chips 只在真实 artifact 存在时渲染为可点击/可下载状态，否则不渲染或显式禁用
-- [ ] 生成进度不再有恒定假百分比（`running→62%` 已消除）
-- [ ] 「查看代码」按钮点击后正确跳转到对应分镜详情页
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过；新增查询有测试覆盖
+- [x] 内容哈希字段来自 `canvas_nodes.contentHash` 真实值，无写死字符串
+- [x] 分镜合同 chips 只在真实 artifact 存在时渲染为可点击/可下载状态，否则不渲染或显式禁用
+- [x] 生成进度不再有恒定假百分比（`running→62%` 已消除）
+- [x] 「查看代码」按钮点击后正确跳转到对应分镜详情页
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过；新增查询有测试覆盖
+
+## 完成证据（2026-07-24）
+
+- 提交 `fe7c1b2`：`queries.ts` 新增 `contentHash` select 与 `getNodeArtifacts(projectId, nodeId)`；`canvas-inspector.tsx` 四处占位全部替换为真实数据；`artifact-chip.tsx` 新增 `href`。
+- `getNodeArtifacts` 排除内部 `pi-session` 会话指针，按最新优先排序；chip 的 `href` 指向真实的 `/api/artifacts/[id]?projectId=...` 下载路由。
+- 生成进度：`success` 展示真实 100%，`running` 展示不定进度 spinner，其余状态不再渲染假百分比。
+- `pnpm lint`、`pnpm tsc --noEmit`、`pnpm test`（60 files / 208 tests）、`pnpm build` 均在合入后的干净 `main` 上验证通过。

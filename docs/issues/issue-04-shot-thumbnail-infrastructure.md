@@ -6,7 +6,7 @@
 | Wave | 2（`docs/specs/2026-07-23-harness-task-breakdown.md` Track H），是 issue-05/issue-06 的前置基础设施 |
 | 依赖 | 无 |
 | 关联决策 | `docs/specs/2026-07-23-ai-development-harness.md` §5.4 `thumbnail.ts` 条目、§3.1 移植映射表第 64 行（`features/render/qa-check.ts` 的姊妹能力） |
-| 状态 | 待施工 |
+| 状态 | **已完成**（2026-07-24，代码提交 `48cd5c5`） |
 
 ## 背景
 
@@ -103,12 +103,20 @@ export async function captureThumbnails(
 - 不做 issue-05/issue-06 的 UI/API 接线（本 issue 只交付 `features/render/thumbnail.ts` 本身）
 
 **完成条件**：
-- [ ] 指定 `fraction` 能稳定映射到有效帧号，并通过 `__CVC_RENDER__.seek(frame, fps)` 抽取 PNG
-- [ ] 同一 `sourceKey` + 帧号复用既有 artifact；HTML/规格变化不会误命中旧图
-- [ ] `frame-thumbnail` PNG 可经 artifact id 下载，响应 `Content-Type: image/png`
-- [ ] 同一次多帧请求只复用一个 capture session；异常时正确关闭 session；登记失败时补偿删除已写文件
-- [ ] 单元 mock 测试与至少一条真实 Playwright 集成测试通过
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过
+- [x] 指定 `fraction` 能稳定映射到有效帧号，并通过 `__CVC_RENDER__.seek(frame, fps)` 抽取 PNG
+- [x] 同一 `sourceKey` + 帧号复用既有 artifact；HTML/规格变化不会误命中旧图
+- [x] `frame-thumbnail` PNG 可经 artifact id 下载，响应 `Content-Type: image/png`
+- [x] 同一次多帧请求只复用一个 capture session；异常时正确关闭 session；登记失败时补偿删除已写文件
+- [x] 单元 mock 测试与至少一条真实 Playwright 集成测试通过
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过
+
+## 完成证据（2026-07-24）
+
+- 提交 `48cd5c5`：新增 `src/features/render/thumbnail.ts`（`captureThumbnails`/`thumbnailSourceKey`/`fractionToFrame`），公共类型下沉到 `types.ts` 避免 `thumbnail.ts` ↔ `repository.ts` 循环依赖。
+- `RenderRepository` 新增 `loadCompletedThumbnailContext`/`findThumbnail`/`registerThumbnail` 三个方法；`artifacts/service.ts` 补充 `frame-thumbnail → image/png` 映射。
+- 测试：13 个依赖注入 mock 单测（缓存命中/未命中、单 session 批量截取、失败补偿等）+ 3 个真实 Playwright 集成测试，全部通过。
+- `pnpm lint`、`pnpm tsc --noEmit`、`pnpm test`（60 files / 208 tests）、`pnpm build` 均在合入后的干净 `main` 上验证通过。
+- 本 issue 只交付基础设施本身，`frame-thumbnail` 尚无消费方（待 issue-05/issue-06 接线），这是预期状态。
 
 ## 6. 施工前需确认的假设
 

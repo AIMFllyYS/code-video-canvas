@@ -1697,14 +1697,14 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 
 | Issue | 优先级 | Wave | 依赖 | 一句话目标 |
 |---|---|---|---|---|
-| `issue-01-director-stage-input-contract-completion` | P0 | 1 | 无 | 补齐 ASSEMBLE/FINALIZE 的 `directorInput` 真实组装，使六阶段无 mock 全部跑通 |
-| `issue-02-stepfun-key-validation-strategy` | P0 | 1 | 无 | 修复 `validateKey()` 用 `models.list()` 导致有效 Key 也判定失败的问题 |
-| `issue-03-canvas-inspector-data-truthfulness` | P1 | 2 | 部分展示依赖 issue-01 | Inspector 的内容哈希/合同 chips/进度/查看代码改为真实数据 |
-| `issue-04-shot-thumbnail-infrastructure` | P1 | 2 | 无 | 新增共享的分镜静态帧缩略图生成能力（`features/render/thumbnail.ts`） |
-| `issue-05-shot-renderer-page-wiring` | P1 | 3 | issue-04 | 分镜渲染器页面播放器/缩略图/历史产物真实打通 |
-| `issue-06-export-configurable-params-and-real-qa` | P1 | 4 | issue-04；建议 issue-01 后回归 | 导出参数最小可配置 + Final QA 真实抽帧检测 |
+| `issue-01-director-stage-input-contract-completion` | P0 | 1 | 无 | ✅ 已完成（2026-07-24，`11435c5`）：补齐 ASSEMBLE/FINALIZE 的 `directorInput` 真实组装，使六阶段无 mock 全部跑通 |
+| `issue-02-stepfun-key-validation-strategy` | P0 | 1 | 无 | ✅ 已完成（2026-07-24，`c50637e`）：修复 `validateKey()` 用 `models.list()` 导致有效 Key 也判定失败的问题 |
+| `issue-03-canvas-inspector-data-truthfulness` | P1 | 2 | 部分展示依赖 issue-01 | ✅ 已完成（2026-07-24，`fe7c1b2`）：Inspector 的内容哈希/合同 chips/进度/查看代码改为真实数据 |
+| `issue-04-shot-thumbnail-infrastructure` | P1 | 2 | 无 | ✅ 已完成（2026-07-24，`48cd5c5`）：新增共享的分镜静态帧缩略图生成能力（`features/render/thumbnail.ts`） |
+| `issue-05-shot-renderer-page-wiring` | P1 | 3 | issue-04 | ✅ 已完成（2026-07-24，待提交）：分镜渲染器页面播放器/缩略图/历史产物真实打通（新增 `GET /api/render/thumbnails` + `shot-server-data.ts`） |
+| `issue-06-export-configurable-params-and-real-qa` | P1 | 4 | issue-04；建议 issue-01 后回归 | ✅ 已完成（2026-07-24，待提交）：3 档 9:16 分辨率预设可配置（导出时 ffmpeg scale，默认预设零回归）+ Final QA（`jimp` 黑帧/纯色检测写回 `shot-qa` 节点）；`export-settings` 因模块边界置于 `features/canvas` |
 | `issue-07-canvas-lane-panel-summary` | P2 | 2 | 无 | ✅ 已完成（2026-07-24，`29bba21`）：分镜通道折叠面板补充子节点真实状态摘要 |
-| `issue-08-export-service-storage-adapter-boundary` | P2 | 2 | 无 | `export-service.ts` 裸 `fs` 改走 `StorageAdapter` |
+| `issue-08-export-service-storage-adapter-boundary` | P2 | 2 | 无 | ✅ 已完成（2026-07-24，`19fe79b`）：`export-service.ts` 裸 `fs` 改走 `StorageAdapter` |
 
 推进顺序遵循 Wave 分组（同 Wave 内可并行）：Wave 1（issue-01/02）→ Wave 2（issue-03/04/07/08，可与 Wave 1 尾声并行）→ Wave 3（issue-05）→ Wave 4（issue-06）。
 

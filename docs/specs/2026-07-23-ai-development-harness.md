@@ -350,6 +350,8 @@ stage：`shot-script→SHOT_SPEC`、`shot-codegen→FABRICATE`、
 
 **采用方案：`projects` 表新增 `exportSettings`（`text`，`mode: 'json'`）列**，存 `{ resolutionPreset, subtitleBurnIn }` 等，随项目走，默认值兜底为当前固定的 `1080×1920 · 30fps`（更贴合"每项目一份导出配置"的语义，且不需要额外 join）。未采用候选方案：新建独立 `export_settings` 表（`projectId` 唯一外键）——与 `projects` 解耦更彻底，但当前档位数量少，不值得多引入一张表。落地时需走 Drizzle 迁移，禁止手改 `meta/*.json` snapshot。
 
+> **落地补记（2026-07-24，issue-06 完成）**：已按本方案新增可空 `projects.exportSettings` JSON 列（迁移 `0002_solid_prism.sql`）。实际结构为 `{ resolutionPreset }`（三档 9:16 预设：`1080x1920`/`720x1280`/`540x960`，`null`→默认母版）；`subtitleBurnIn` **本轮未纳入存储**——字幕烧录尚无真实实现，导出页已按「UI 字段真实性门禁」将其降级为纯展示占位（"暂不支持（P1）"），待 P1 实现真实烧录时再入库。分辨率仅在导出 `concat` 阶段用 ffmpeg `scale` 生效（不下沉渲染层，不破坏单镜渲染缓存）；默认母版预设继续走 `-c:v copy` 无损快路径。预设常量/`exportSettingsSchema`/resolver 的单一事实源落在 `src/features/canvas/export-settings.ts`（**而非 `features/render`**），以规避 `director→render`、`render↔canvas` 循环依赖（详见 `docs/issues/issue-06-*.md` §A.2 修正说明）。
+
 分辨率切换的实现层级同样已拍板：**在合并导出阶段用 ffmpeg `scale` 滤镜统一缩放，不在 FABRICATE/单镜渲染阶段按分辨率分档**——理由是分辨率下沉到渲染层会因为 `renderKey` 变化导致已渲染分镜缓存失效，代价远高于导出时才做的一次性 `scale`；默认预设仍走原有 `-c:v copy` 无损直通路径，零回归风险。
 
 ---

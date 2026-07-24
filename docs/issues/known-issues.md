@@ -4,6 +4,10 @@
 > 与 [`docs/specs/2026-07-23-harness-task-breakdown.md`](../specs/2026-07-23-harness-task-breakdown.md) 的 Track H 小节互为索引：本文件是详细清单，task-breakdown 只登记摘要。
 > 背景分析见对应会话记录；核心根因是既往验收标准只测"按钮点击是否触发对应 API"，未测"页面展示的每个字段是否真实"，详见 AGENTS.md「UI 字段真实性门禁」。
 
+## 后续施工交接
+
+`issue-01/02/03/04/05/06/07/08` 已全部完成（Track H 系统性前后端打通修复全部收口，2026-07-24）；历史并行开工指南与 Goal 启动提示词见 [`next-wave-handoff.md`](./next-wave-handoff.md)。
+
 ## 使用说明
 
 - 每个 issue 是一个可独立施工的低耦合模块，文件命名 `issue-NN-<brief>.md`，内部结构对齐 harness Task 卡片（目标/根因/允许改动范围/禁止改动/完成条件），可直接作为 Codex Goal 的施工依据。
@@ -53,10 +57,10 @@ Wave 编号只表示"建议的先后顺序"，**不代表必须串行**。逐个
 |---|---|---|---|---|---|
 | [`issue-01-director-stage-input-contract-completion`](./issue-01-director-stage-input-contract-completion.md) | P0 | 1 | 无 | 补齐 ASSEMBLE/FINALIZE 的 `directorInput` 真实组装，使六阶段无 mock 全部跑通 | **已完成**（2026-07-24；Q1-Q4 决策记录见文档 §3；Q4 涉及的两项延后工作已登记 [GitHub Issue #7](https://github.com/AIMFllyYS/code-video-canvas/issues/7)） |
 | [`issue-02-stepfun-key-validation-strategy`](./issue-02-stepfun-key-validation-strategy.md) | P0 | 1 | 无 | 修复 `validateKey()` 用 `models.list()` 导致有效 Key 也判定失败的问题 | **已完成**（2026-07-24） |
-| [`issue-03-canvas-inspector-data-truthfulness`](./issue-03-canvas-inspector-data-truthfulness.md) | P1 | 2 | 部分展示依赖 issue-01 | Inspector 的内容哈希/合同 chips/进度/查看代码改为真实数据 | 待施工 |
-| [`issue-04-shot-thumbnail-infrastructure`](./issue-04-shot-thumbnail-infrastructure.md) | P1 | 2 | 无 | 新增共享的分镜静态帧缩略图生成能力 | 待施工 |
-| [`issue-05-shot-renderer-page-wiring`](./issue-05-shot-renderer-page-wiring.md) | P1 | 3 | issue-04 | 分镜渲染器页面播放器/缩略图/历史产物真实打通 | 待施工 |
-| [`issue-06-export-configurable-params-and-real-qa`](./issue-06-export-configurable-params-and-real-qa.md) | P1 | 4 | issue-04；建议 issue-01 后回归 | 导出参数最小可配置 + Final QA 真实抽帧检测 | **已拍板，可开工**（架构选"导出时缩放"；图像库已批准 `jimp`） |
+| [`issue-03-canvas-inspector-data-truthfulness`](./issue-03-canvas-inspector-data-truthfulness.md) | P1 | 2 | 部分展示依赖 issue-01 | Inspector 的内容哈希/合同 chips/进度/查看代码改为真实数据 | **已完成**（2026-07-24，`fe7c1b2`） |
+| [`issue-04-shot-thumbnail-infrastructure`](./issue-04-shot-thumbnail-infrastructure.md) | P1 | 2 | 无 | 新增共享的分镜静态帧缩略图生成能力 | **已完成**（2026-07-24，`48cd5c5`） |
+| [`issue-05-shot-renderer-page-wiring`](./issue-05-shot-renderer-page-wiring.md) | P1 | 3 | issue-04 | 分镜渲染器页面播放器/缩略图/历史产物真实打通 | **已完成**（2026-07-24，待提交） |
+| [`issue-06-export-configurable-params-and-real-qa`](./issue-06-export-configurable-params-and-real-qa.md) | P1 | 4 | issue-04；建议 issue-01 后回归 | 导出参数最小可配置 + Final QA 真实抽帧检测 | **已完成**（2026-07-24；`export-settings` 因模块边界实置于 `features/canvas`，见文档 §A.2） |
 | [`issue-07-canvas-lane-panel-summary`](./issue-07-canvas-lane-panel-summary.md) | P2 | 2 | 无 | 分镜通道折叠面板补充子节点状态摘要 | **已完成**（2026-07-24，`29bba21`） |
 | [`issue-08-export-service-storage-adapter-boundary`](./issue-08-export-service-storage-adapter-boundary.md) | P2 | 2 | 无 | `export-service.ts` 裸 `fs` 改走 `StorageAdapter` | **已完成**（2026-07-24） |
 
@@ -85,3 +89,9 @@ Wave 编号只表示"建议的先后顺序"，**不代表必须串行**。逐个
 | 2026-07-24（并行分析） | 逐一核对 8 个 issue 的允许改动范围，确认 `issue-01/02/03/04/07/08` 六个互相零文件重叠、可立即同时并行开工；标出 `issue-06`/`issue-08` 都会改到 `export-service.ts` 这一处需要协调的文件级冲突 |
 | 2026-07-24（issue-02 完成） | `validateKey()` 由 `models.list()` 改为与 `StepfunAdapter.chat()` 一致的最小 `chat.completions.create()` 探测（`max_tokens:1` + per-request `timeout`/`maxRetries:0`），保留不泄露 Key 的服务端 `console.error` 日志；新增 4 个 `validateKey` 单测（共 9 tests 全绿）；经 `pnpm dev` + POST `/api/settings` 真实 Key 验证（有效→200/无效→422）；状态→已完成 |
 | 2026-07-24（issue-07 完成） | 画布从既有 `nodes` 投影纯派生固定五角色通道摘要，展开态显示真实状态徽章与脚本文本，不完整数据显式提示且不伪造状态；5 个新增测试、全量 168 tests、lint/tsc/build 与 production Chromium 交互验收通过；提交 `29bba21` |
+| 2026-07-24（issue-01 完成） | `resolveDirectorInput` 补齐 ASSEMBLE（`score`/`shot-sfx`/`shot-subtitle`）与 FINALIZE（`export`/`shot-qa`）五种节点类型的输入组装，`stage-prompt.ts` 按 `nodeType` 二次路由到拆分后的 builder；director 测试 54/54 全绿；提交 `11435c5` |
+| 2026-07-24（issue-03 完成） | Inspector 面板内容哈希/关联产物 chips/生成进度/查看代码四处硬编码占位改为真实服务端数据，新增 `getNodeArtifacts` 查询与 `ArtifactChip.href`；`pnpm lint/tsc/test(60 files·208 tests)/build` 全绿；提交 `fe7c1b2` |
+| 2026-07-24（issue-04 完成） | 新增 `features/render/thumbnail.ts` 共享缩略图基础设施（fraction→frame 换算、sha256 缓存寻址、单 session 批量截帧、失败补偿），`RenderRepository` 新增三个只读/登记方法；13 个 mock 单测 + 3 个真实 Playwright 集成测试；提交 `48cd5c5` |
+| 2026-07-24（issue-08 完成） | `export-service.ts` 裸 `node:fs/promises` 调用改走 `StorageAdapter` 新增的 `tempDir`/`readLocalFile`/`removeTempDir` 三个方法，`exportProject()` 行为与产物字节无回归；提交 `19fe79b` |
+| 2026-07-24（issue-06 完成） | Part A 导出分辨率三档预设（9:16）可配置：`projects.exportSettings` JSON 列（迁移 `0002_solid_prism.sql`）+ 新 `PATCH /api/projects/[id]`；`concat.ts` 按目标≠母版分「`-vf scale` 重编码 / `-c:v copy` 无损」两路，默认预设零回归。Part B Final QA：新增 `features/render/qa-check.ts`（`jimp` 亮度均值黑帧 + 标准差纯色规则）+ 编排写回 `shot-qa` 节点 `data.qaCheck`（contentHash 跳过），`GET /api/render/export` 惰性触发并返回 `shotQa`（未检测为 `null`）。**关键修正**：`export-settings.ts` 因 `director↔render`/`render↔canvas` 循环风险实置于 `features/canvas`。全量 62 files/241 tests 绿，lint/tsc/build 通过 |
+| 2026-07-24（issue-05 完成） | 分镜渲染器页（`/canvas/shot/[id]`）六处占位打通：`page.tsx` 自动加载 `render-mp4` 历史产物、受控 `<video>`（播放·逐帧·进度·时间戳，预览态隐控件）、缩略图轨道消费新增 `GET /api/render/thumbnails`（内部调 issue-04 `captureThumbnails`）、同步状态诚实化、合同构图模式（同通道 `shot-script` 的 `director-shot-spec`）/分辨率（`renderSpec`）/确定性声明（`render-mp4` 存在）接真实数据、独立"生成分镜代码"入口复用 `/api/render`；新增 `shot-server-data.ts` + `shot-api` 纯函数与 `fetchThumbnails` + 8 个单测；`pnpm lint` 全绿、`pnpm build` 通过（含新路由）、issue-05 文件 `tsc` 干净、集成测试隔离通过；**仅全树 `tsc --noEmit` 被未提交的 issue-06 WIP（`export-service.test.ts` 3 处类型错误）阻塞，未越界修复**；待提交 |
