@@ -56,8 +56,8 @@
   `variants`，禁硬编码时长 / 贝塞尔 / timer，跟随 `prefers-reduced-motion` 降级（详见
   [架构规范 §10](./architecture-conventions.md#ui-design-ssot)）。注意：§3 禁
   CSS `animation`/`transition` 只约束**视频 shot 渲染**，应用 UI 不受此限。
-- 新视觉组件严格按 Pencil reusable symbol → 可复用组件与 demo → `/playbook`
-  登记 → 页面通过公共导出复用；`/playbook` 不是业务组件实现目录。
+- 新视觉组件严格按 Pencil reusable symbol → Pencil layout/screenshot 验证 → 可复用组件与 demo → `/playbook` 登记 → 页面通过公共导出复用；`/playbook` 不是业务组件实现目录。
+- Canonical UI 只映射 `canvas.pen` 的 `ds-*` token 与 `mode: light | dark`，不得从 R2 的 `--*` source-kit token 建立产品依赖，也不得在页面硬编码 hex/rgba。
 
 ## 6. 密钥与安全边界
 

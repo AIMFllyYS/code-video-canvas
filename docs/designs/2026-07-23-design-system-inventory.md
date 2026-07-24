@@ -1,334 +1,300 @@
 # CodeVideoCanvas Design System Inventory
 
-> Created: 2026-07-23 · Updated: 2026-07-24 · Status: accepted
-> Source of truth: [`canvas.pen`](./canvas.pen) · Spec: [`2026-07-23-ui-design-handoff.md`](./2026-07-23-ui-design-handoff.md)
+> Created: 2026-07-23 · Updated: 2026-07-25 · Status: accepted
+> Visual SSOT: [`canvas.pen`](./canvas.pen) · Runtime governance: [Architecture Conventions §10](../conventions/architecture-conventions.md#ui-design-ssot)
 
-本文档是设计稿的**体系索引**：画布分区、token、组件、页面布局模式、图标白名单。实现前端主题时以本文 + `.pen` 变量为准。
+本文是 `canvas.pen` 的文字索引，记录当前 Canonical 视觉体系、主题变量、组件母版、组合模块、正式页面及同步规则。若本文与设计稿像素或实例树不一致，以已在 Pencil 编辑器中打开的 `canvas.pen` 为准，并在同一次设计变更中回写本文。
 
 ---
 
-## 1. 画布空间地图
+## 1. 权威与依赖链
 
-```
-y≈0       Zone A · 设计规范
-          A1 Cover (1440×360)
-          A2 Colors (新分组：品牌/阶段/中性/文字/功能填充/功能表面)
-          A3 Type / Grid (1440×560)
-          A4 Icons (1440×1100，位于 A3 右侧 x≈1600)
+Canonical 产品设计只允许沿以下链路向下组合：
 
-y≈1920    Zone B · 组件库（30 reusable）
-          B1 Controls · B2 Feedback · B3 Navigation · B4 Business
-
-y≈4743    Zone C · 浅色页面（横排，间距 160）
-          S1 Home → S2 New Project → S3 Canvas → S4 Shot Detail → S5 Export → S6 Settings
-
-y≈5803    Zone D · 暗色页面（对齐 S1–S6 正下方）
-          S1 Home Dark → S2 New Project Dark → … → S6 Settings Dark
-          根 frame `theme: { mode: "dark" }`，其余结构与浅色屏一致
+```text
+A · Foundations
+  → B0/B1–B3 · Canonical Components
+  → C1–C3 · Canonical Compositions
+  → S1–S6 · Canonical Routed Screens
 ```
 
-主题轴：`mode: light | dark`。颜色变量均为双主题；数字/字体系列变量无主题轴。
+- **A** 定义 token、字体、密度、图标、内容真实性与同步规则。
+- **B0** 保存 reusable mother component；B1–B3 仅展示母组件实例。
+- **C** 只组合 B，不重新定义视觉语言。
+- **S** 是最终产品效果，只消费 A → B → C。
+- **D** 是页面、状态与依赖治理合同，约束 S，不提供平行视觉体系。
+- **R2/R3** 是来源档案，只保留 shadcn 结构模板、提示词和探索稿；不得被 S 直接引用，也不参与 Canonical Header 或主题同步。
+
+设计到代码的固定顺序：
+
+```text
+Pencil reusable symbol
+  → Pencil layout/screenshot verification
+  → React reusable component + demo
+  → /playbook registry
+  → feature/page composition
+```
+
+`.pen` 只能通过 Pencil MCP 读取和修改。
 
 ---
 
-## 2. 颜色统一原则
+## 2. 当前画布地图
 
-1. **禁止硬编码颜色**。除 A2/A3 色板展示 Chip 外，所有 fill、stroke、effect shadow color 必须引用 `$变量`。
-2. **阶段色按流水线语义归类**，不再使用 7 个独立色相的“彩虹板”：
-   - 输入 / 媒体：`teal`（`stage-ingest`、`stage-audio`）
-   - AI 编排：`purple`（`stage-direct`、`stage-shotspec`）
-   - 镜头生成：`accent` 蓝（`stage-shot`）
-   - 组装：`warning` 橙（`stage-assemble`）
-   - 完成 / 导出：`success` 绿（`stage-finalize`）
-3. **暗色背景不再使用纯黑**：`bg` → `#0F0F0F`，`canvas-bg` → `#0A0A0A`，与 `surface`、`fill` 形成明确层级。
-4. **阴影统一**：卡片层用 `$shadow-card`，浮层/弹窗/开关/Toast 用 `$shadow-float`。
-5. **功能 Token 必须落地**：状态胶囊底用 `*-fill`，彩色背景上文字用 `$text-inverse`，画布网格用 `$canvas-grid`，透明占位用 `$transparent`。
+| 区域 | 内容 | 当前节点 |
+|---|---|---|
+| A | Foundations | A1 Tokens、A2 Typography & Spacing、A3 Icon & Content Rules、A4 Board Headers & Sync |
+| B0 | Canonical mother components | 16 个正式 reusable symbols |
+| B | Component specimens | B1 Actions & Inputs、B2 Navigation & Feedback、B3 CVC Domain Components |
+| C | Stable compositions | C1 Workbench、C2 Pipeline、C3 Inspector |
+| D | Governance contracts | D1 Route、D2 State & Feedback、D3 Dependency |
+| S Light | 正式浅色页面 | S1–S6，1440×900 |
+| S Dark | 正式暗色页面 | S1–S6，1440×900 |
+| R2 | Source archive | shadcn source kit，保持原始 token 与外观 |
+| R3 | Source archive | generated dashboard explorations + prompts |
+
+当前 `.pen` 共 103 个 reusable 节点：
+
+- **16 个 Canonical reusable symbols**：唯一允许正式页面依赖；
+- **87 个 R2 source-kit symbols**：仅为档案与结构参考，不属于产品组件数。
 
 ---
 
-## 3. Design Tokens
+## 3. 视觉方向
 
-### 3.1 品牌与语义色
+### 3.1 Porcelain Light
 
-| Token | Light | Dark | 用途 |
-|---|---|---|---|
-| `accent` | `#007AFF` | `#0A84FF` | 主操作 / 选中 / 链接 |
-| `accent-fill` | `#007AFF1A` | `#0A84FF29` | Tinted 按钮 / 选中底 / StatusPill 生成中 |
-| `success` | `#34C759` | `#30D158` | 成功 / 已渲染 / Finalize 导出 |
-| `warning` | `#FF9500` | `#FF9F0A` | 警告 / QA WARNING / Assemble 组装 |
-| `danger` | `#FF3B30` | `#FF453A` | 失败 / 破坏性操作 |
-| `purple` | `#AF52DE` | `#BF5AF2` | AI / 风格 / Direct / Shot-Spec |
-| `teal` | `#30B0C7` | `#40CBE0` | 媒体 / 输入 / 缓存 / Audio |
+- 纵向渐变由白色过渡到低饱和雾蓝瓷白。
+- 表面接近白色但保留轻微冷调，与背景通过 1px 雾蓝边界和克制阴影分层。
+- 主操作使用深海军蓝渐变；正文使用墨蓝黑，不以纯黑承担大面积主色。
 
-> 已删除的通用色：`pink`、`indigo`。这两个色相不再作为通用语义色出现。
+### 3.2 Obsidian Navy Dark
 
-### 3.2 流水线阶段色
+- 顶部为黑曜石近黑，中段为低亮黑灰，底部逐渐显现深海军蓝。
+- 避免高亮蓝紫、霓虹光晕和典型“AI 渐变”；蓝色只用于信息、选中和运行态。
+- 卡片使用半透明黑灰表面，边界为低对比石墨灰，正文使用柔和灰白而非刺眼纯白。
 
-| Token | Light | Dark | 阶段 | 归类色系 |
-|---|---|---|---|---|
-| `stage-ingest` | `#30B0C7` | `#40CBE0` | Ingest 语义分镜 | 青 / 媒体输入 |
-| `stage-direct` | `#AF52DE` | `#BF5AF2` | Direct 风格圣经 | 紫 / AI |
-| `stage-shotspec` | `#AF52DE` | `#BF5AF2` | Shot-Spec 分镜合同 | 紫 / AI |
-| `stage-shot` | `#007AFF` | `#0A84FF` | Shot 分镜节点 | 蓝 / 主色 |
-| `stage-audio` | `#30B0C7` | `#40CBE0` | Audio 配音/字幕 | 青 / 媒体 |
-| `stage-assemble` | `#FF9500` | `#FF9F0A` | Assemble 合成 | 橙 / 警告 |
-| `stage-finalize` | `#34C759` | `#30D158` | Finalize 导出 | 绿 / 成功 |
+### 3.3 语义色纪律
 
-### 3.3 中性色与表面
+- `ds-blue`：选择、信息、活动执行。
+- `ds-green`：已验证、成功、健康。
+- `ds-amber`：警告、等待人工复核。
+- `ds-red`：失败、危险、阻断。
+- `ds-accent`：受控的金属暖色点缀，不替代主操作色。
+- 状态不可只靠颜色表达，必须同时有文本标签或图标语义。
 
-| Token | Light | Dark | 用途 |
-|---|---|---|---|
-| `bg` | `#FFFFFF` | `#0F0F0F` | 页面主背景 |
-| `bg-secondary` | `#F2F2F7` | `#1C1C1E` | 次级背景 / 规范板底 |
-| `surface` | `#FFFFFF` | `#1C1C1E` | 卡片表面 / 输入框 |
-| `surface-raised` | `#FFFFFF` | `#252525` | Dialog / 浮层 / 选中分段 |
-| `fill` | `#F2F2F7` | `#2C2C2E` | 控件填充 / 轨道背景 |
-| `fill-strong` | `#E5E5EA` | `#3A3A3C` | 按下 / 强填充 / 侧栏激活项 |
-| `separator` | `#3C3C432E` | `#5454587A` | 分隔线 / 描边 |
-| `canvas-bg` | `#F5F5F7` | `#0A0A0A` | 节点画布底 |
-| `scrim` | `#00000066` | `#00000080` | 模态遮罩 |
+---
 
-### 3.4 文字色
+## 4. Canonical Design Tokens
+
+主题轴统一为 `mode: light | dark`。新 Canonical 组件只使用 `ds-*`、`$transparent` 以及本节明确列出的字体/尺寸变量；旧 `--*`、`pi-*`、Apple-like token 仅为 R2/历史兼容，不得进入新产品组件。
+
+### 4.1 基础表面
 
 | Token | Light | Dark | 用途 |
 |---|---|---|---|
-| `label` | `#000000` | `#FFFFFF` | 主文字 / 标题 |
-| `label-secondary` | `#3C3C4399` | `#EBEBF599` | 次级文字 / 描述 |
-| `label-tertiary` | `#3C3C434C` | `#EBEBF54C` | 占位 / 辅助 / 禁用图标 |
-| `text-inverse` | `#FFFFFF` | `#FFFFFF` | 彩色/深色背景上的白字 |
+| `ds-bg` | `#EEF2FF` | `#03040A` | 页面基底 |
+| `ds-surface` | `#FAFBFFF2` | `#0D0E13F2` | 卡片、顶栏、Inspector、Dialog |
+| `ds-surface-muted` | `#E8ECFA` | `#171820` | 次级面、选中导航、控件轨道 |
+| `ds-text` | `#171A2E` | `#F1F1F4` | 主文字 |
+| `ds-text-muted` | `#68728F` | `#9696A3` | 次级文字、元数据 |
+| `ds-border` | `#D2D9EE` | `#292B35` | 1px 边界与分隔 |
+| `ds-shadow` | `#25305A1F` | `#00000099` | Canonical 卡片/浮层阴影色 |
 
-### 3.5 功能填充
+### 4.2 页面背景渐变
+
+| Token | Light | Dark |
+|---|---|---|
+| `ds-gradient-start` | `#FFFFFF` | `#03040A` |
+| `ds-gradient-mid` | `#F1F3FF` | `#080912` |
+| `ds-gradient-end` | `#DCE3FF` | `#23295C` |
+
+统一配置：线性、纵向、stop `0 / 0.52 / 1`。A–D、Sidebar 与 S1–S6 使用同一组变量；不得为单页另造背景渐变。
+
+### 4.3 主操作
 
 | Token | Light | Dark | 用途 |
 |---|---|---|---|
-| `accent-fill` | `#007AFF1A` | `#0A84FF29` | 主色浅底 |
-| `success-fill` | `#34C7591A` | `#30D15829` | StatusPill 已渲染 / 验证成功 |
-| `teal-fill` | `#30B0C71A` | `#40CBE029` | StatusPill 已缓存 |
-| `danger-fill` | `#FF3B301A` | `#FF453A29` | StatusPill 失败 |
-| `warning-fill` | `#FF95001A` | `#FF9F0A29` | QA 警告底 |
-| `overlay` | `#00000099` | `#00000099` | 缩略图蒙层 / 时长标签底 |
-| `canvas-grid` | `#3C3C4312` | `#EBEBF526` | 画布网格点 |
+| `ds-primary` | `#202A5B` | `#403778` | Toggle、品牌标及非渐变主色 |
+| `ds-primary-start` | `#3A4788` | `#4B4383` | Primary gradient start |
+| `ds-primary-end` | `#1C244F` | `#292642` | Primary gradient end |
+| `ds-primary-fg` | `#F8FAFF` | `#F8FAFF` | 主操作前景 |
 
-### 3.6 功能表面 / 效果
+Primary 按钮使用 `135°` 的 `ds-primary-start → ds-primary-end` 渐变。除 S6 两个 Save 实例外，页面不得局部替换 Primary 配色。
+
+### 4.4 信息与状态
+
+| Token | Light | Dark |
+|---|---|---|
+| `ds-blue` | `#4E5FA8` | `#8D8DAA` |
+| `ds-blue-soft` | `#E5E9FF` | `#1C1D2B` |
+| `ds-green` | `#168F63` | `#63B28E` |
+| `ds-green-soft` | `#E9F8F2` | `#122A22` |
+| `ds-amber` | `#B66A18` | `#D9A55E` |
+| `ds-amber-soft` | `#F3E7D4` | `#3B2D1D` |
+| `ds-red` | `#C4475B` | `#DE7C91` |
+| `ds-red-soft` | `#F2DEDA` | `#3A2421` |
+| `ds-accent` | `#80663A` | `#C4A15E` |
+| `ds-accent-soft` | `#F0E6D2` | `#383020` |
+
+### 4.5 媒体、遮罩与中性 Save
 
 | Token | Light | Dark | 用途 |
 |---|---|---|---|
-| `on-accent` | `#FFFFFF` | `#FFFFFF` | Primary / Destructive 按钮字/图标 |
-| `glass` | `#FFFFFFCC` | `#1C1C1ECC` | Toast 毛玻璃底 |
-| `glass-sidebar` | `#F2F2F7CC` | `#1C1C1ECC` | Sidebar 毛玻璃底 |
-| `tooltip-bg` | `#1C1C1E` | `#2C2C2E` | Tooltip 底 |
-| `player-bg` | `#000000` | `#000000` | 播放器黑底 |
-| `knob` | `#FFFFFF` | `#FFFFFF` | Toggle 圆钮 |
-| `transparent` | `#00000000` | `#00000000` | 透明填充 / 透明描边占位 |
-| `shadow-card` | `#00000014` | `#00000066` | 卡片 / 节点 / 设置组阴影 |
-| `shadow-float` | `#0000001F` | `#00000080` | 浮层 / Dialog / Toast / Toggle / SegmentedControl 阴影 |
+| `ds-scrim` | `#10183A70` | `#02030A99` | S2 模态遮罩 |
+| `ds-player-start` | `#26366F` | `#0E0F15` | 播放器渐变顶部 |
+| `ds-player-mid` | `#131E48` | `#05060B` | 播放器渐变中段 |
+| `ds-player-end` | `#070B20` | `#161A3C` | 播放器渐变底部 |
+| `ds-player-fg` | `#EEF2FF` | `#EEF2FF` | 播放器图标 |
+| `ds-save-neutral` | `#252836` | `#E8EBF5` | 仅 S6 Save 按钮背景 |
+| `ds-save-neutral-fg` | `#F5F6FA` | `#171A2E` | 仅 S6 Save 按钮前景 |
+| `ds-save-shadow` | `#1118271F` | `#02061766` | 仅 S6 Save 按钮阴影 |
 
-### 3.7 字体 / 字阶 / 间距 / 圆角
+中性 Save 是唯一批准的页面级按钮色彩例外，但仍通过主题变量实现，不使用实例硬编码 hex。
 
-| Token | 值 |
-|---|---|
-| `font-sans` | Inter |
-| `font-sc` | Noto Sans SC（含中文文本必须用） |
-| `font-mono` | JetBrains Mono |
-
-字阶：Display 34 / Title1 28 / Title2 22 / Headline 17 / Body 15 / Subhead 13 / Caption 12 / Micro 11。
-
-间距：`space-1`…`space-10` → 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40。
-
-圆角：`radius-sm` 6 · `md` 10 · `lg` 14 · `xl` 20 · `pill` 999。
-
-### 3.8 动效（Motion）
-
-应用 UI 的动画统一走这套 token；权威源同步至 `globals.css`（`--duration-*` / `--ease-*` / `--animate-shimmer`）与 `src/lib/motion/`（JS 镜像 + `AppMotionConfig`）。**确定性红线只约束视频 shot 渲染，应用 UI 允许过渡/动画**；所有动效在系统「减弱动态效果」下自动降级为静态（`prefers-reduced-motion` 全局规则 + motion `reducedMotion="user"`）。
+### 4.6 字体与密度
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--duration-fast` | 120ms | 悬停 / 颜色态 / 离场 |
-| `--duration-base` | 220ms | 收起/展开、抽屉进入、页面进入 |
-| `--duration-slow` | 360ms | 大位移 / 强调 |
-| `--ease-standard` | cubic-bezier(0.4, 0, 0.2, 1) | 通用 |
-| `--ease-emphasized` | cubic-bezier(0.22, 1, 0.36, 1) | 进入 / 展开 |
-| `--ease-exit` | cubic-bezier(0.4, 0, 1, 1) | 离场 / 收起 |
+| `ds-font` | Geist | UI、标题、正文 |
+| `ds-mono` | Geist Mono | ID、hash、task ID、artifact、时间码 |
+| `ds-radius` | 8 | 默认表面圆角 |
+| `ds-gap` | 16 | 默认模块间距 |
 
-约定：
-
-- 侧栏 / 面板收起展开用 motion 缓动宽度（`AnimatedAside` / 缓动列）；拖拽调宽时关闭动画保证 1:1 跟手。
-- 抽屉（窄屏 / 自动收起）用 `AnimatePresence` 的 `DrawerOverlay`：scrim 淡入淡出 + 面板从边缘滑入/滑出。
-- 骨架 shimmer 用 `--animate-shimmer`（1.6s ease-in-out 无限），仅在真实懒加载 / 异步等待时出现。
-
-职责分层（改动效前对号入座；新增只扩展以下层、不在页面另造抽象）：
-
-| 层 | 位置 | 职责 |
-|---|---|---|
-| Token 真源 | `src/lib/motion/tokens.ts` + `globals.css` | 时长 / 缓动 / transition（JS↔CSS 双镜像，必须同步） |
-| 全局配置 | `src/lib/motion/config.tsx` | `AppMotionConfig`：reducedMotion + 默认 transition，根 layout 挂一次 |
-| 可复用 variants | `src/lib/motion/variants.ts` | 进入 / 离场 / 滑入 |
-| 共享折叠 / 抽屉 | `features/navigation/collapsible-panel.tsx` | `AnimatedAside`（缓动宽度）/ `DrawerOverlay`（scrim + 滑入） |
-
-完整模块边界与新增规范见 [架构规范 §8](../conventions/architecture-conventions.md) 与 AGENTS.md「应用 UI 动效」。
+常用字号：Display 36、H1 30、H2 22、Body 14、Label 12；正文行高建议 1.45–1.55。控件圆角以 6 为主，卡片/播放器以 8 为主，Dialog 为 10，pill 为 999。
 
 ---
 
-## 4. 组件体系（Zone B · 30 reusable）
+## 5. Canonical Reusable Symbols（B0）
 
-### B1 基础控件
-
-| 组件 ID（稿内 name） | 场景 |
-|---|---|
-| Button/Primary | 主 CTA |
-| Button/Tinted | 次主操作（重渲等） |
-| Button/Gray | 取消 / 次级 |
-| Button/Destructive | 删除等破坏性 |
-| IconButton | 工具栏纯图标 |
-| SegmentedControl | 分段 Tab（分镜/音频/导出；主题浅色/深色/跟随） |
-| TextField / TextArea | 表单 |
-| SearchField | 项目搜索 |
-| Toggle | 开关 |
-| ProgressBar | 渲染/导出进度 |
-| StatusPill | 待生成 / 生成中 / 已渲染 / 已缓存 / 失败 |
-| Tooltip | 悬停提示 |
-
-### B2 反馈
-
-| 组件 | 场景 |
-|---|---|
-| Toast | info / success / warning / error |
-| Dialog | 模态确认与表单（新建项目） |
-| EmptyState | 空列表引导 |
-
-### B3 导航壳
-
-| 组件 | 场景 |
-|---|---|
-| NavItem | 常驻侧栏导航项 |
-| Sidebar | S1–S6 共同应用壳第一列（240px） |
-| TopBar | 页面顶栏操作区 |
-| ProjectCard | S1 项目网格 |
-| ArtifactChip | 工件文件名芯片 |
-
-### B4 业务节点
-
-| 组件 | 场景 |
-|---|---|
-| Node/StageNode | Ingest / Direct / Shot-Spec |
-| Node/ShotNode | 分镜节点（预览+状态） |
-| Node/AudioNode | 配音/字幕 |
-| Node/ExportNode | Finalize 导出 |
-| QueueStatusBar | 底部队列 |
-| TimelineTrack | 合成时间线 |
-| ContactSheetThumb | QA 抽帧联系表 |
-| SettingsRow / SettingsGroup | 设置页行组 |
-
-### B5 交互 chrome（Pencil 之外，登记于 /playbook）
-
-非 canvas.pen reusable symbol 的交互原语，作为可复用视觉原语登记于 `/playbook`：
-
-| 组件 | 场景 |
-|---|---|
-| ResizeHandle | 分栏面板拖拽调宽把手 |
-| Skeleton | 懒加载 / 异步等待占位（shimmer） |
-
-连线 Edge 不建 reusable，画布层用 `path` 绘制。
-
----
-
-## 5. 页面布局模式（Zone C / D）
-
-| 屏 | 路由意向 | 布局骨架 | 关键组件 |
+| Pencil symbol | ID | 责任 | 主题行为 |
 |---|---|---|---|
-| S1 Home | `/` | Sidebar(240) \| Hero → 新建卡 → ProjectCard 网格 → 最近渲染 | Sidebar, ProjectCard, SearchField, Button/Primary |
-| S2 New Project | Dialog on S1 | 含 Sidebar 的 S1 背景 + Scrim + Dialog(560) 表单 | Sidebar, Dialog, TextField, TextArea, Button |
-| S3 Canvas | `(canvas)/` | Sidebar(240) \| Center(TopBar+DAG+Queue) \| Inspector(320) | Sidebar, Nodes, QueueStatusBar, ProgressBar |
-| S4 Shot Detail | 单镜审查 | Sidebar(240) \| TopBar → 播放器 + Code(380) + 合同(320) | Sidebar, IconButton, StatusPill, SettingsGroup |
-| S5 Export | 合成导出 | Sidebar(240) \| TopBar → 480×200 预览 → Timeline×4 → 导出面板 + QA | Sidebar, TimelineTrack, SettingsGroup, ContactSheetThumb |
-| S6 Settings | `settings/` | Sidebar(240) \| 居中 720 列 SettingsGroup×4 | Sidebar, SettingsGroup, Toggle, SegmentedControl |
+| `SpecBoardHeader/Canonical` | `naY6Q` | A–D 规范板统一标题 | `ds-text / muted / border` |
+| `Button/Primary/Canonical` | `QDsSV` | 主操作 | 主题化主渐变 |
+| `Button/Outline/Canonical` | `rRzIi` | 次操作 | surface + border |
+| `Button/Ghost/Canonical` | `j7HxdL` | 低强调操作 | 透明底 + token 前景 |
+| `Field/Canonical` | `AIern` | 单行字段 | surface + border |
+| `Textarea/Canonical` | `pAGbj` | 多行源文本 | surface + border |
+| `Toggle/Canonical` | `tRDRK` | 布尔状态 | primary track |
+| `NavItem/Canonical` | `OD6of` | 导航原子 | muted / selected override |
+| `StatusBadge/Canonical` | `G3szjk` | 运行与语义状态 | semantic + soft surface |
+| `Progress/Canonical` | `cjFyE` | 离散进度 | muted track + blue fill |
+| `AppSidebar/Canonical` | `ViGub` | 唯一应用侧栏 | 与页面同源渐变 |
+| `ArtifactChip/Canonical` | `OJzNk` | Artifact 标识/链接外观 | muted surface + mono |
+| `InspectorTabs/Canonical` | `N4FZZS` | 固定四页签 | Data / Source / Gates / Execution |
+| `ProjectCard/Canonical` | `S1xDL` | 项目摘要 | surface / muted preview |
+| `PipelineNode/Canonical` | `Qsovp` | DAG 任务与 checkpoint | surface + semantic status |
+| `QueueBar/Canonical` | `XL8t8` | Trigger/队列摘要 | surface + border |
 
-Zone D 与 Zone C 一一对应；根节点强制 `theme.mode = dark`，文案与结构相同。S6 Dark 主题分段选中「深色」。
+规则：
+
+1. 修改颜色优先改 token，不逐个修改实例。
+2. 修改结构只改 B0 mother component，再检查 B、C、S 同步结果。
+3. 实例 override 只允许内容、状态、图标、选中态和明确登记的尺寸变体。
+4. 不新增平行 Button、Card、Badge、Sidebar、Tabs 或 QueueBar。
 
 ---
 
-## 6. 图标体系（A4 · Lucide 白名单）
+## 6. 组合模块（C）
 
-统一：`{ type: "icon", library: "lucide" }`。禁止 emoji。
+| 模块 | 消费组件 | 正式消费点 |
+|---|---|---|
+| C1 Workbench | Primary Button、ProjectCard | S1、S2 背景 |
+| C2 Pipeline | PipelineNode、QueueBar | S3 |
+| C3 Inspector | InspectorTabs、Progress、状态与预览表面 | S3、S4 |
 
-### 6.1 尺寸规范
+C 只负责稳定布局与业务组合，不定义新颜色。任何可复用的新 viewer、trace、gate、source、run control 或 status bar，必须先按 N6 顺序加入 B0/B 区，再进入 C/S。
 
-| 尺寸 | 用途 |
+---
+
+## 7. 正式页面与路由合同（S）
+
+| 屏 | 路由/状态 | 主目的 | 主操作 |
+|---|---|---|---|
+| S1 | `/workbench` | 恢复或创建项目 | New project |
+| S2 | `/workbench` New Project state | 创建 durable project | Start planning |
+| S3 | `/canvas/[projectId]` | 操作执行 DAG | Run ready nodes |
+| S4 | `/shots/[shotId]` | 审查单镜合同与媒体 | Render shot |
+| S5 | `/export/[projectId]` | 验证并交付输出 | Compose project |
+| S6 | `/settings` | 验证 workspace providers/defaults | Save settings |
+
+共同约束：
+
+- 每屏 1440×900、`clip:true`，Light/Dark 同构。
+- 唯一应用壳为 `AppSidebar/Canonical`；页面不得复制 Sidebar 或 TopNav。
+- S2 是 S1 上的模态状态，不是独立路由。
+- Inspector 固定为 `Data / Source / Gates / Execution`。
+- 可见字段必须追溯到 Snapshot、Realtime、artifact/API DTO 或明确的本地 optimistic command state。
+- Artifact 外观可点击时必须有真实下载 URL；控件必须有 handler，能力不可用时明确 disabled/empty。
+- 不显示 raw assistant delta、Tool 参数值、prompt、credential、provider raw error 或 hidden reasoning。
+
+---
+
+## 8. 状态、内容与可访问性
+
+Canonical 状态集合：`loading / empty / ready / running / succeeded / failed`，另按业务需要表达 `blocked / cancelled / reconnecting`。
+
+- Snapshot 是首次加载、刷新、断线重连和 terminal 对账真源。
+- Realtime 只更新 live presentation，不写业务终态。
+- 不使用固定假百分比、恒真 QA、永久 Skeleton 或伪造 artifact。
+- 文字与表面需保持足够对比度；状态必须有文本，不只靠色相。
+- 图标统一使用 Lucide，禁止 emoji。
+- 键盘焦点、语义标签和 reduced motion 必须在 React 实现与 `/playbook` demo 中验证。
+- JSON viewer 仅用 React text node，限制 depth 6、node 500、copy 64 KiB。
+
+---
+
+## 9. 图标白名单
+
+**应用壳与导航**：`clapperboard`、`layout-dashboard`、`folder`、`waypoints`、`film`、`download`、`settings`
+
+**操作**：`plus`、`save`、`settings-2`、`ellipsis`、`x`、`upload`、`refresh-cw`、`arrow-left`、`chevron-right`
+
+**执行与内容**：`list-tree`、`sparkles`、`combine`、`file-code`、`play`、`loader-circle`
+
+**状态**：`circle-check`、`triangle-alert`、`circle-x`、`shield-check`、`info`
+
+尺寸：13–14 用于紧凑元数据，16 用于控件/导航，20–28 用于品牌和卡片预览，44 仅用于播放器中心操作。
+
+---
+
+## 10. 同步与验收清单
+
+每次视觉变更按以下顺序执行：
+
+1. 确认活动编辑器是 `docs/designs/canvas.pen`。
+2. 读取 `ds-*` 变量和 B0 reusable symbol，确认未基于陈旧记忆工作。
+3. 对受影响根 frame 设置 `placeholder:true`，直接更新现有对象。
+4. 修改 token 或 B0 mother component；避免局部实例漂移。
+5. 检查 B specimen、C composition、S Light 与 S Dark。
+6. 对受影响节点运行 `snapshot_layout` 与 `get_screenshot`。
+7. 完成后立即移除 placeholder。
+8. 同步本文；代码实施阶段再同步 React token、demo 与 `/playbook`。
+
+验收：
+
+- [ ] Canonical 组件不使用 R2 的 `--*` token。
+- [ ] Light 仍为 Porcelain，不因 Dark 调整改变。
+- [ ] Dark 为 Obsidian Navy，无高亮蓝紫漂移。
+- [ ] 所有正式组件通过同一 `mode` 主题逻辑切换。
+- [ ] 仅 S6 两个 Save 使用 `ds-save-*` 中性例外。
+- [ ] 播放器与 S2 scrim 使用主题 token，不散落 hex。
+- [ ] B0 → B → C → S 同步，无 S → R 依赖。
+- [ ] S1–S6 Light/Dark 无裁切、重叠或异常换行。
+- [ ] Inspector 四页签顺序和命名固定。
+- [ ] R2/R3 外观保持原始，不套 Canonical Header。
+
+---
+
+## 11. 文档归属
+
+| 文档 | 责任 |
 |---|---|
-| 14 | SearchField、Track 头、行内辅图标 |
-| 16 | 按钮内图标、NavItem、节点头 |
-| 20 | Toast、品牌标、顶栏强调 |
-| 24 | 预览区中央 play |
-| 48 | EmptyState 大图标 |
+| [`canvas.pen`](./canvas.pen) | 视觉像素、变量、reusable symbol、页面 SSOT |
+| 本文 | 当前 token、组件、页面与同步规则的文字索引 |
+| [`README.md`](./README.md) | `docs/designs` 权威关系与历史/当前文档入口 |
+| [`../conventions/architecture-conventions.md`](../conventions/architecture-conventions.md#ui-design-ssot) | 设计到代码的长期架构边界 |
+| [`../issues/refactor-v3/issue-n6-ui-truth-and-governance.md`](../issues/refactor-v3/issue-n6-ui-truth-and-governance.md) | N6 实施顺序、测试和证据要求 |
+| [`2026-07-23-ui-design-handoff.md`](./2026-07-23-ui-design-handoff.md) | 冻结的 Demo v1 历史执行稿，不再提供当前 token |
 
-### 6.2 白名单（按分组）
-
-**品牌 / 导航**：`clapperboard` · `layout-dashboard` · `folder` · `waypoints` · `settings` · `search`
-
-**操作**：`plus` · `circle-plus` · `x` · `refresh-cw` · `download` · `upload` · `sparkles` · `ellipsis` · `chevron-right` · `arrow-left`
-
-**播放**：`play` · `skip-back` · `skip-forward` · `volume-2` · `loader-circle`
-
-**媒体 / 流水线**：`film` · `file` · `file-input` · `file-check` · `file-code` · `video` · `audio-lines` · `music` · `captions` · `palette`
-
-**状态**：`info` · `circle-check` · `triangle-alert` · `circle-x` · `shield-check` · `timer`
-
-### 6.3 命名约定（Pencil Lucide 新命名）
-
-Pencil 内置 Lucide 使用 v0.400+ 重命名。旧名 → 稿内标准名：
-
-| 旧名（勿用） | 标准名 |
-|---|---|
-| `plus-circle` | `circle-plus` |
-| `more-horizontal` | `ellipsis` |
-| `loader-2` | `loader-circle` |
-| `file-json` | `file-code` |
-| `file-video` | `video` |
-| `check-circle-2` | `circle-check` |
-| `x-circle` | `circle-x` |
-| `alert-triangle` | `triangle-alert` |
-| `clock` | `timer` |
-
-代码侧 `lucide-react` 使用与上表「标准名」相同的 export（新包已对齐）。
-
----
-
-## 7. 暗色实现检查清单
-
-1. 所有填充/描边/文字/阴影使用 `$变量`，禁止散落 hex（色板展示区除外）。
-2. Toast / Sidebar 使用 `$glass` / `$glass-sidebar` + `background_blur`。
-3. Primary / Destructive 字色用 `$on-accent`。
-4. StatusPill 态底用 `*-fill` token。
-5. 卡片/节点阴影用 `$shadow-card`，浮层/弹窗用 `$shadow-float`。
-6. 画布网格用 `$canvas-grid`，透明占位用 `$transparent`。
-7. 彩色背景上的白字用 `$text-inverse`。
-8. Zone D 六屏截图对比：对比度、阶段色、选中描边、毛玻璃可读。
-9. S6 外观分段在 Dark 屏选中「深色」。
-
----
-
-## 8. 如何在 `.pen` 里维护这套规范
-
-Pencil 本身支持两种「活规范」机制：
-
-1. **Variables（变量）**：在 `.pen` 文件里定义所有 token，是颜色/字号/间距的单一事实来源。当前已集中管理。
-2. **Reusable Components（可复用组件）**：30 个组件即设计系统的原子/分子件，修改一处会同步到所有实例。
-
-但 **文字级设计规范**（如本文的表格、原则、检查清单）不适合放在 `.pen` 里，因为：
-- `note` 节点是纯文本，没有层级排版；
-- 无法版本控制、无法搜索、无法多端同步；
-- 多人协作时难以 diff。
-
-因此推荐：
-- **视觉源**：`canvas.pen`（变量 + 组件 + 页面）
-- **文字规范**：`docs/designs/2026-07-23-design-system-inventory.md`（本文档）
-
-两者同步节奏：每次调整 `.pen` 变量后，顺手更新本文档对应表格。
-
----
-
-## 9. 相关文件
-
-- [`canvas.pen`](./canvas.pen) — 视觉源稿
-- [`2026-07-23-ui-design-handoff.md`](./2026-07-23-ui-design-handoff.md) — Pencil 执行/验收规格
-- [`2026-07-23-platform-architecture-design.md`](./2026-07-23-platform-architecture-design.md) — 平台架构
+Product/Architecture/Harness/Task Breakdown 继续管理产品行为、长期架构、施工协议和状态；本次视觉整理不改变其业务合同或 Track 状态。

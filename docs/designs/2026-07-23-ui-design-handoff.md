@@ -1,11 +1,11 @@
-# CodeVideoCanvas 前端 UI 设计交接文档（Pencil Agent 执行稿）
+# CodeVideoCanvas 前端 UI 设计交接文档（Demo v1 历史执行稿）
 
-> [!NOTE]
-> **状态：Demo v1 visual reference。** `canvas.pen` 仍是视觉 SSOT，但 v3 新组件和页面
-> 必须按 N6 Track Plan 先更新 Pencil reusable symbol，再登记 `/playbook`，并遵循
-> Product/Architecture Spec 的真实数据合同。本文不覆盖 v3 业务状态与字段来源。
+> [!WARNING]
+> **状态：Frozen / superseded visual reference。** 本文保留 2026-07-23 Demo v1 的 Apple-like token、30-symbol 清单和旧页面文案，仅供追溯，**不得用于新的设计或代码实施**。
+>
+> 当前视觉 SSOT 仍是通过 Pencil MCP 访问的 [`canvas.pen`](./canvas.pen)；当前文字规范是 [`2026-07-23-design-system-inventory.md`](./2026-07-23-design-system-inventory.md)，正式依赖链为 A → B → C → S，主题为 Porcelain Light / Obsidian Navy Dark。v3 新组件和页面必须按 N6 Track Plan 执行 Pencil reusable symbol → 截图验证 → React/demo → `/playbook` → 页面，并遵循 Product/Architecture Spec 的真实数据合同。
 
-> 创建：2026-07-23 · 更新：2026-07-23 · 状态：approved（执行基线）
+> 创建：2026-07-23 · 更新：2026-07-25 · 状态：frozen（Demo v1 history）
 > 目标文件：`docs/designs/canvas.pen`（Pencil 设计稿，schema v2.14）
 > 执行者：Pencil 内置 Agent（通过 batch_design 等 MCP 工具绘制）
 > 配套输入：`docs/specs/2026-07-23-prd-code-video-canvas.md`（PRD）、`docs/designs/2026-07-23-platform-architecture-design.md`（架构）

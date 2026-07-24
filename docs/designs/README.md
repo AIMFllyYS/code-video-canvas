@@ -13,10 +13,11 @@
 
 ## 当前权威
 
-- `canvas.pen`：视觉 SSOT，只能通过 Pencil MCP 访问；
-- `2026-07-23-design-system-inventory.md`：Token/图标/组件规范；
-- v3 新 UI：按 N6 Track Plan 执行 Pencil → Playbook → 页面；
-- `2026-07-23-platform-architecture-design.md` 与 `tasks.md`：冻结历史文档。
+- `canvas.pen`：视觉 SSOT，只能通过 Pencil MCP 访问；当前正式体系为 A → B → C → S，R2/R3 仅是来源档案。
+- `2026-07-23-design-system-inventory.md`：当前 Canonical token、16 个 B0 reusable symbols、组合模块、S1–S6 路由与同步规范。主题固定为 Porcelain Light / Obsidian Navy Dark。
+- `../conventions/architecture-conventions.md#ui-design-ssot`：设计到代码的长期边界。
+- v3 新 UI：按 N6 Track Plan 执行 Pencil reusable symbol → 截图验证 → React/demo → `/playbook` → 页面。
+- `2026-07-23-ui-design-handoff.md`、`2026-07-23-platform-architecture-design.md` 与 `tasks.md`：冻结的 Demo v1 历史文档，不再提供当前 token 或页面合同。
 
 ## 文档结构模板
 

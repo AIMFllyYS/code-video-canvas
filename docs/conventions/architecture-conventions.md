@@ -252,7 +252,8 @@ canvas.pen reusable symbol
   `AppShell`/Sidebar；页面通过 `nav-context` 发布可信上下文并只替换内容区。
   `/playbook` 保持在该路由组之外。
 - 页面不复制视觉原语、AppShell、Sidebar、TopNav 或动效实现。
-- Design Token 管理颜色/阴影/圆角/间距；Lucide 白名单管理图标。
+- Design Token 管理颜色/阴影/圆角/间距；Lucide 白名单管理图标。当前 Canonical 视觉体系固定为 A → B → C → S；R2/R3 仅是来源档案，正式页面不得直接依赖。
+- 当前主题为 Porcelain Light / Obsidian Navy Dark，统一使用 `mode: light | dark` 与 `ds-*` token。Light 与 Dark 独立校准；禁止页面局部硬编码颜色。唯一批准例外是 S6 两个 Save 实例使用主题化 `ds-save-*` 中性色。
 - 根 layout 只挂一次 `AppMotionConfig`。应用 UI 动效使用 `motion/react`、
   `src/lib/motion` token 与共享 `collapsible-panel`/variants；页面不得硬编码时长、
   贝塞尔、timer 或建立平行动效原语，并必须遵循 reduced motion。
