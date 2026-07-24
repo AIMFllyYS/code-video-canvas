@@ -11,6 +11,7 @@ export interface ExportReadiness {
   /** laneKey → QA 是否通过；null/缺失表示尚未检测（不得当作通过）。 */
   shotQa: Record<string, boolean | null>
   resolutionPreset: ResolutionPreset
+  artifactUrl?: string
 }
 
 export async function loadExportReadiness(
@@ -38,6 +39,7 @@ export async function loadExportReadiness(
     resolutionPreset: isResolutionPreset(body.resolutionPreset)
       ? body.resolutionPreset
       : DEFAULT_EXPORT_SETTINGS.resolutionPreset,
+    ...(typeof body.artifactUrl === 'string' ? { artifactUrl: body.artifactUrl } : {}),
   }
 }
 

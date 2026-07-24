@@ -35,14 +35,18 @@ function harness(
     vi.fn<AdvanceDependencies['enqueueDirectorStage']>(() => 'director-job')
   const enqueueRenderShot =
     vi.fn<AdvanceDependencies['enqueueRenderShot']>(() => 'render-job')
+  const prepareFinalExport =
+    vi.fn<AdvanceDependencies['prepareFinalExport']>(async () => {})
   return {
     repository,
     enqueueDirectorStage,
     enqueueRenderShot,
+    prepareFinalExport,
     dependencies: {
       repository,
       enqueueDirectorStage,
       enqueueRenderShot,
+      prepareFinalExport,
     } satisfies AdvanceDependencies,
   }
 }
@@ -88,6 +92,25 @@ describe('advancePipeline', () => {
       stage: 'ASSEMBLE',
     })
     expect(result.enqueuedNodeIds).toEqual(['codegen', 'subtitle'])
+  })
+
+  it('creates the trusted final MP4 before enqueuing export FINALIZE', async () => {
+    const test = harness([
+      candidate({ id: 'export', type: 'export', stage: 'FINALIZE' }),
+    ])
+
+    const result = await advancePipeline('project-1', 'score', test.dependencies)
+
+    expect(test.prepareFinalExport).toHaveBeenCalledWith('project-1')
+    expect(test.enqueueDirectorStage).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      nodeId: 'export',
+      stage: 'FINALIZE',
+    })
+    expect(test.prepareFinalExport.mock.invocationCallOrder[0]).toBeLessThan(
+      test.enqueueDirectorStage.mock.invocationCallOrder[0]!
+    )
+    expect(result.enqueuedNodeIds).toEqual(['export'])
   })
 
   it.each(['pending', 'running', 'success', 'failed', 'stale'] as const)(

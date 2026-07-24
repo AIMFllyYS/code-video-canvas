@@ -46,6 +46,7 @@ export interface AdvanceDependencies {
   repository: AdvanceRepository
   enqueueDirectorStage: EnqueueDirectorStage
   enqueueRenderShot: EnqueueRenderShot
+  prepareFinalExport: (projectId: string) => Promise<void>
 }
 
 export interface AdvanceResult {
@@ -96,6 +97,9 @@ export async function advancePipeline(
       if (candidate.type === 'shot-codegen') {
         resolved.enqueueRenderShot({ projectId, nodeId: candidate.id })
       } else {
+        if (candidate.type === 'export') {
+          await resolved.prepareFinalExport(projectId)
+        }
         resolved.enqueueDirectorStage({
           projectId,
           nodeId: candidate.id,
@@ -295,6 +299,15 @@ async function createDefaultDependencies(): Promise<AdvanceDependencies> {
     repository: new AdvanceRepositoryImpl(getDb()),
     enqueueDirectorStage,
     enqueueRenderShot,
+    prepareFinalExport: async (projectId) => {
+      const { exportProject } = await import('@/features/render/export-service')
+      const result = await exportProject(projectId)
+      if (!result.ok) {
+        throw new Error(
+          `终片导出前置未完成：${result.incompleteNodeIds.join(', ')}`
+        )
+      }
+    },
   }
 }
 

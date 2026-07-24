@@ -11,6 +11,7 @@ describe('export API client', () => {
         shotCount: 1,
         shotQa: { S001: null, S002: true },
         resolutionPreset: '720x1280',
+        artifactUrl: '/api/artifacts/final?projectId=project-1',
       })
     )
     await expect(loadExportReadiness('project-1', fetcher)).resolves.toEqual({
@@ -19,6 +20,7 @@ describe('export API client', () => {
       shotCount: 1,
       shotQa: { S001: null, S002: true },
       resolutionPreset: '720x1280',
+      artifactUrl: '/api/artifacts/final?projectId=project-1',
     })
   })
 

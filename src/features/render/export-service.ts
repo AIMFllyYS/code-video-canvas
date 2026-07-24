@@ -8,6 +8,7 @@ import { runShotQaChecks } from './qa-check'
 import {
   RenderRepository,
   type FinalArtifactInput,
+  type FinalArtifactRecord,
   type RenderExportPlan,
 } from './repository'
 
@@ -24,6 +25,11 @@ interface ExportDependencies {
   repository?: ExportRepository
   storage?: StorageAdapter
   concat?: typeof concatExport
+}
+
+interface ExportReadinessRepository {
+  getExportPlan(projectId: string): RenderExportPlan
+  findLatestFinalArtifact(projectId: string): FinalArtifactRecord | null
 }
 
 export async function exportProject(
@@ -70,21 +76,24 @@ export async function exportProject(
 
 export function getExportReadiness(
   projectId: string,
-  repository: Pick<ExportRepository, 'getExportPlan'> = new RenderRepository()
+  repository: ExportReadinessRepository = new RenderRepository()
 ): {
   ready: boolean
   incompleteNodeIds: string[]
   shotCount: number
   shotQa: Record<string, boolean | null>
   resolutionPreset: ResolutionPreset
+  finalArtifactId: string | null
 } {
   const plan = repository.getExportPlan(projectId)
+  const finalArtifact = repository.findLatestFinalArtifact(projectId)
   return {
     ready: plan.incompleteNodeIds.length === 0,
     incompleteNodeIds: plan.incompleteNodeIds,
     shotCount: plan.shots.length,
     shotQa: plan.shotQa,
     resolutionPreset: plan.resolutionPreset,
+    finalArtifactId: finalArtifact?.artifactId ?? null,
   }
 }
 

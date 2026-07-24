@@ -61,6 +61,12 @@ export interface FinalArtifactInput {
   contentHash: string
 }
 
+export interface FinalArtifactRecord {
+  artifactId: string
+  path: string
+  contentHash: string
+}
+
 /** Render 持久化端口；集中处理画布顺序与 artifact 指针。 */
 export class RenderRepository {
   constructor(private readonly db: Db = getDb()) {}
@@ -196,6 +202,17 @@ export class RenderRepository {
       })
       .run()
     return id
+  }
+
+  findLatestFinalArtifact(projectId: string): FinalArtifactRecord | null {
+    const row = this.db
+      .select({ id: artifacts.id, path: artifacts.path, contentHash: artifacts.contentHash })
+      .from(artifacts)
+      .where(and(eq(artifacts.projectId, projectId), eq(artifacts.kind, 'final-mp4')))
+      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
+      .get()
+    if (!row?.contentHash) return null
+    return { artifactId: row.id, path: row.path, contentHash: row.contentHash }
   }
 
   /** 加载已成功渲染分镜的缩略图生成上下文（HTML key + 渲染规格）。 */

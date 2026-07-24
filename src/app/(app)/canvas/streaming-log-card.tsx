@@ -21,6 +21,15 @@ export interface StreamingLogCardProps {
   retrying?: boolean
 }
 
+export function resolveVisibleStageError(
+  status: CanvasGraphNode['status'],
+  persistedError: DirectorNodeError | undefined,
+  streamError: DirectorNodeError | undefined
+): DirectorNodeError | undefined {
+  if (status !== 'failed') return undefined
+  return persistedError ?? streamError
+}
+
 /**
  * 分镜/阶段 AI 流式输出卡片（业务组合，不登记 /playbook）。
  * 复用 `CollapsibleCard` + `useStageStream`：实时追加 token、显示真实字符数与
@@ -36,7 +45,7 @@ export function StreamingLogCard({
   retrying,
 }: StreamingLogCardProps) {
   const stream = useStageStream(projectId, nodeId, status)
-  const error = directorError ?? stream.error
+  const error = resolveVisibleStageError(status, directorError, stream.error)
   const scrollRef = useRef<HTMLPreElement>(null)
 
   // 失败态自动弹一次错误弹窗：以「派生复位」实现（不在 effect 内同步 setState）。

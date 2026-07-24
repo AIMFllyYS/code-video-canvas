@@ -26,7 +26,14 @@ export async function GET(request: Request) {
         }`
       )
     }
-    return NextResponse.json({ ok: true, ...getExportReadiness(projectId) })
+    const { finalArtifactId, ...readiness } = getExportReadiness(projectId)
+    return NextResponse.json({
+      ok: true,
+      ...readiness,
+      artifactUrl: finalArtifactId
+        ? `/api/artifacts/${finalArtifactId}?projectId=${encodeURIComponent(projectId)}`
+        : null,
+    })
   } catch (error) {
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : '导出状态读取失败' },

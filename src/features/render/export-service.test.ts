@@ -3,7 +3,7 @@ import path from 'node:path'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StorageAdapter } from '@/lib/storage'
-import { exportProject } from './export-service'
+import { exportProject, getExportReadiness } from './export-service'
 
 vi.mock('server-only', () => ({}))
 
@@ -135,6 +135,31 @@ describe('exportProject', () => {
     ).rejects.toThrow('ffmpeg boom')
 
     expect(storage.removeTempDir).toHaveBeenCalledOnce()
+  })
+})
+
+describe('getExportReadiness', () => {
+  it('returns the latest trusted final artifact for refresh-safe preview', () => {
+    const result = getExportReadiness('project-1', {
+      getExportPlan: vi.fn(() => ({
+        incompleteNodeIds: [],
+        shots: [{ nodeId: 'node-1', laneKey: 'S001', outputKey: 'render/S001.mp4' }],
+        musicKey: null,
+        targetResolution: { width: 1080, height: 1920 },
+        resolutionPreset: '1080x1920' as const,
+        shotQa: { S001: true },
+      })),
+      findLatestFinalArtifact: vi.fn(() => ({
+        artifactId: 'artifact-final',
+        path: 'exports/project-1/final.mp4',
+        contentHash: 'hash-final',
+      })),
+    })
+
+    expect(result).toMatchObject({
+      ready: true,
+      finalArtifactId: 'artifact-final',
+    })
   })
 })
 

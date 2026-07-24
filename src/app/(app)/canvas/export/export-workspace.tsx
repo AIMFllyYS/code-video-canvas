@@ -94,7 +94,10 @@ function useExportRuntime(projectId: string) {
 
   useEffect(() => {
     void loadExportReadiness(projectId)
-      .then(setReadiness)
+      .then((nextReadiness) => {
+        setReadiness(nextReadiness)
+        setOutputUrl(nextReadiness.artifactUrl)
+      })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : '导出状态读取失败')
       })
@@ -325,11 +328,18 @@ function ExportSettings({
         <Button icon={Download} disabled={disabled} onClick={onExport}>
           开始导出
         </Button>
-        <ProgressBar
-          value={outputUrl ? 100 : exporting ? 62 : 0}
-          label="导出队列"
-          className="w-full"
-        />
+        {exporting ? (
+          <div className="flex w-full flex-col gap-1.5" aria-live="polite">
+            <div className="flex items-center justify-between text-[13px] font-sc">
+              <span className="text-label">导出队列</span>
+              <span className="text-label-secondary">处理中</span>
+            </div>
+            <Skeleton className="h-1 w-full" />
+          </div>
+        ) : (
+          <ProgressBar value={outputUrl ? 100 : 0} label="导出队列" className="w-full" />
+        )}
+        {outputUrl && <ArtifactChip icon={Download} filename="final.mp4" href={outputUrl} />}
       </div>
     </SettingsGroup>
   )

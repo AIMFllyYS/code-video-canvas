@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { POST } from './route'
+import { GET, POST } from './route'
 
-const mocks = vi.hoisted(() => ({ exportProject: vi.fn(), getExportReadiness: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  ensureShotQaChecked: vi.fn(),
+  exportProject: vi.fn(),
+  getExportReadiness: vi.fn(),
+}))
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/features/render/export-service', () => ({
+  ensureShotQaChecked: mocks.ensureShotQaChecked,
   exportProject: mocks.exportProject,
   getExportReadiness: mocks.getExportReadiness,
 }))
@@ -47,6 +52,32 @@ describe('POST /api/render/export', () => {
       artifactUrl: '/api/artifacts/artifact-final?projectId=project-1',
     })
     expect(mocks.exportProject).toHaveBeenCalledWith('project-1')
+  })
+})
+
+describe('GET /api/render/export', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns a controlled URL for the latest final artifact', async () => {
+    mocks.getExportReadiness.mockReturnValue({
+      ready: true,
+      incompleteNodeIds: [],
+      shotCount: 1,
+      shotQa: { S001: true },
+      resolutionPreset: '1080x1920',
+      finalArtifactId: 'artifact-final',
+    })
+
+    const response = await GET(
+      new Request('http://localhost/api/render/export?projectId=project-1')
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      artifactUrl: '/api/artifacts/artifact-final?projectId=project-1',
+    })
   })
 })
 
