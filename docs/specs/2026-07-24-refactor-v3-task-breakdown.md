@@ -222,11 +222,17 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
 
 ### Track N1 — Postgres foundation and spikes
 
-- [ ] **N1.1 SQLite Online Backup、quick_check、计数与 hash 证据** —
-  `task_state=in_progress; status=ready; blocked_by=none; preflight=c880dff; scope_doc=91b9161`;
+- [x] **N1.1 SQLite Online Backup、quick_check、计数与 hash 证据** —
+  `task_state=done; status=ready; blocked_by=none; commit=4798cf3; preflight=c880dff; scope_doc=91b9161`;
+  evidence=`docs/evidence/refactor-v3/n1/sqlite-backup.md`；Node 24 focused 1 file /
+  3 tests、定向 lint、typecheck、`pnpm verify:v3` 全部 exit 0；真实活动 WAL
+  Online Backup 的 `quick_check=ok`，六表 count 为 `6/85/88/34/58/1`，
+  snapshot SHA 与独立 `Get-FileHash` 一致且为 ReadOnly；源 DB/WAL SHA 前后不变，
+  第二次固定调用按预期拒绝且 snapshot/report 实体未变化；文件复制、源库写入、
+  U+FFFD 与越界 staged path 扫描均为 0；最终只读审计 PASS；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n11)
 - [ ] **N1.2 Docker Postgres、Drizzle schema、约束与 tracked migration** —
-  `task_state=todo; status=blocked; blocked_by=N1.1`;
+  `task_state=todo; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n12)
 - [ ] **N1.3 repository async 化与逐域 Postgres cutover** —
   `task_state=todo; status=blocked; blocked_by=N1.2`;
