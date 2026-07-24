@@ -88,8 +88,8 @@ evidence 索引。
 
 | Track | 当前状态 | Blocked by | 阶段范围 | 详细 Issue |
 |---|---|---|---|---|
-| N0 | `in_progress` | 无 | 基线封账与止血 | [`issue-n0-baseline-and-bleeding-fixes.md`](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md) |
-| N1 | `blocked` | N0 | Postgres 地基与 Spike | [`issue-n1-postgres-foundation-and-spikes.md`](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md) |
+| N0 | `done` | 无 | 基线封账与止血 | [`issue-n0-baseline-and-bleeding-fixes.md`](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md) |
+| N1 | `ready` | 无 | Postgres 地基与 Spike | [`issue-n1-postgres-foundation-and-spikes.md`](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md) |
 | N2 | `blocked` | N1 | Trigger 接管执行 | [`issue-n2-trigger-orchestration.md`](../issues/refactor-v3/issue-n2-trigger-orchestration.md) |
 | N3 | `blocked` | N2 | Pi structured runtime | [`issue-n3-pi-agent-runtime.md`](../issues/refactor-v3/issue-n3-pi-agent-runtime.md) |
 | N4 | `blocked` | N3 | Source/compiler/HyperFrames | [`issue-n4-artifact-compiler-hyperframes.md`](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md) |
@@ -217,25 +217,28 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n05)
 
+**Track N0 closeout:** `docs/evidence/refactor-v3/n0/closeout.md`；Tier B 与专项门禁
+通过，Node 22/24、fixture/live、API/像素/媒体边界和冻结债务已显式记录。
+
 ### Track N1 — Postgres foundation and spikes
 
 - [ ] **N1.1 SQLite Online Backup、quick_check、计数与 hash 证据** —
-  `task_state=todo; status=blocked; blocked_by=N0`;
+  `task_state=todo; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n11)
 - [ ] **N1.2 Docker Postgres、Drizzle schema、约束与 tracked migration** —
-  `task_state=todo; status=blocked; blocked_by=N0`;
+  `task_state=todo; status=blocked; blocked_by=N1.1`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n12)
 - [ ] **N1.3 repository async 化与逐域 Postgres cutover** —
-  `task_state=todo; status=blocked; blocked_by=N0`;
+  `task_state=todo; status=blocked; blocked_by=N1.2`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n13)
 - [ ] **N1.4 SQLite export、Postgres import 与计数/hash 对账** —
-  `task_state=todo; status=blocked; blocked_by=N0`;
+  `task_state=todo; status=blocked; blocked_by=N1.1,N1.2,N1.3`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n14)
 - [ ] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
-  `task_state=todo; status=blocked; blocked_by=N0`;
+  `task_state=todo; status=blocked; blocked_by=N1.2`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n15)
 - [ ] **N1.6 移除 runtime SQLite，仅保留只读 migration 工具** —
-  `task_state=todo; status=blocked; blocked_by=N0`;
+  `task_state=todo; status=blocked; blocked_by=N1.3,N1.4,N1.5`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n16)
 
 ### Track N2 — Trigger orchestration
