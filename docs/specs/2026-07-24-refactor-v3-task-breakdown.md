@@ -177,8 +177,12 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   dev server 未中断；随后出现的 `.qoder/repowiki/**` 并发 WIP 未读取、未修改、未
   stage，Task 精确路径 `diff --check` 通过）;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n01)
-- [ ] **N0.2 修复 Pi Tool 参数与 result details 提取** —
-  `task_state=in_progress; status=ready; blocked_by=none`;
+- [x] **N0.2 修复 Pi Tool 参数与 result details 提取** —
+  `task_state=done; status=ready; blocked_by=none; commit=21c78fa`;
+  evidence=Node 22 focused regression（5 files / 41 tests）、typecheck 与 lint 通过；
+  录制 transcript 证明 Tool 参数精确复原、失败 Tool 不回退、历史 session 不串用，
+  thinking 未进入 artifact/display/JSONL；`@openai/agents*` 与 U+FFFD 扫描为 0，
+  `new Agent(` 仅位于既有 Pi 封装；并发 `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n02)
 - [ ] **N0.3 把 source/runtime 合同检查前移到 render enqueue** —
   `task_state=todo; status=ready; blocked_by=none`;
