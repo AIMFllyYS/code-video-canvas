@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Download, Play } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -15,9 +16,16 @@ import { Button } from '@/components/ui/button'
 import { QueueStatusBar } from '@/components/ui/queue-status-bar'
 import { TopBar } from '@/components/ui/top-bar'
 import type { CanvasGraphEdge, CanvasGraphNode } from '@/features/canvas'
+import { fadeInUp } from '@/lib/motion/variants'
 import { usePublishNavContext } from '@/features/navigation/nav-context'
 import { CanvasInspector } from './canvas-inspector'
-import { toFlowEdge, toFlowNode } from './flow-elements'
+import {
+  buildLaneSummaries,
+  LaneSummaryDetails,
+  toFlowEdge,
+  toFlowNode,
+  type LaneSummary,
+} from './flow-elements'
 
 export interface CanvasViewProps {
   projectId: string
@@ -30,10 +38,7 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
   const router = useRouter()
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(() => new Set())
   const [selectedNodeId, setSelectedNodeId] = useState(nodes[0]?.id)
-  const laneKeys = useMemo(
-    () => [...new Set(nodes.flatMap((node) => (node.laneKey ? [node.laneKey] : [])))].sort(),
-    [nodes]
-  )
+  const laneSummaries = useMemo(() => buildLaneSummaries(nodes), [nodes])
   const hiddenNodeIds = useMemo(
     () =>
       new Set(
@@ -107,7 +112,11 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
             <MiniMap pannable zoomable className="!bg-surface !shadow-card" />
             <Controls className="!border-separator !bg-surface !shadow-card" />
           </ReactFlow>
-          <LanePanel laneKeys={laneKeys} collapsedLanes={collapsedLanes} onToggle={toggleLane} />
+          <LanePanel
+            laneSummaries={laneSummaries}
+            collapsedLanes={collapsedLanes}
+            onToggle={toggleLane}
+          />
         </div>
         <QueueStatusBar completed={completed} total={nodes.length} />
       </section>
@@ -117,30 +126,48 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
 }
 
 interface LanePanelProps {
-  laneKeys: string[]
+  laneSummaries: LaneSummary[]
   collapsedLanes: Set<string>
   onToggle: (laneKey: string) => void
 }
 
-function LanePanel({ laneKeys, collapsedLanes, onToggle }: LanePanelProps) {
+function LanePanel({ laneSummaries, collapsedLanes, onToggle }: LanePanelProps) {
   return (
     <aside className="absolute left-4 top-4 max-h-[calc(100%-8rem)] w-56 overflow-auto rounded-md border border-separator bg-glass p-3 shadow-float backdrop-blur-xl">
-      <p className="mb-2 text-xs font-semibold text-label">分镜通道 · {laneKeys.length}</p>
-      <div className="space-y-1">
-        {laneKeys.map((laneKey) => {
-          const collapsed = collapsedLanes.has(laneKey)
+      <p className="mb-2 text-xs font-semibold text-label">
+        分镜通道 · {laneSummaries.length}
+      </p>
+      <div className="space-y-2">
+        {laneSummaries.map((summary) => {
+          const collapsed = collapsedLanes.has(summary.laneKey)
           return (
-            <Button
-              key={laneKey}
-              variant="gray"
-              size="sm"
-              aria-pressed={collapsed}
-              onClick={() => onToggle(laneKey)}
-              className="w-full justify-between"
-            >
-              <span className="truncate">{laneKey}</span>
-              <span className="text-label-secondary">{collapsed ? '展开' : '折叠'}</span>
-            </Button>
+            <div key={summary.laneKey}>
+              <Button
+                variant="gray"
+                size="sm"
+                aria-expanded={!collapsed}
+                onClick={() => onToggle(summary.laneKey)}
+                className="w-full justify-between"
+              >
+                <span className="truncate">{summary.laneKey}</span>
+                <span className="text-label-secondary">
+                  {collapsed ? '展开' : '折叠'}
+                </span>
+              </Button>
+              <AnimatePresence initial={false}>
+                {!collapsed && (
+                  <motion.div
+                    key="summary"
+                    variants={fadeInUp}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                  >
+                    <LaneSummaryDetails summary={summary} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )
         })}
       </div>
