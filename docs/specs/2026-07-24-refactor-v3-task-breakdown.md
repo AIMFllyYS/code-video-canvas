@@ -231,21 +231,24 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   第二次固定调用按预期拒绝且 snapshot/report 实体未变化；文件复制、源库写入、
   U+FFFD 与越界 staged path 扫描均为 0；最终只读审计 PASS；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n11)
-- [ ] **N1.2 Docker Postgres、Drizzle schema、约束与 tracked migration** —
-  `task_state=in_progress; status=ready; blocked_by=none; preflight=636fb9b; scope_doc=ebe6fa0`;
-  environment=`degraded`：现有 pnpm store 的写入审批因平台用量限制被拒绝，
-  `package.json/pnpm-lock.yaml` 保持不变；Docker Desktop daemon 停止且启动需要
-  sandbox 外权限。继续执行无需外部写入的 RED/schema/compose 工作，PG live gate
-  到达时若仍不可用则保持明确 blocker，不伪造 GREEN；
+- [x] **N1.2 Docker Postgres、Drizzle schema、约束与 tracked migration** —
+  `task_state=done; status=ready; blocked_by=none; commit=513bb1d; preflight=636fb9b; scope_doc=2976bdf`;
+  evidence=`docs/evidence/refactor-v3/n1/postgres-health.md`,
+  `docs/evidence/refactor-v3/n1/fresh-migration.md`,
+  `docs/evidence/refactor-v3/n1/constraint-matrix.md`；精确 `postgres@3.4.9`、
+  Docker Postgres 17.5 healthy/loopback、final fresh + repeat migration、
+  12 表/23 FK/31 CHECK/13 UNIQUE/immutable trigger、PG 2 files / 10 tests、
+  runtime unit 2 files / 8 tests、全量 88 files / 422 tests、lint/typecheck/build/
+  `verify:v3` 与独立终审均 PASS；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n12)
 - [ ] **N1.3 repository async 化与逐域 Postgres cutover** —
-  `task_state=todo; status=blocked; blocked_by=N1.2`;
+  `task_state=todo; status=ready; blocked_by=none; preflight=513bb1d`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n13)
 - [ ] **N1.4 SQLite export、Postgres import 与计数/hash 对账** —
-  `task_state=todo; status=blocked; blocked_by=N1.1,N1.2,N1.3`;
+  `task_state=todo; status=blocked; blocked_by=N1.3`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n14)
 - [ ] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
-  `task_state=todo; status=blocked; blocked_by=N1.2`;
+  `task_state=todo; status=ready; blocked_by=none; preflight=513bb1d`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n15)
 - [ ] **N1.6 移除 runtime SQLite，仅保留只读 migration 工具** —
   `task_state=todo; status=blocked; blocked_by=N1.3,N1.4,N1.5`;
