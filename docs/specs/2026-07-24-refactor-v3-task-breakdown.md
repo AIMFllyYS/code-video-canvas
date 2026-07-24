@@ -193,8 +193,14 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   Node 22 SQLite/Playwright 组合门禁保留到 N0 Track closeout 复核；并发
   `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n03)
-- [ ] **N0.4 修复 API 结果丢弃与 UI 假进度** —
-  `task_state=in_progress; status=ready; blocked_by=none`;
+- [x] **N0.4 修复 API 结果丢弃与 UI 假进度** —
+  `task_state=done; status=ready; blocked_by=none; commit=acf4089`;
+  evidence=Node 22 focused 3 files / 15 tests、typecheck、lint 通过；pipeline
+  partial failure 与 start/stop 真实返回值已映射为反馈，单节点 jobId 仅以本地
+  `info/已入队` 展示并由刷新后的服务端节点状态接管；QueueStatusBar 只由
+  `completed/active/failed/total` 派生，固定 cache、百分比、自动保存、U+FFFD 与
+  `rightLabel` 扫描均为 0；独立只读终审 PASS；并发 `.qoder/repowiki/**` WIP
+  未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n04)
 - [ ] **N0.5 建立 import、文件长度与 UTF-8 基线报告** —
   `task_state=todo; status=ready; blocked_by=none`;
