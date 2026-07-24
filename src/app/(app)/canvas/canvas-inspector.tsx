@@ -6,11 +6,10 @@ import { useEffect, useState } from 'react'
 import { ArtifactChip } from '@/components/ui/artifact-chip'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
-import { ProgressBar } from '@/components/ui/progress-bar'
 import { ResizeHandle } from '@/components/ui/resize-handle'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
 import { SettingsRow } from '@/components/ui/settings-row'
-import { StatusPill, type StatusPillVariant } from '@/components/ui/status-pill'
+import { StatusPill } from '@/components/ui/status-pill'
 import { Toast } from '@/components/ui/toast'
 import { AnimatedAside, DrawerOverlay } from '@/features/navigation/collapsible-panel'
 import type { CanvasGraphNode } from '@/features/canvas'
@@ -25,6 +24,7 @@ import {
 } from '@/lib/layout/breakpoints'
 import { cn } from '@/lib/utils'
 import { triggerNodeAction } from './canvas-action-api'
+import { getNodeStatusPresentation } from './flow-elements'
 import { StreamingLogCard } from './streaming-log-card'
 
 export function CanvasInspector({
@@ -34,9 +34,16 @@ export function CanvasInspector({
 }: {
   projectId: string
   node?: CanvasGraphNode
-  onQueued: () => void
+  onQueued: (jobId: string) => void
 }) {
-  const [error, setError] = useState<string>()
+  const [error, setError] = useState<{
+    nodeId: string
+    message: string
+  }>()
+  const [queuedJob, setQueuedJob] = useState<{
+    nodeId: string
+    jobId: string
+  }>()
   const [submitting, setSubmitting] = useState(false)
   const autoCollapse = useMediaQuery(`(max-width: ${BP_SECONDARY_PANEL_COLLAPSE - 1}px)`)
   const [manualCollapsed, setManualCollapsed] = usePersistentToggle(
@@ -68,22 +75,36 @@ export function CanvasInspector({
     if (!node) return
     setSubmitting(true)
     setError(undefined)
+    setQueuedJob(undefined)
     try {
-      await triggerNodeAction(projectId, node)
-      onQueued()
+      const jobId = await triggerNodeAction(projectId, node)
+      setQueuedJob({ nodeId: node.id, jobId })
+      onQueued(jobId)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '作业入队失败')
+      setError({
+        nodeId: node.id,
+        message: cause instanceof Error ? cause.message : '作业入队失败',
+      })
     } finally {
       setSubmitting(false)
     }
   }
+
+  const queuedJobId =
+    node &&
+    queuedJob?.nodeId === node.id &&
+    node.status !== 'success' &&
+    node.status !== 'failed'
+      ? queuedJob.jobId
+      : undefined
 
   const body = node ? (
     <InspectorBody
       node={node}
       projectId={projectId}
       submitting={submitting}
-      error={error}
+      error={error?.nodeId === node.id ? error.message : undefined}
+      queuedJobId={queuedJobId}
       onExecute={execute}
       onCollapse={() => {
         setManualCollapsed(true)
@@ -184,6 +205,7 @@ function InspectorBody({
   projectId,
   submitting,
   error,
+  queuedJobId,
   onExecute,
   onCollapse,
   showCollapse,
@@ -192,10 +214,12 @@ function InspectorBody({
   projectId: string
   submitting: boolean
   error?: string
+  queuedJobId?: string
   onExecute: () => void
   onCollapse: () => void
   showCollapse: boolean
 }) {
+  const status = getNodeStatusPresentation(node.status)
   return (
     <div className={cn('flex h-full flex-col gap-4 overflow-auto p-4')}>
       <div className="flex items-center justify-between gap-2">
@@ -203,7 +227,7 @@ function InspectorBody({
           {node.laneKey ?? NODE_LABEL[node.type]}
         </h2>
         <div className="flex shrink-0 items-center gap-1">
-          <StatusPill variant={STATUS_VARIANT[node.status]} />
+          <StatusPill variant={status.variant} label={status.label} />
           {showCollapse && (
             <IconButton
               icon={ChevronRight}
@@ -243,7 +267,6 @@ function InspectorBody({
           <p className="text-[13px] text-label-tertiary">暂无产物</p>
         )}
       </div>
-      {node.status === 'success' && <ProgressBar value={100} label="生成进度" className="w-full" />}
       <StreamingLogCard
         projectId={projectId}
         nodeId={node.id}
@@ -260,6 +283,14 @@ function InspectorBody({
         <Link href={`/canvas/shot/${node.id}?projectId=${projectId}`}>
           <Button variant="gray">查看代码</Button>
         </Link>
+      )}
+      {queuedJobId && (
+        <Toast
+          variant="info"
+          title="已入队"
+          body={`作业 ${queuedJobId} 已提交，最终状态以服务端为准。`}
+          className="w-full"
+        />
       )}
       {error && <Toast variant="error" title="失败" body={error} className="w-full" />}
     </div>
@@ -280,15 +311,6 @@ const ARTIFACT_FILENAME: Record<string, string> = {
   'qa-vision-report': 'vision-qa-report.json',
   'render-mp4': 'render.mp4',
   'final-mp4': 'final.mp4',
-}
-
-const STATUS_VARIANT: Record<CanvasGraphNode['status'], StatusPillVariant> = {
-  idle: 'pending',
-  pending: 'pending',
-  running: 'generating',
-  success: 'rendered',
-  failed: 'failed',
-  stale: 'stale',
 }
 
 const NODE_LABEL: Record<CanvasGraphNode['type'], string> = {

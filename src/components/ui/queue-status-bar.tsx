@@ -3,10 +3,27 @@ import { cn } from '@/lib/utils'
 
 export interface QueueStatusBarProps {
   completed: number
+  active: number
+  failed: number
   total: number
   label?: string
-  rightLabel?: string
   className?: string
+}
+
+export interface QueueActivity {
+  completed: number
+  active: number
+  failed: number
+  total: number
+}
+
+export function describeQueueActivity(input: QueueActivity): string {
+  if (input.failed > 0) return `${input.failed} 个节点失败`
+  if (input.active > 0) return `${input.active} 个节点执行中`
+  if (input.total > 0 && input.completed === input.total) {
+    return '全部节点已完成'
+  }
+  return '等待执行'
 }
 
 /**
@@ -16,12 +33,14 @@ export interface QueueStatusBarProps {
  */
 export function QueueStatusBar({
   completed,
+  active,
+  failed,
   total,
   label,
-  rightLabel,
   className,
 }: QueueStatusBarProps) {
-  const percent = total > 0 ? Math.round((completed / total) * 100) : 0
+  const boundedCompleted = Math.min(Math.max(completed, 0), total)
+  const percent = total > 0 ? Math.round((boundedCompleted / total) * 100) : 0
   return (
     <div
       className={cn(
@@ -30,7 +49,12 @@ export function QueueStatusBar({
       )}
     >
       <div className="flex items-center gap-2">
-        <LoaderCircle className="h-3.5 w-3.5 animate-spin text-accent" />
+        <LoaderCircle
+          className={cn(
+            'h-3.5 w-3.5 text-accent',
+            active > 0 && 'animate-spin'
+          )}
+        />
         <span className="text-xs font-sc text-label-secondary">
           {label ?? `渲染队列 · ${completed}/${total} 节点完成`}
         </span>
@@ -39,7 +63,7 @@ export function QueueStatusBar({
         </div>
       </div>
       <span className="text-xs font-sc text-label-tertiary">
-        {rightLabel ?? '本地渲染 · 命中缓存 5 次'}
+        {describeQueueActivity({ completed, active, failed, total })}
       </span>
     </div>
   )

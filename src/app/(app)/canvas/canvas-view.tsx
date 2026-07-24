@@ -22,6 +22,10 @@ import { usePublishNavContext } from '@/features/navigation/nav-context'
 import { CanvasInspector } from './canvas-inspector'
 import { startPipeline, stopPipeline } from './canvas-action-api'
 import {
+  describePipelineResult,
+  type PipelineFeedback,
+} from './pipeline-feedback'
+import {
   buildLaneSummaries,
   LaneSummaryDetails,
   toFlowEdge,
@@ -46,7 +50,7 @@ export function CanvasView({
 }: CanvasViewProps) {
   const router = useRouter()
   const [pipelineSubmitting, setPipelineSubmitting] = useState(false)
-  const [pipelineError, setPipelineError] = useState<string>()
+  const [pipelineFeedback, setPipelineFeedback] = useState<PipelineFeedback>()
   const [collapsedLanes, setCollapsedLanes] = useState<Set<string>>(() => new Set())
   const [selectedNodeId, setSelectedNodeId] = useState(nodes[0]?.id)
   const laneSummaries = useMemo(() => buildLaneSummaries(nodes), [nodes])
@@ -74,6 +78,10 @@ export function CanvasView({
   )
   const selectedNode = nodes.find(({ id }) => id === selectedNodeId)
   const completed = nodes.filter(({ status }) => status === 'success').length
+  const active = nodes.filter(
+    ({ status }) => status === 'pending' || status === 'running'
+  ).length
+  const failed = nodes.filter(({ status }) => status === 'failed').length
   const rendererNodeId = nodes.find(({ type }) => type === 'shot-codegen')?.id
 
   usePublishNavContext({ projectId, rendererNodeId })
@@ -95,15 +103,19 @@ export function CanvasView({
 
   async function togglePipeline(): Promise<void> {
     setPipelineSubmitting(true)
-    setPipelineError(undefined)
+    setPipelineFeedback(undefined)
     try {
-      if (autopilot) await stopPipeline(projectId)
-      else await startPipeline(projectId)
+      const result = autopilot
+        ? await stopPipeline(projectId)
+        : await startPipeline(projectId)
+      setPipelineFeedback(describePipelineResult(result))
       router.refresh()
     } catch (error) {
-      setPipelineError(
-        error instanceof Error ? error.message : '工作流操作失败'
-      )
+      setPipelineFeedback({
+        variant: 'error',
+        title: '工作流操作失败',
+        body: error instanceof Error ? error.message : '工作流操作失败',
+      })
     } finally {
       setPipelineSubmitting(false)
     }
@@ -114,7 +126,7 @@ export function CanvasView({
       <section className="flex min-w-0 flex-1 flex-col">
         <TopBar
           title={projectTitle}
-          meta={`${nodes.length} 节点 · 已自动保存`}
+          meta={`${nodes.length} 节点`}
           actions={
             <>
               <Button
@@ -132,12 +144,12 @@ export function CanvasView({
             </>
           }
         />
-        {pipelineError && (
+        {pipelineFeedback && (
           <div className="px-4 pt-3">
             <Toast
-              variant="error"
-              title="工作流操作失败"
-              body={pipelineError}
+              variant={pipelineFeedback.variant}
+              title={pipelineFeedback.title}
+              body={pipelineFeedback.body}
             />
           </div>
         )}
@@ -162,7 +174,12 @@ export function CanvasView({
             onToggle={toggleLane}
           />
         </div>
-        <QueueStatusBar completed={completed} total={nodes.length} />
+        <QueueStatusBar
+          completed={completed}
+          active={active}
+          failed={failed}
+          total={nodes.length}
+        />
       </section>
       <CanvasInspector projectId={projectId} node={selectedNode} onQueued={() => router.refresh()} />
     </div>

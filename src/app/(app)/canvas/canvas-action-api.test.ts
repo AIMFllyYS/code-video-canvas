@@ -11,7 +11,13 @@ describe('triggerNodeAction', () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       response({ ok: true, jobId: 'job-1' })
     )
-    await triggerNodeAction('project-1', node({ type: 'script-import', stage: 'INGEST' }), fetcher)
+    await expect(
+      triggerNodeAction(
+        'project-1',
+        node({ type: 'script-import', stage: 'INGEST' }),
+        fetcher
+      )
+    ).resolves.toBe('job-1')
 
     expect(fetcher).toHaveBeenCalledWith(
       '/api/director/stage',
@@ -25,7 +31,13 @@ describe('triggerNodeAction', () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       response({ ok: true, jobId: 'render-1' })
     )
-    await triggerNodeAction('project-1', node({ type: 'shot-codegen', stage: 'FABRICATE' }), fetcher)
+    await expect(
+      triggerNodeAction(
+        'project-1',
+        node({ type: 'shot-codegen', stage: 'FABRICATE' }),
+        fetcher
+      )
+    ).resolves.toBe('render-1')
 
     expect(fetcher).toHaveBeenCalledWith(
       '/api/render',
@@ -39,12 +51,18 @@ describe('triggerNodeAction', () => {
 describe('pipeline controls', () => {
   it('starts project autopilot through the pipeline endpoint', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
-      response({ ok: true, autopilot: true, enqueuedNodeIds: ['node-1'] })
+      response({
+        ok: true,
+        autopilot: true,
+        enqueuedNodeIds: ['node-1'],
+        failedNodeIds: ['node-2'],
+      })
     )
 
-    await expect(startPipeline('project-1', fetcher)).resolves.toMatchObject({
+    await expect(startPipeline('project-1', fetcher)).resolves.toEqual({
       autopilot: true,
       enqueuedNodeIds: ['node-1'],
+      failedNodeIds: ['node-2'],
     })
     expect(fetcher).toHaveBeenCalledWith(
       '/api/director/pipeline',
