@@ -1233,9 +1233,14 @@ commit 不含 `.trigger/**`、MP4、Key、raw model text。
 - Delete: `src/lib/db/migrations/meta/0003_snapshot.json`
 - Delete: `src/lib/migration/legacy-sqlite-test-database.ts`
 - Modify: `src/lib/config/paths.ts`
+- Modify: `src/lib/storage/index.ts`
 - Modify: `src/lib/db/client.ts`
 - Modify: `src/lib/db/index.ts`
 - Modify: `src/lib/db/migrate.ts`
+- Move: `src/features/canvas/actions.pg.test.ts` → `src/lib/db/integration/canvas-actions.pg.test.ts`
+- Move: `src/features/canvas/fan-out.pg.test.ts` → `src/lib/db/integration/canvas-fan-out.pg.test.ts`
+- Move: `src/features/canvas/queries.pg.test.ts` → `src/lib/db/integration/canvas-queries.pg.test.ts`
+- Move: `src/features/canvas/status.pg.test.ts` → `src/lib/db/integration/canvas-status.pg.test.ts`
 - Modify: `scripts/setup/README.md`
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml`（只能由 pnpm 生成）
@@ -1279,8 +1284,14 @@ Expected: `better-sqlite3@12.1.0` 与 types 只在 devDependencies，供显式�
 
 删除 Files 中列出的 SQLite schema、tests 与 migration/meta；`src/lib/db/index.ts`
 只导出 Postgres schema/client/transaction；`paths.ts` 不再把 `DB_PATH` 作为 runtime
-配置导出。迁移脚本通过显式 CLI 参数接收 source path，不能从 app config 导入。
-Next/Trigger build graph 不得包含 `src/lib/migration/**`。
+配置导出，`src/lib/storage/index.ts` 不再依赖 import-time 目录初始化。迁移脚本通过
+显式 CLI 参数接收 source path，不能从 app config 导入。Next/Trigger build graph
+不得包含 `src/lib/migration/**`。
+
+将 N1.3 新增的四个 Postgres 集成测试移入 `src/lib/db/integration/**`。这些测试直接
+组装真实数据库、schema 与 test database，属于 infrastructure integration suite，
+不能继续放在 `src/features/canvas/**` 冒充 domain test；本步只调整测试归属与路径，
+不移动 Canvas 生产 SQL，也不提高 `canvasForbiddenImports` debt cap。
 
 - [ ] **Step 4: 跑 runtime zero-import 与迁移保留测试**
 
@@ -1291,10 +1302,12 @@ pnpm test -- src/lib/db/runtime-boundary.test.ts src/lib/migration/sqlite-online
 rg -n "better-sqlite3|drizzle-orm/sqlite-core|DB_PATH|app\\.db" src --glob '!src/lib/migration/**' --glob '!src/lib/db/runtime-boundary.test.ts'
 rg -n "@openai/agents|from ['\\\"]@openai/agents" package.json pnpm-lock.yaml src trigger --glob '!**/*.test.ts'
 pnpm typecheck
+pnpm verify:v3
 ```
 
 Expected: 第一组 GREEN；runtime SQLite scan 无匹配；Agents SDK scan 无匹配；
-ordinary `openai` 不在禁止 pattern 中且仍可被 StepFun/Gemini client 使用。
+ordinary `openai` 不在禁止 pattern 中且仍可被 StepFun/Gemini client 使用；
+`canvasForbiddenImports` 不高于既有 cap，禁止通过修改 baseline 掩盖 N1.3 回归。
 
 - [ ] **Step 5: 执行 Track N1 Tier B gate**
 
@@ -1322,7 +1335,7 @@ accounted；三 spikes 仍为真实通过；build 不需要 SQLite runtime。
 Run:
 
 ```powershell
-git add -- src/lib/db/runtime-boundary.test.ts src/lib/config/paths.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/schema.ts src/lib/db/schema.test.ts src/lib/db/migrations src/lib/migration/legacy-sqlite-test-database.ts scripts/setup/README.md package.json pnpm-lock.yaml
+git add -- src/lib/db/runtime-boundary.test.ts src/lib/config/paths.ts src/lib/storage/index.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/schema.ts src/lib/db/schema.test.ts src/lib/db/migrations src/lib/db/integration src/features/canvas/actions.pg.test.ts src/features/canvas/fan-out.pg.test.ts src/features/canvas/queries.pg.test.ts src/features/canvas/status.pg.test.ts src/lib/migration/legacy-sqlite-test-database.ts scripts/setup/README.md package.json pnpm-lock.yaml
 git diff --cached --check
 git commit -m "refactor(db): remove active SQLite runtime"
 git status --short --branch
