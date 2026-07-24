@@ -242,7 +242,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   `verify:v3` 与独立终审均 PASS；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n12)
 - [ ] **N1.3 repository async 化与逐域 Postgres cutover** —
-  `task_state=todo; status=ready; blocked_by=none; preflight=513bb1d`;
+  `task_state=in_progress; status=ready; blocked_by=none; preflight=30498d8`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n13)
 - [ ] **N1.4 SQLite export、Postgres import 与计数/hash 对账** —
   `task_state=todo; status=blocked; blocked_by=N1.3`;
