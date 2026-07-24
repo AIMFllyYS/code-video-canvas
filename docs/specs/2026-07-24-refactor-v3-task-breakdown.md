@@ -88,7 +88,7 @@ evidence 索引。
 
 | Track | 当前状态 | Blocked by | 阶段范围 | 详细 Issue |
 |---|---|---|---|---|
-| N0 | `ready` | 无 | 基线封账与止血 | [`issue-n0-baseline-and-bleeding-fixes.md`](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md) |
+| N0 | `in_progress` | 无 | 基线封账与止血 | [`issue-n0-baseline-and-bleeding-fixes.md`](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md) |
 | N1 | `blocked` | N0 | Postgres 地基与 Spike | [`issue-n1-postgres-foundation-and-spikes.md`](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md) |
 | N2 | `blocked` | N1 | Trigger 接管执行 | [`issue-n2-trigger-orchestration.md`](../issues/refactor-v3/issue-n2-trigger-orchestration.md) |
 | N3 | `blocked` | N2 | Pi structured runtime | [`issue-n3-pi-agent-runtime.md`](../issues/refactor-v3/issue-n3-pi-agent-runtime.md) |
@@ -170,7 +170,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
 ### Track N0 — Baseline and bleeding fixes
 
 - [ ] **N0.1 冻结 Demo v1 权威、建立 v3 workflowVersion 与基线证据** —
-  `task_state=todo; status=ready; blocked_by=none`;
+  `task_state=in_progress; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n01)
 - [ ] **N0.2 修复 Pi Tool 参数与 result details 提取** —
   `task_state=todo; status=ready; blocked_by=none`;
