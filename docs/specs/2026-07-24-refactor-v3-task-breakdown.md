@@ -171,11 +171,13 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
 
 - [x] **N0.1 冻结 Demo v1 权威、建立 v3 workflowVersion 与基线证据** —
   `task_state=done; status=ready; blocked_by=none; commit=1a604b5`;
-  evidence=`docs/evidence/refactor-v3/n0-baseline.json`（Node 22 隔离本地副本，
-  Task 文件 SHA-256 与主工作树一致；lint/typecheck/build 退出 0，79 files / 352 tests
-  与脱敏对抗测试通过；绝对路径/已知 secret/U+FFFD 扫描为 0；用户既有 Node 24
-  dev server 未中断；随后出现的 `.qoder/repowiki/**` 并发 WIP 未读取、未修改、未
-  stage，Task 精确路径 `diff --check` 通过）;
+  evidence=初始 Node 22 隔离基线冻结于 commit `1a604b5` 中的
+  `docs/evidence/refactor-v3/n0-baseline.json`（Task 文件 SHA-256 与主工作树一致；
+  lint/typecheck/build 退出 0，79 files / 352 tests 与脱敏对抗测试通过；绝对路径/
+  已知 secret/U+FFFD 扫描为 0；用户既有 Node 24 dev server 未中断）；当前同路径由
+  N0.5 最终重捕获为 Node 24.15.0 / pnpm 9.15.0，初始证据仍可从 commit 历史复核；
+  随后出现的 `.qoder/repowiki/**` 并发 WIP 未读取、未修改、未 stage，Task 精确路径
+  `diff --check` 通过;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n01)
 - [x] **N0.2 修复 Pi Tool 参数与 result details 提取** —
   `task_state=done; status=ready; blocked_by=none; commit=21c78fa`;
@@ -202,8 +204,17 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   `rightLabel` 扫描均为 0；独立只读终审 PASS；并发 `.qoder/repowiki/**` WIP
   未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n04)
-- [ ] **N0.5 建立 import、文件长度与 UTF-8 基线报告** —
-  `task_state=in_progress; status=ready; blocked_by=none`;
+- [x] **N0.5 建立 import、文件长度与 UTF-8 基线报告** —
+  `task_state=done; status=ready; blocked_by=none; commit=eb1328f; scope_doc=c67b29c; conflict_resolution=bade79a`;
+  evidence=`docs/evidence/refactor-v3/n0-baseline.json`（Node 24.15.0 /
+  pnpm 9.15.0 最终捕获，lint/typecheck/test/build 全部 exit 0，85 files /
+  411 tests）；Node 22 focused architecture gate 1 file / 15 tests、
+  `pnpm verify:v3`、typecheck 与定向 lint 通过；v3 report 扫描 2910 files，
+  Agents SDK package/import、U+FFFD、Trigger task forbidden import 均为 0；
+  冻结 ordinary `openai` 3、Canvas forbidden import 23、历史超限文件 4，均不得
+  增长；普通 `openai` 未被误判，非字面量模块加载与 `npm:` alias 绕过均 fail-closed；
+  独立只读终审 PASS；Node 24 dev server PID 44452 保持可用，用户
+  `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n05)
 
 ### Track N1 — Postgres foundation and spikes
