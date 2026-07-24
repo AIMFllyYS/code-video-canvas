@@ -830,17 +830,46 @@ CLI/FFmpeg 提供位于 attempt root 内的安全相对路径；绝对路径不�
 | 表 | 必需字段/约束 |
 |---|---|
 | `workspaces` | id、slug unique、name、timestamps |
-| `projects` | workspace/id、title、script、status、workflow_version、revision |
+| `projects` | workspace/id、title、script、status、workflow_version、revision、versioned export settings、autopilot |
 | `canvas_nodes` | project FK、logical_key unique/project、type/stage/status CHECK、data |
 | `canvas_edges` | project/source/target 复合 FK、唯一 edge |
 | `pipeline_runs` | project、Trigger ID、status、workflow_version、fingerprint、revision |
 | `task_attempts` | run/task/entity、`attempt_no`（Trigger/worker）、status/fingerprint/checkpoint/failure；组合 unique 与 attempt fence |
-| `artifacts` | aggregate type/id、kind、version、lifecycle、schema、storage、size/hash、attempt、supersedes；组合唯一版本 |
+| `artifacts` | project、aggregate type/id、kind、version、lifecycle、schema、storage、size/hash、attempt、supersedes；组合唯一版本 |
 | `command_receipts` | UUID id、command、idempotency key、fingerprint、status、result；`(workspace_id,idempotency_key)` unique |
 | `model_routes` | `(workspace_id,ai_task_kind)` unique、provider/model、revision；不存 secret |
 | `media_routes` | `(workspace_id,media_task_kind)` unique；`tts/asr` provider/model/revision；不存 secret |
 | `provider_credentials` | workspace/provider、ciphertext、key_version、verified_at；无明文 fallback |
 | `ai_invocations` | run/attempt/task、`invocation_no`、`repair_no`、provider/model、input/output hash、usage、trace artifact |
+
+为避免 schema/migration 实现自行猜测，以下集合与行粒度固定：
+
+```ts
+export const PROJECT_STATUSES = ['active', 'archived'] as const
+export const COMMAND_RECEIPT_STATUSES = [
+  'pending', 'succeeded', 'failed',
+] as const
+export const CANVAS_NODE_TYPES = [
+  'script-import', 'shot-split', 'score', 'export',
+  'shot-script', 'shot-codegen', 'shot-sfx', 'shot-subtitle', 'shot-qa',
+] as const
+export const CANVAS_NODE_STAGES = [
+  'INGEST', 'DIRECT', 'SHOT_SPEC', 'FABRICATE', 'ASSEMBLE', 'FINALIZE',
+] as const
+export const AI_INVOCATION_STATUSES = [
+  'running', 'succeeded', 'failed', 'cancelled',
+] as const
+```
+
+- `projects.status` 与 `command_receipts.status` 分别只接受上述集合；
+- `canvas_nodes.type/stage` 使用上述集合的 named CHECK，legacy 空 stage 在导入时按
+  type 的固定 DAG 映射补齐，不把 `null` 带入活动 PG 数据；
+- `artifacts.project_id` 是必需的 workspace-scoped project FK，用于 Snapshot 与
+  project artifact 查询；polymorphic aggregate 不替代该归属；
+- `ai_invocations` 每次真实 provider round 一行。`invocation_no` 标识同一 task
+  attempt 内的逻辑 invocation（`shot-spec=1`、`fabricate=2`），`repair_no=0`
+  表示初始 round，内容修复依次为 `1..2`；唯一键为
+  `(workspace_id,attempt_id,invocation_no,repair_no)`。
 
 ### `DATA-003` Secrets
 
@@ -886,6 +915,37 @@ CLI/FFmpeg 提供位于 attempt root 内的安全相对路径；绝对路径不�
 7. 旧 DB 与备份保留只读；
 8. 应用 runtime 删除 SQLite；
 9. 迁移工具不得写原 DB。
+
+Legacy artifact 若实体存在且 hash 可验证，按
+`(aggregate_type,aggregate_id,kind)` 分组，在组内以 `created_at ASC,id ASC` 稳定
+排序并依次赋 `version=1..N`，`supersedes_id` 指向同组前一版本；全部以
+`lifecycle=draft`、`schema_version=cvc.legacy-artifact/v1` 导入。没有 legacy
+审核/发布证据时不得伪称 `approved/released`。有合法 node 时使用 node aggregate，
+否则使用 project aggregate；缺 project、悬空 node、缺文件或 hash 冲突都必须进入
+具名 disposition，不得创建活动 artifact 或静默丢弃。
+
+Legacy project 固定导入为 `status=active`、`revision=0`，workflow version 取 export
+manifest 中冻结的 `serializeWorkflowVersion(ACTIVE_WORKFLOW_VERSION)`。Legacy node
+status 固定映射为
+`idle→idle/pending→queued/running→running/success→succeeded/failed→failed/
+stale→stale`；stage 不信任旧 nullable 值，而按 type 固定映射：
+
+```text
+script-import→INGEST       shot-split→DIRECT
+shot-script→SHOT_SPEC      shot-codegen→FABRICATE
+shot-sfx→ASSEMBLE          shot-subtitle→ASSEMBLE
+score→ASSEMBLE             shot-qa→FINALIZE
+export→FINALIZE
+```
+
+不支持的 node type/status、缺 shot lane key、悬空 edge endpoint 必须进入具名
+disposition。Legacy `settings` 不在 PG 重建通用 KV 表：credential 行进入加密
+`provider_credentials`，能唯一映射的 AI/media 配置进入 route 表，其余行只以
+canonical row hash 进入
+`unsupported-setting|unused-route-setting|invalid-setting-value` disposition，
+任何 evidence/log 不保存原值。exporter 必须用具名 v1 常量解析并把最终四个 AI
+route 与两个 media route 冻结进 manifest；importer 只消费该 manifest，不重新读取
+env 或运行时默认。
 
 ---
 

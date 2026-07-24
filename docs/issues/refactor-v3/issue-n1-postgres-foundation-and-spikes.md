@@ -258,6 +258,21 @@ Expected: lint/typecheck/diff 通过；`.data/**` 不在 staged diff；commit �
 - Prohibited: app/worker import 时自动 migrate、`drizzle-kit push`、`run_events`
 - Prohibited: plaintext credential 列、`model_routes` 中的 Key、`media_routes` 中的 Key
 
+**N1.2 → N1.3 可编译迁移边界（DOC-CONFLICT 修订）：**
+
+当前 20 余个生产 caller 同步消费 legacy `getDb()`，另有 15 个测试直接消费
+`createDb()`；这些 caller 的 async PG cutover 归 N1.3。若 N1.2 直接把同名 API
+替换为 Promise 并删除 legacy exports，全仓 typecheck 必然失败；不得用交叉类型、
+伪同步 thenable、跳过 TypeScript 文件或提前吞并 N1.3 掩盖冲突。
+
+因此 N1.2 只新增明确命名的 `getPostgresDb(): Promise<PostgresDb>` 与
+`migratePostgres()`，并保持现有 `getDb()/Db/createDb()/runMigrations()` 及 legacy
+barrel export 冻结不变，直到 N1.3 完成 caller cutover。新 PG schema、test helper、
+migrator 与 application code 禁止调用 legacy API。N1.3 负责把
+`getPostgresDb()` 收口为正式 `getDb()` 并删除 legacy runtime export；N1.6 删除
+仅供冻结测试/迁移使用的 legacy schema、migration 与 driver 依赖。这是有删除期限的
+迁移桥，不是第二套长期数据模型。
+
 - [ ] **Step 1: 串行安装精确 Postgres driver**
 
 Run:
@@ -290,7 +305,12 @@ Expected: `postgres` 只出现一次且精确为 `3.4.9`；普通 `openai` 与�
 - `media_routes` 只接受 `tts|asr`，且
   `(workspace_id,media_task_kind)` 唯一；
 - 两种 route 都没有 secret/ciphertext 列；credential 只落共享
-  `provider_credentials`。
+  `provider_credentials`；
+- project/receipt status、node type/stage 与 route revision 的 named CHECK；
+- 所有业务时间列均为 `timestamp with time zone`；
+- `ai_invocations` 每个 provider round 一行，initial/repair 的组合 unique；
+- route 列 inventory 不含 `secret/key/ciphertext/nonce/auth_tag`，credential 列
+  inventory 不含 plaintext secret。
 
 Run:
 
@@ -359,25 +379,51 @@ export const ATTEMPT_STATUSES = [
 export const ARTIFACT_LIFECYCLES = [
   'draft', 'approved', 'released', 'rejected',
 ] as const
+export const PROJECT_STATUSES = ['active', 'archived'] as const
+export const COMMAND_RECEIPT_STATUSES = [
+  'pending', 'succeeded', 'failed',
+] as const
+export const CANVAS_NODE_TYPES = [
+  'script-import', 'shot-split', 'score', 'export',
+  'shot-script', 'shot-codegen', 'shot-sfx', 'shot-subtitle', 'shot-qa',
+] as const
+export const CANVAS_NODE_STAGES = [
+  'INGEST', 'DIRECT', 'SHOT_SPEC', 'FABRICATE', 'ASSEMBLE', 'FINALIZE',
+] as const
+export const AI_INVOCATION_STATUSES = [
+  'running', 'succeeded', 'failed', 'cancelled',
+] as const
 ```
 
 所有时间列为 `timestamp with time zone`，JSON 只用于显式 versioned
 payload/checkpoint/metadata。`artifacts.content_hash` 是实体字节 SHA-256；
-`storage_key` 可存 StorageAdapter key，但任何 API/UI 不得返回它。
+`storage_key` 可存 StorageAdapter key，但任何 API/UI 不得返回它。`projects` 保留
+versioned `export_settings` 与 `autopilot`；`canvas_nodes` 用数值坐标列并要求
+versioned `data`，type/stage 必须命中上述集合。`artifacts.project_id` 是必需的
+workspace-scoped project FK；polymorphic aggregate 不替代 project 归属。
 `provider_credentials` 使用 `(workspace_id,provider)` 唯一，至少含
-`ciphertext bytea/nonce bytea/auth_tag bytea/key_version/verified_at/created_at/
-updated_at`；AI 和 media route 只存 provider/model/revision。`revision` 为非负
-bigint。
+`envelope_version/ciphertext bytea/nonce bytea/auth_tag bytea/key_version/
+verified_at/created_at/updated_at`；nonce 固定 12 bytes、auth tag 固定 16 bytes。
+AI 和 media route 只存 provider/model/revision。所有 `revision` 为非负 bigint。
+`ai_invocations` 每个真实 provider round 一行；同一 task attempt 的
+`invocation_no` 标识逻辑 invocation，`repair_no=0` 是初始 round、`1..2` 是内容
+修复，唯一键固定为
+`(workspace_id,attempt_id,invocation_no,repair_no)`。
 
 N1.6 删除同名 legacy `src/lib/db/schema.ts` 前，所有新 PG import 必须显式写
 `@/lib/db/schema/index`，不得使用会被旧文件优先解析的裸
 `@/lib/db/schema`；Drizzle config 也显式指向
 `./src/lib/db/schema/index.ts`。
 
-`src/lib/db/client.ts` 缓存 `Promise<Db>` 与底层 Postgres.js client；缺少
-`DATABASE_URL` 时在首次 `await getDb()` 明确失败，模块 import 不连库、不迁移。
-`src/lib/db/migrate.ts` 只导出显式 `migratePostgres()`；只有
-`scripts/setup/db-migrate.ts` 调它。
+`src/lib/db/client.ts` 新增并缓存 `Promise<PostgresDb>` 与底层 Postgres.js
+client；缺少 `DATABASE_URL` 时在首次 `await getPostgresDb()` 明确失败，模块
+import 不连库、不迁移。初始化失败必须清除 rejected cache 并关闭已创建 client，
+允许修复配置后重试。legacy 同步 `getDb()` 暂时冻结，不得被新 PG 代码调用。
+
+`src/lib/db/migrate.ts` 新增显式 `migratePostgres()`；只有
+`scripts/setup/db-migrate.ts` 调用该 PG migrator。legacy `createDb()` 与
+`runMigrations()` 只为尚属 N1.3/N1.6 的旧 caller/test 保留，不得进入任何新 PG
+import graph。
 `package.json` 新增
 `"test:pg": "vitest run --config vitest.pg.config.ts"`；`db:generate` 仍是显式
 开发命令，不得挂到 `dev/start/build`。
@@ -415,6 +461,9 @@ Expected: 空 `cvc` 与每次重建的 `cvc_test` 都从已提交 SQL migration 
 `docs/evidence/refactor-v3/n1/fresh-migration.md`，将 workspace 复合 FK、命名
 CHECK、unique 与 artifact immutable trigger 的测试矩阵写入
 `docs/evidence/refactor-v3/n1/constraint-matrix.md`；两份证据都不得包含连接串。
+N1.2 的全仓 `pnpm typecheck` 必须通过；PG schema、helper、migrator 只能 import
+`@/lib/db/schema/index`。不得修改 N1.3 caller、构造同步 Promise facade 或放宽
+tsconfig 取得假绿。
 
 - [ ] **Step 7: Task-Light 检查并本地提交**
 
@@ -434,7 +483,9 @@ Expected: lint/typecheck/diff 通过；staged SQL 与 Drizzle schema 一致；�
 
 **N1.2 exit gate:** fresh Postgres 可仅从受审 migration 建立十二表；workspace
 复合隔离、状态 CHECK、attempt/receipt unique、artifact 不可变 trigger 均由 PG
-测试证明；AI/media routes 分离且共享 credential store；无 runtime auto-migrate。
+测试证明；AI/media routes 分离且共享 credential store；新 PG client 与 app/worker
+import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.6 清退，N1.2
+不得把该过渡边界误报为 Track N1 的 runtime SQLite zero-import 已完成。
 
 <a id="task-n13"></a>
 
@@ -445,12 +496,17 @@ Expected: lint/typecheck/diff 通过；staged SQL 与 Drizzle schema 一致；�
 **Files:**
 
 - Create: `src/lib/db/transaction.ts`
+- Create: `src/lib/migration/legacy-sqlite-test-database.ts`
 - Create: `src/features/credentials/provider-credential-store.ts`
 - Create: `src/features/credentials/provider-credential-store.pg.test.ts`
 - Create: `src/features/routing/model-route-repository.ts`
 - Create: `src/features/routing/model-route-repository.pg.test.ts`
 - Create: `src/features/routing/media-route-repository.ts`
 - Create: `src/features/routing/media-route-repository.pg.test.ts`
+- Modify: `src/lib/db/client.ts`
+- Modify: `src/lib/db/index.ts`
+- Modify: `src/lib/db/migrate.ts`
+- Modify: `src/lib/db/schema.test.ts`
 - Modify: `src/features/canvas/actions.ts`
 - Modify: `src/features/canvas/actions.test.ts`
 - Modify: `src/features/canvas/fan-out.ts`
@@ -461,6 +517,10 @@ Expected: lint/typecheck/diff 通过；staged SQL 与 Drizzle schema 一致；�
 - Modify: `src/features/canvas/status.test.ts`
 - Modify: `src/features/ai/config.ts`
 - Modify: `src/features/ai/config.test.ts`
+- Modify: `src/features/ai/gemini-adapter.test.ts`
+- Modify: `src/features/ai/gemini-config.test.ts`
+- Modify: `src/features/ai/model-routing.test.ts`
+- Modify: `src/features/ai/stepfun-adapter.test.ts`
 - Modify: `src/features/artifacts/service.ts`
 - Modify: `src/features/audio/repository.ts`
 - Modify: `src/features/audio/repository.test.ts`
@@ -481,6 +541,7 @@ Expected: lint/typecheck/diff 通过；staged SQL 与 Drizzle schema 一致；�
 - Modify: `src/features/director/tools/write-artifact.test.ts`
 - Modify: `src/features/render/cache.ts`
 - Modify: `src/features/render/cache.test.ts`
+- Modify: `src/features/render/render-shot-repository.ts`
 - Modify: `src/features/render/repository.ts`
 - Modify: `src/features/render/repository.test.ts`
 - Modify: `src/features/render/thumbnail.integration.test.ts`
@@ -518,6 +579,16 @@ Expected: lint/typecheck/diff 通过；staged SQL 与 Drizzle schema 一致；�
 - Prohibited: `better-sqlite3` import outside `src/lib/migration/**` and `scripts/migration/**`
 - Prohibited: network/API call while a PG transaction is open
 - Prohibited: plaintext credential fallback、客户端 import credential store、同步 `.get/.all/.run`
+
+N1.3 开工时必须重新枚举所有 import
+`@/lib/db/client|migrate|schema`、`@/lib/db` barrel 的 tracked caller；实际 caller
+清单优先于本节静态列表。所有受 `getDb` async cutover 直接影响的源码与测试都属于
+N1.3 允许修改范围，但只能修改 DB 调用/类型/fixture，不得顺带改变非 DB 行为。
+完成 caller cutover 后把 `getPostgresDb()` 收口为正式 async `getDb()`，并从 runtime
+barrel 删除 legacy schema/client export。legacy `createDb()` 只迁到
+`src/lib/migration/legacy-sqlite-test-database.ts` 供即将在 N1.6 删除的
+`schema.test.ts` 使用；`src/lib/db/migrate.ts` 在 N1.3 收口为纯 PG migrator，
+不得继续 import SQLite。
 
 - [ ] **Step 1: 写 async/transaction/credential 的失败测试**
 
@@ -615,7 +686,7 @@ Run:
 ```powershell
 pnpm lint
 git diff --check
-git add -- src/lib/db/transaction.ts src/features/credentials src/features/routing src/features/canvas src/features/ai/config.ts src/features/ai/config.test.ts src/features/artifacts/service.ts src/features/audio src/features/director src/features/render src/lib/queue/in-process-queue.ts src/lib/queue/query.ts
+git add -- src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/schema.test.ts src/lib/db/transaction.ts src/lib/migration/legacy-sqlite-test-database.ts src/features/credentials src/features/routing src/features/canvas src/features/ai/config.ts src/features/ai/config.test.ts src/features/ai/gemini-adapter.test.ts src/features/ai/gemini-config.test.ts src/features/ai/model-routing.test.ts src/features/ai/stepfun-adapter.test.ts src/features/artifacts/service.ts src/features/audio src/features/director src/features/render src/lib/queue/in-process-queue.ts src/lib/queue/query.ts
 git add -- "src/app/(app)/page.tsx" "src/app/(app)/projects/page.tsx" "src/app/(app)/canvas/page.tsx" "src/app/(app)/canvas/export/page.tsx" ':(literal)src/app/(app)/canvas/shot/[id]/page.tsx' "src/app/(app)/settings/page.tsx"
 git add -- ':(literal)src/app/api/artifacts/[id]/route.ts' ':(literal)src/app/api/artifacts/[id]/route.test.ts' src/app/api/projects/route.ts src/app/api/projects/route.test.ts ':(literal)src/app/api/projects/[id]/route.ts' src/app/api/settings/route.ts src/app/api/settings/route.test.ts
 git add -- src/app/api/director/pipeline/route.ts src/app/api/director/pipeline/route.test.ts src/app/api/director/stage/route.ts src/app/api/director/stage/route.test.ts ':(literal)src/app/api/director/stream/[nodeId]/route.ts' ':(literal)src/app/api/director/stream/[nodeId]/route.test.ts' ':(literal)src/app/api/jobs/[id]/route.ts' ':(literal)src/app/api/jobs/[id]/route.test.ts'
@@ -660,6 +731,60 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 - Prohibited: 在 JSONL、stdout、日志或 reconciliation 中出现 credential 明文
 - Prohibited: 把 legacy absolute path 暴露给 API/UI
 
+Legacy → v3 映射固定如下，importer 不得临场猜测：
+
+| Legacy source | v3 target/default | 无法映射时 |
+|---|---|---|
+| project | `status=active`、`revision=0`；`workflow_version` 取 export manifest 冻结值；`export_settings` 包为 `{schemaVersion:1,settings}`，autopilot 原样转 boolean | 非法时间/JSON → `invalid-project` |
+| node type/status | type 仅九种固定值；status 为 `idle→idle`、`pending→queued`、`running→running`、`success→succeeded`、`failed→failed`、`stale→stale` | `unsupported-node-type|invalid-node-status` |
+| node stage | 忽略 legacy nullable stage；按 `script-import→INGEST`、`shot-split→DIRECT`、`shot-script→SHOT_SPEC`、`shot-codegen→FABRICATE`、`shot-sfx/shot-subtitle/score→ASSEMBLE`、`shot-qa/export→FINALIZE` | shot lane 缺 lane key → `missing-lane-key` |
+| node identity/data | global logical key=`global:<type>`；shot logical key=`shot:<laneKey>:<type>`；坐标转数值列；data 包为 `{schemaVersion:1,payload,migration:{legacyStage}}`；`revision=0` | 非法坐标/JSON → `invalid-node-data` |
+| edge | project/source/target 均先 UUIDv5 映射，再验证同 workspace/project endpoint | `missing-source|missing-target|cross-project-endpoint` |
+| setting credential | `stepfun_api_key|gemini_api_key` 加密进入共享 `provider_credentials` | 空值/加密失败 → 整体 export/import fail closed |
+| AI route settings | `project-plan←shot-split`、`shot-spec←shot-script`、`fabricate←shot-codegen`、`vision-qa←shot-qa`；provider/model 只取 export manifest 的 `resolvedRoutesV1` | 不能唯一贡献 route → `unused-route-setting` |
+| media route settings | `stepfun_tts_model→tts`、`stepfun_asr_model→asr`，provider 固定 `stepfun` | 非法/空值 → `invalid-setting-value` |
+| 其他 setting | 不重建通用 KV 表，不保存原值 | `unsupported-setting` |
+
+所有 disposition 都只记录 source table、legacy PK、canonical row hash 与 reason，
+不记录 setting value、credential、绝对路径或原始 payload。`workflow_version` 的
+manifest 冻结值固定由
+`serializeWorkflowVersion(ACTIVE_WORKFLOW_VERSION)` 产生。参与同一 route 推导的
+多个 setting row 必须分别关联到 target 或 disposition，保证逐行对账。
+
+exporter 使用以下固定默认解析 route，并把最终结果完整冻结到 manifest；importer
+禁止重新读取运行时默认或 env：
+
+```ts
+export const LEGACY_ROUTE_DEFAULTS_V1 = {
+  ai: {
+    'project-plan': { nodeType: 'shot-split', provider: 'gemini' },
+    'shot-spec': { nodeType: 'shot-script', provider: 'gemini' },
+    fabricate: { nodeType: 'shot-codegen', provider: 'gemini' },
+    'vision-qa': { nodeType: 'shot-qa', provider: 'gemini' },
+  },
+  models: {
+    gemini: { text: 'gemini-3.6-flash', vision: 'gemini-3.6-flash' },
+    stepfun: {
+      text: 'step-3.5-flash',
+      vision: 'step-3.7-flash',
+      tts: 'stepaudio-2.5-tts',
+      asr: 'stepaudio-2.5-asr',
+    },
+  },
+  media: {
+    tts: { provider: 'stepfun', model: 'stepaudio-2.5-tts' },
+    asr: { provider: 'stepfun', model: 'stepaudio-2.5-asr' },
+  },
+} as const
+```
+
+`resolvedRoutesV1` 必须含 `schemaVersion:1`、四个 AI route 与两个 media route 的
+最终 provider/model；先应用对应 `director_provider_*` 和 provider model setting，
+再回退上述固定值。`vision-qa` 使用 vision model，其余 AI task 使用 text model。
+缺 route、未知 provider 或空 model 使 export fail closed；`gemini_fast_model`、
+非 canonical node route 与 base URL setting 进入 `unused-route-setting` 或
+`unsupported-setting`，不能偷偷影响 v3 route。
+
 - [ ] **Step 1: 写 deterministic export/import/reconcile 的失败测试**
 
 测试 fixture 必须包含：
@@ -667,6 +792,8 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 - 六表各至少两行、非 ASCII 中文标题/脚本；
 - 一个有 project 的 legacy job 和一个无 project 的 legacy job；
 - 一个真实 artifact 文件与一个缺失 artifact 指针；
+- 同 aggregate/kind 的两条历史 artifact；
+- 一个 nullable/mismatched stage node 与一个悬空 edge；
 - 一个 StepFun secret setting 与一个普通 setting；
 - 第二次 import；
 - 中途失败后 resume。
@@ -676,10 +803,15 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 - 同一 legacy string ID 永远映射到同一 UUIDv5；
 - JSONL 固定表顺序、行按主键排序、UTF-8 无 BOM/U+FFFD；
 - secret 只以 AES-GCM envelope 进入 `provider_credentials`，export/log 无原文；
+- `resolvedRoutesV1` 完整冻结四个 AI 与两个 media route；export 后改变 env/default
+  不改变 importer 结果；
 - 支持映射的 job 进入 deterministic `pipeline_runs/task_attempts`，不支持或无
   project 的 job 进入 manifest 的 `archivedDispositions`，携带 row hash，不伪造
   活动 run；
 - 存在且 hash 可算的 artifact 进入 PG，缺失文件进入 rejected disposition；
+- 历史 artifact 按 `created_at,id` 稳定赋 `version=1..N` 并串起
+  `supersedes_id`；
+- project/node/edge/settings 严格按上述 default/mapping/disposition 对账；
 - 第二次 import 不新增行；失败 resume 从已提交 project 继续；
 - reconcile 对六张 legacy 表分别比较 count、PK set 与 canonical row hash，
   每行都对应 PG target 或明确 archive/reject disposition。
@@ -696,7 +828,7 @@ Expected: 缺失实现导致 RED。
 - [ ] **Step 2: 实现 versioned、脱敏、可重放 export**
 
 `manifest.json` 固定 `schemaVersion: 1`、snapshot SHA、六表 counts/hash、
-workspace UUID、每个 JSONL 文件 SHA、artifact manifest 与
+workspace UUID、`resolvedRoutesV1`、每个 JSONL 文件 SHA、artifact manifest 与
 `archivedDispositions`。JSONL 文件固定为：
 
 ```text
@@ -733,9 +865,15 @@ legacy job 映射规则固定：
   `missing-project|unsupported-kind|invalid-status`；
 - 任何 disposition 都计入 job 对账，不静默丢弃。
 
-artifact 缺实体或实体 hash 与 legacy hash 冲突时不创建活动 artifact，而写
-`missing-file|hash-mismatch` disposition。成功导入的 artifact 保留相对
-`storage_key`，`content_hash` 重新按实体字节计算。
+artifact 缺 project、node 指针悬空、缺实体或实体 hash 与 legacy hash 冲突时不
+创建活动 artifact，而写
+`missing-project|missing-node|missing-file|hash-mismatch` disposition。成功导入的
+artifact 保留相对 `storage_key`，`content_hash` 重新按实体字节计算，并按
+`(aggregate_type,aggregate_id,kind)` 分组，以 `created_at ASC,id ASC` 稳定排序后
+依次赋 `version=1..N`，`supersedes_id` 指向同组前一版本；lifecycle 固定为
+`draft`，schema version 固定为 `cvc.legacy-artifact/v1`。存在合法 node 时使用
+node aggregate，否则使用 project aggregate；没有 legacy 审核/发布证据时禁止映射
+为 `approved/released`。
 
 - [ ] **Step 4: 跑 fixture GREEN，再对真实只读快照执行三段式迁移**
 
@@ -976,6 +1114,7 @@ commit 不含 `.trigger/**`、MP4、Key、raw model text。
 - Delete: `src/lib/db/migrations/meta/0001_snapshot.json`
 - Delete: `src/lib/db/migrations/meta/0002_snapshot.json`
 - Delete: `src/lib/db/migrations/meta/0003_snapshot.json`
+- Delete: `src/lib/migration/legacy-sqlite-test-database.ts`
 - Modify: `src/lib/config/paths.ts`
 - Modify: `src/lib/db/client.ts`
 - Modify: `src/lib/db/index.ts`
@@ -983,7 +1122,7 @@ commit 不含 `.trigger/**`、MP4、Key、raw model text。
 - Modify: `scripts/setup/README.md`
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml`（只能由 pnpm 生成）
-- Retain unchanged: `src/lib/migration/**`
+- Retain unchanged: `src/lib/migration/**` 中除上述 test-only helper 外的正式迁移工具
 - Retain unchanged: `scripts/migration/**`
 - Retain read-only local data: `.data/app.db*`
 - Retain read-only local data: `.data/legacy-sqlite-archives/baseline-before-postgres/**`
@@ -1066,7 +1205,7 @@ accounted；三 spikes 仍为真实通过；build 不需要 SQLite runtime。
 Run:
 
 ```powershell
-git add -- src/lib/db/runtime-boundary.test.ts src/lib/config/paths.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/schema.ts src/lib/db/schema.test.ts src/lib/db/migrations scripts/setup/README.md package.json pnpm-lock.yaml
+git add -- src/lib/db/runtime-boundary.test.ts src/lib/config/paths.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/schema.ts src/lib/db/schema.test.ts src/lib/db/migrations src/lib/migration/legacy-sqlite-test-database.ts scripts/setup/README.md package.json pnpm-lock.yaml
 git diff --cached --check
 git commit -m "refactor(db): remove active SQLite runtime"
 git status --short --branch
