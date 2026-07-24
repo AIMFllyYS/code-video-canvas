@@ -3,15 +3,17 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { dirname } from "node:path"
 
 import { configure, runs, tasks } from "@trigger.dev/sdk"
-import { z } from "zod"
 
 import type { pipelineRunTask } from "../../trigger/tasks/pipeline-run"
-import {
-  pipelineRunProgress,
-  pipelineRunProgressEventSchema,
-} from "../../trigger/tasks/pipeline-run"
+import { pipelineProgressStream } from "../../trigger/streams"
+import { SafeProgressEventV1Schema } from "../../src/features/pipeline/contracts/progress"
+import { CVC_TASK_IDS } from "../../src/features/pipeline/contracts/task-ids"
+import { ProjectTaskPayloadV1Schema } from "../../src/features/pipeline/contracts/task-payload"
+import { TaskResultV1Schema } from "../../src/features/pipeline/contracts/task-result"
 
 const OUTPUT_PATH = ".data/spikes/trigger.json"
+const PIPELINE_RUN_TASK_ID = CVC_TASK_IDS[0]
+const WORKFLOW_VERSION = "n2.1-trigger-probe-v1"
 const TERMINAL_STATUSES = new Set([
   "COMPLETED",
   "CANCELED",
@@ -21,11 +23,6 @@ const TERMINAL_STATUSES = new Set([
   "EXPIRED",
   "TIMED_OUT",
 ])
-
-const outputSchema = z.object({
-  schemaVersion: z.literal(1),
-  probeId: z.uuid(),
-}).strict()
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex")
@@ -42,13 +39,13 @@ function requireServerKey(): string {
 }
 
 async function collectProgress(runId: string) {
-  const stream = await pipelineRunProgress.read(runId, {
+  const stream = await pipelineProgressStream.read(runId, {
     timeoutInSeconds: 60,
   })
   const events = []
 
   for await (const candidate of stream) {
-    events.push(pipelineRunProgressEventSchema.parse(candidate))
+    events.push(SafeProgressEventV1Schema.parse(candidate))
     if (events.length === 2) {
       break
     }
@@ -71,7 +68,8 @@ async function waitForTerminal(runId: string) {
 
 function assertEventSequence(
   events: Awaited<ReturnType<typeof collectProgress>>,
-  probeId: string,
+  pipelineRunId: string,
+  attemptId: string,
 ): void {
   const phases = events.map((event) => event.phase)
   if (
@@ -81,9 +79,43 @@ function assertEventSequence(
   ) {
     throw new Error("Expected typed progress sequence started -> completed")
   }
-  if (events.some((event) => event.probeId !== probeId)) {
-    throw new Error("Typed progress event probeId mismatch")
+  if (events[0]?.progress !== 0 || events[1]?.progress !== 100) {
+    throw new Error("Typed progress event progress mismatch")
   }
+  if (
+    events.some(
+      (event) =>
+        event.taskId !== PIPELINE_RUN_TASK_ID ||
+        event.pipelineRunId !== pipelineRunId ||
+        event.attemptId !== attemptId,
+    )
+  ) {
+    throw new Error("Typed progress event scope mismatch")
+  }
+}
+
+function createProbePayload() {
+  const workspaceId = randomUUID()
+  const projectId = randomUUID()
+  const pipelineRunId = randomUUID()
+  const attemptId = randomUUID()
+  const fingerprint = sha256(
+    [workspaceId, projectId, pipelineRunId, attemptId].join(":"),
+  )
+
+  return ProjectTaskPayloadV1Schema.parse({
+    schemaVersion: 1,
+    workspaceId,
+    projectId,
+    pipelineRunId,
+    attemptId,
+    fingerprint,
+    workflowVersion: WORKFLOW_VERSION,
+    entity: {
+      type: "project",
+      id: projectId,
+    },
+  })
 }
 
 async function writeEvidence(
@@ -111,13 +143,9 @@ async function writeEvidence(
 
 async function main(): Promise<void> {
   configure({ accessToken: requireServerKey() })
-  const probeId = randomUUID()
+  const payload = createProbePayload()
   const progressPromise = tasks
-    .trigger<typeof pipelineRunTask>("cvc.pipeline.run", {
-      schemaVersion: 1,
-      probeId,
-      requestedAt: new Date().toISOString(),
-    })
+    .trigger<typeof pipelineRunTask>(PIPELINE_RUN_TASK_ID, payload)
     .then(async (handle) => ({
       handle,
       progress: collectProgress(handle.id),
@@ -131,11 +159,18 @@ async function main(): Promise<void> {
   if (terminal.status !== "COMPLETED" || !terminal.isSuccess) {
     throw new Error(`Trigger.dev probe finished with ${terminal.status}`)
   }
-  const output = outputSchema.parse(terminal.output)
-  if (output.probeId !== probeId) {
-    throw new Error("Trigger.dev task output probeId mismatch")
+  const output = TaskResultV1Schema.parse(terminal.output)
+  if (
+    output.taskId !== PIPELINE_RUN_TASK_ID ||
+    output.pipelineRunId !== payload.pipelineRunId ||
+    output.attemptId !== payload.attemptId ||
+    output.outcome !== "completed" ||
+    output.artifactIds.length !== 0 ||
+    output.checkpointHash !== payload.fingerprint
+  ) {
+    throw new Error("Trigger.dev task output contract mismatch")
   }
-  assertEventSequence(events, probeId)
+  assertEventSequence(events, payload.pipelineRunId, payload.attemptId)
   await writeEvidence(handle.id, events)
 }
 

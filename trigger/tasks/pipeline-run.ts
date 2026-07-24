@@ -1,49 +1,42 @@
-import { streams, task } from "@trigger.dev/sdk"
-import { z } from "zod"
+import { task } from "@trigger.dev/sdk"
 
-export const pipelineRunProbePayloadSchema = z.object({
-  schemaVersion: z.literal(1),
-  probeId: z.uuid(),
-  requestedAt: z.iso.datetime(),
-}).strict()
+import { CVC_TASK_IDS } from "@/features/pipeline/contracts/task-ids"
+import { ProjectTaskPayloadV1Schema } from "@/features/pipeline/contracts/task-payload"
+import { TaskResultV1Schema } from "@/features/pipeline/contracts/task-result"
 
-export type PipelineRunProbePayload = z.infer<
-  typeof pipelineRunProbePayloadSchema
->
+import { pipelineProgressStream } from "../streams"
 
-export const pipelineRunProgressEventSchema = z.object({
-  schemaVersion: z.literal(1),
-  phase: z.enum(["started", "completed"]),
-  probeId: z.uuid(),
-}).strict()
-
-export type PipelineRunProgressEvent = z.infer<
-  typeof pipelineRunProgressEventSchema
->
-
-export const pipelineRunProgress =
-  streams.define<PipelineRunProgressEvent>({
-    id: "pipeline-run-progress-v1",
-  })
+const PIPELINE_RUN_TASK_ID = CVC_TASK_IDS[0]
 
 export const pipelineRunTask = task({
-  id: "cvc.pipeline.run",
+  id: PIPELINE_RUN_TASK_ID,
   run: async (payload: unknown) => {
-    const parsed = pipelineRunProbePayloadSchema.parse(payload)
-    await pipelineRunProgress.append({
+    const parsed = ProjectTaskPayloadV1Schema.parse(payload)
+    await pipelineProgressStream.append({
       schemaVersion: 1,
+      taskId: PIPELINE_RUN_TASK_ID,
+      pipelineRunId: parsed.pipelineRunId,
+      attemptId: parsed.attemptId,
       phase: "started",
-      probeId: parsed.probeId,
+      progress: 0,
     })
-    await pipelineRunProgress.append({
+    await pipelineProgressStream.append({
       schemaVersion: 1,
+      taskId: PIPELINE_RUN_TASK_ID,
+      pipelineRunId: parsed.pipelineRunId,
+      attemptId: parsed.attemptId,
       phase: "completed",
-      probeId: parsed.probeId,
+      progress: 100,
     })
 
-    return {
-      schemaVersion: 1 as const,
-      probeId: parsed.probeId,
-    }
+    return TaskResultV1Schema.parse({
+      schemaVersion: 1,
+      taskId: PIPELINE_RUN_TASK_ID,
+      pipelineRunId: parsed.pipelineRunId,
+      attemptId: parsed.attemptId,
+      outcome: "completed",
+      artifactIds: [],
+      checkpointHash: parsed.fingerprint,
+    })
   },
 })
