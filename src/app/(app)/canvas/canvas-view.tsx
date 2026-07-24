@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { QueueStatusBar } from '@/components/ui/queue-status-bar'
 import { TopBar } from '@/components/ui/top-bar'
 import type { CanvasGraphEdge, CanvasGraphNode } from '@/features/canvas'
-import { AppShell } from '@/features/navigation/app-shell'
+import { usePublishNavContext } from '@/features/navigation/nav-context'
 import { CanvasInspector } from './canvas-inspector'
 import { toFlowEdge, toFlowNode } from './flow-elements'
 
@@ -60,6 +60,8 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
   const completed = nodes.filter(({ status }) => status === 'success').length
   const rendererNodeId = nodes.find(({ type }) => type === 'shot-codegen')?.id
 
+  usePublishNavContext({ projectId, rendererNodeId })
+
   useEffect(() => {
     if (!nodes.some(({ status }) => status === 'pending' || status === 'running')) return
     const timeout = window.setTimeout(() => router.refresh(), 1500)
@@ -76,13 +78,7 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
   }
 
   return (
-    <AppShell
-      active="canvas"
-      projectId={projectId}
-      rendererNodeId={rendererNodeId}
-      className="bg-canvas-bg"
-      contentClassName="flex"
-    >
+    <div className="flex min-h-0 flex-1 bg-canvas-bg">
       <section className="flex min-w-0 flex-1 flex-col">
         <TopBar
           title={projectTitle}
@@ -116,7 +112,7 @@ export function CanvasView({ projectId, projectTitle, nodes, edges }: CanvasView
         <QueueStatusBar completed={completed} total={nodes.length} />
       </section>
       <CanvasInspector projectId={projectId} node={selectedNode} onQueued={() => router.refresh()} />
-    </AppShell>
+    </div>
   )
 }
 

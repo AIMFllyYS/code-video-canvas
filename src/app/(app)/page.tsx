@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ProjectCard } from '@/components/ui/project-card'
 import { SearchField } from '@/components/ui/search-field'
 import { getCanvasGraph, listProjects } from '@/features/canvas'
-import { AppShell } from '@/features/navigation/app-shell'
+import { PublishNavContext } from '@/features/navigation/nav-context'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,13 +25,12 @@ export default function HomePage() {
   })
 
   return (
-    <AppShell
-      active="workbench"
-      projectId={projectCards[0]?.id}
-      rendererNodeId={projectCards[0]?.rendererNodeId}
-      contentClassName="overflow-y-auto"
-    >
-      <main className="min-h-full">
+    <>
+      <PublishNavContext
+        projectId={projectCards[0]?.id}
+        rendererNodeId={projectCards[0]?.rendererNodeId}
+      />
+      <main className="min-h-0 flex-1 overflow-y-auto">
         <section className="flex h-[179px] flex-col items-center justify-center gap-4 px-4 text-center sm:px-10 lg:px-20">
           <h1 className="text-[34px] font-bold leading-tight">把一段稿子，变成一支专业视频</h1>
           <p className="text-[15px] text-label-secondary">
@@ -91,6 +90,6 @@ export default function HomePage() {
           </section>
         )}
       </main>
-    </AppShell>
+    </>
   )
 }

@@ -47,7 +47,7 @@ export function NavItem({
   )
 
   const classes = cn(
-    'flex h-8 items-center rounded-sm',
+    'flex h-8 items-center rounded-sm transition-colors duration-[var(--duration-fast)] ease-standard',
     compact ? 'w-8 justify-center px-0' : 'gap-2 px-2.5 py-1.5',
     active ? 'bg-fill-strong' : 'bg-transparent',
     className,

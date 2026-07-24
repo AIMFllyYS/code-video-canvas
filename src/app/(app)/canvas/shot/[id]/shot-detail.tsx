@@ -16,12 +16,13 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { ProgressBar } from '@/components/ui/progress-bar'
+import { Skeleton } from '@/components/ui/skeleton'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
 import { SettingsRow } from '@/components/ui/settings-row'
 import { StatusPill } from '@/components/ui/status-pill'
 import { TopBar } from '@/components/ui/top-bar'
 import { Toast } from '@/components/ui/toast'
-import { AppShell } from '@/features/navigation/app-shell'
+import { usePublishNavContext } from '@/features/navigation/nav-context'
 import { ShotPanelChrome, useShotPanelState } from './shot-panels'
 import { renderShotAndWait } from './shot-api'
 
@@ -47,9 +48,10 @@ export function ShotDetail({
   const runtime = useShotRuntime(projectId, nodeId, previewUrl)
   const panels = useShotPanelState()
 
+  usePublishNavContext({ projectId, rendererNodeId: nodeId })
+
   return (
-    <AppShell active="renderer" projectId={projectId} rendererNodeId={nodeId}>
-      <main className="flex h-full min-w-0 flex-col">
+    <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TopBar
           title={
             <span className="flex items-center gap-2">
@@ -101,6 +103,7 @@ export function ShotDetail({
           codeContent={
             <ShotCode
               sourceCode={runtime.sourceCode}
+              codeLoading={runtime.codeLoading}
               onRender={runtime.render}
               rendering={runtime.rendering}
             />
@@ -108,7 +111,6 @@ export function ShotDetail({
           contractContent={<ShotContract laneKey={laneKey} sourceText={sourceText} />}
         />
       </main>
-    </AppShell>
   )
 }
 
@@ -116,8 +118,9 @@ function useShotRuntime(projectId: string, nodeId: string, previewUrl?: string) 
   const [rendering, setRendering] = useState(false)
   const [outputUrl, setOutputUrl] = useState<string>()
   const [sourceCode, setSourceCode] = useState(
-    previewUrl ? '正在读取分镜代码…' : '分镜代码尚未生成',
+    previewUrl ? '' : '分镜代码尚未生成',
   )
+  const [codeLoading, setCodeLoading] = useState(Boolean(previewUrl))
   const [error, setError] = useState<string>()
 
   useEffect(() => {
@@ -129,6 +132,7 @@ function useShotRuntime(projectId: string, nodeId: string, previewUrl?: string) 
       })
       .then(setSourceCode)
       .catch(() => setSourceCode('分镜代码读取失败'))
+      .finally(() => setCodeLoading(false))
   }, [previewUrl])
 
   async function render() {
@@ -144,7 +148,7 @@ function useShotRuntime(projectId: string, nodeId: string, previewUrl?: string) 
       setRendering(false)
     }
   }
-  return { rendering, outputUrl, sourceCode, error, render }
+  return { rendering, outputUrl, sourceCode, codeLoading, error, render }
 }
 
 function ShotLink({
@@ -216,10 +220,12 @@ function ShotPlayer({
 
 function ShotCode({
   sourceCode,
+  codeLoading,
   onRender,
   rendering,
 }: {
   sourceCode: string
+  codeLoading: boolean
   onRender: () => void
   rendering: boolean
 }) {
@@ -231,9 +237,17 @@ function ShotCode({
         </span>
         <span className="text-[11px] text-success">已同步</span>
       </div>
-      <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap rounded-md bg-bg-secondary p-3 text-[11px] leading-relaxed text-label-secondary">
-        {sourceCode}
-      </pre>
+      {codeLoading ? (
+        <div className="min-h-0 flex-1 space-y-2 rounded-md bg-bg-secondary p-3">
+          {Array.from({ length: 7 }, (_, index) => (
+            <Skeleton key={index} className="h-3" style={{ width: `${92 - index * 9}%` }} />
+          ))}
+        </div>
+      ) : (
+        <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap rounded-md bg-bg-secondary p-3 text-[11px] leading-relaxed text-label-secondary">
+          {sourceCode}
+        </pre>
+      )}
       <Button variant="tinted" icon={RefreshCw} onClick={onRender} disabled={rendering}>
         重渲此镜
       </Button>

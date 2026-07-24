@@ -2,8 +2,11 @@
 
 import { ChevronRight, FileCode } from 'lucide-react'
 import { useState, type PointerEvent, type ReactNode } from 'react'
+import { motion } from 'motion/react'
 import { IconButton } from '@/components/ui/icon-button'
 import { ResizeHandle } from '@/components/ui/resize-handle'
+import { DrawerOverlay } from '@/features/navigation/collapsible-panel'
+import { TRANSITION_BASE, TRANSITION_INSTANT } from '@/lib/motion/tokens'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePersistentToggle } from '@/lib/hooks/use-persistent-toggle'
 import { useResizablePanel } from '@/lib/hooks/use-resizable-panel'
@@ -90,40 +93,34 @@ export function ShotPanelChrome({
   contractContent: ReactNode
   player: ReactNode
 }) {
-  const codeCol = panels.codeCollapsed ? '0px' : `${panels.code.width}px`
-  const contractCol = panels.contractCollapsed ? '0px' : `${panels.contract.width}px`
-
   return (
     <section className="relative min-h-0 flex-1 overflow-hidden">
-      <div
-        className="grid h-full min-h-0 gap-0 overflow-auto p-6"
-        style={{ gridTemplateColumns: `minmax(0,1fr) ${codeCol} ${contractCol}` }}
-      >
-        <div className="min-w-0 pr-4">{player}</div>
-        {!panels.codeCollapsed && (
-          <InlinePanel
-            dragging={panels.code.isDragging}
-            onPointerDown={panels.code.handlePointerDown}
-            onKeyAdjust={(delta) => panels.code.setWidth(panels.code.width - delta)}
-            onCollapse={panels.closeCode}
-            ariaLabel="调节代码列宽度"
-            collapseLabel="收起代码列"
-          >
-            {codeContent}
-          </InlinePanel>
-        )}
-        {!panels.contractCollapsed && (
-          <InlinePanel
-            dragging={panels.contract.isDragging}
-            onPointerDown={panels.contract.handlePointerDown}
-            onKeyAdjust={(delta) => panels.contract.setWidth(panels.contract.width - delta)}
-            onCollapse={panels.closeContract}
-            ariaLabel="调节合同列宽度"
-            collapseLabel="收起合同列"
-          >
-            {contractContent}
-          </InlinePanel>
-        )}
+      <div className="flex h-full min-h-0 gap-0 overflow-auto p-6">
+        <div className="min-w-0 flex-1 pr-4">{player}</div>
+        <AnimatedInlinePanel
+          width={panels.code.width}
+          collapsed={panels.codeCollapsed}
+          dragging={panels.code.isDragging}
+          onPointerDown={panels.code.handlePointerDown}
+          onKeyAdjust={(delta) => panels.code.setWidth(panels.code.width - delta)}
+          onCollapse={panels.closeCode}
+          ariaLabel="调节代码列宽度"
+          collapseLabel="收起代码列"
+        >
+          {codeContent}
+        </AnimatedInlinePanel>
+        <AnimatedInlinePanel
+          width={panels.contract.width}
+          collapsed={panels.contractCollapsed}
+          dragging={panels.contract.isDragging}
+          onPointerDown={panels.contract.handlePointerDown}
+          onKeyAdjust={(delta) => panels.contract.setWidth(panels.contract.width - delta)}
+          onCollapse={panels.closeContract}
+          ariaLabel="调节合同列宽度"
+          collapseLabel="收起合同列"
+        >
+          {contractContent}
+        </AnimatedInlinePanel>
       </div>
 
       {(panels.codeCollapsed || panels.contractCollapsed) && (
@@ -147,36 +144,46 @@ export function ShotPanelChrome({
         </div>
       )}
 
-      {panels.codeOverlay && (
-        <OverlayPanel
-          width={panels.code.width}
-          dragging={panels.code.isDragging}
+      <DrawerOverlay
+        open={panels.codeOverlay}
+        onDismiss={panels.dismissCodeOverlay}
+        side="right"
+        scrimLabel="关闭代码列遮罩"
+        className="flex bg-surface"
+        style={{ width: panels.code.width }}
+      >
+        <ResizeHandle
+          isDragging={panels.code.isDragging}
           onPointerDown={panels.code.handlePointerDown}
           onKeyAdjust={(delta) => panels.code.setWidth(panels.code.width - delta)}
-          onDismiss={panels.dismissCodeOverlay}
-          ariaLabel="调节代码列宽度"
-        >
-          {codeContent}
-        </OverlayPanel>
-      )}
-      {panels.contractOverlay && (
-        <OverlayPanel
-          width={panels.contract.width}
-          dragging={panels.contract.isDragging}
+          aria-label="调节代码列宽度"
+        />
+        <div className="min-w-0 flex-1 overflow-auto p-4">{codeContent}</div>
+      </DrawerOverlay>
+      <DrawerOverlay
+        open={panels.contractOverlay}
+        onDismiss={panels.dismissContractOverlay}
+        side="right"
+        scrimLabel="关闭合同列遮罩"
+        className="flex bg-surface"
+        style={{ width: panels.contract.width }}
+      >
+        <ResizeHandle
+          isDragging={panels.contract.isDragging}
           onPointerDown={panels.contract.handlePointerDown}
           onKeyAdjust={(delta) => panels.contract.setWidth(panels.contract.width - delta)}
-          onDismiss={panels.dismissContractOverlay}
-          ariaLabel="调节合同列宽度"
-        >
-          {contractContent}
-        </OverlayPanel>
-      )}
+          aria-label="调节合同列宽度"
+        />
+        <div className="min-w-0 flex-1 overflow-auto p-4">{contractContent}</div>
+      </DrawerOverlay>
     </section>
   )
 }
 
-function InlinePanel({
+function AnimatedInlinePanel({
   children,
+  width,
+  collapsed,
   dragging,
   onPointerDown,
   onKeyAdjust,
@@ -185,6 +192,8 @@ function InlinePanel({
   collapseLabel,
 }: {
   children: ReactNode
+  width: number
+  collapsed: boolean
   dragging: boolean
   onPointerDown: (event: PointerEvent<HTMLElement>) => void
   onKeyAdjust: (delta: number) => void
@@ -193,59 +202,30 @@ function InlinePanel({
   collapseLabel: string
 }) {
   return (
-    <div className="relative flex min-w-0 flex-col border-l border-separator pl-4">
-      <ResizeHandle
-        className="absolute inset-y-0 left-0"
-        isDragging={dragging}
-        onPointerDown={onPointerDown}
-        onKeyAdjust={onKeyAdjust}
-        aria-label={ariaLabel}
-      />
-      <div className="mb-2 flex justify-end">
-        <IconButton icon={ChevronRight} aria-label={collapseLabel} onClick={onCollapse} />
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function OverlayPanel({
-  width,
-  children,
-  dragging,
-  onPointerDown,
-  onKeyAdjust,
-  onDismiss,
-  ariaLabel,
-}: {
-  width: number
-  children: ReactNode
-  dragging: boolean
-  onPointerDown: (event: PointerEvent<HTMLElement>) => void
-  onKeyAdjust: (delta: number) => void
-  onDismiss: () => void
-  ariaLabel: string
-}) {
-  return (
-    <>
-      <button
-        type="button"
-        aria-label="关闭面板遮罩"
-        className="fixed inset-0 z-40 bg-scrim"
-        onClick={onDismiss}
-      />
+    <motion.div
+      className="shrink-0 overflow-hidden"
+      initial={false}
+      animate={{ width: collapsed ? 0 : width }}
+      transition={collapsed || !dragging ? TRANSITION_BASE : TRANSITION_INSTANT}
+    >
       <div
-        className="fixed inset-y-0 right-0 z-50 flex bg-surface shadow-float"
         style={{ width }}
+        className="relative flex h-full min-w-0 flex-col border-l border-separator pl-4"
       >
-        <ResizeHandle
-          isDragging={dragging}
-          onPointerDown={onPointerDown}
-          onKeyAdjust={onKeyAdjust}
-          aria-label={ariaLabel}
-        />
-        <div className="min-w-0 flex-1 overflow-auto p-4">{children}</div>
+        {!collapsed && (
+          <ResizeHandle
+            className="absolute inset-y-0 left-0"
+            isDragging={dragging}
+            onPointerDown={onPointerDown}
+            onKeyAdjust={onKeyAdjust}
+            aria-label={ariaLabel}
+          />
+        )}
+        <div className="mb-2 flex justify-end">
+          <IconButton icon={ChevronRight} aria-label={collapseLabel} onClick={onCollapse} />
+        </div>
+        {children}
       </div>
-    </>
+    </motion.div>
   )
 }

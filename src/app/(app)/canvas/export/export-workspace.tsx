@@ -2,19 +2,24 @@
 
 import { AudioLines, Captions, ChevronRight, Download, Film, Music, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { motion } from 'motion/react'
 import { ArtifactChip } from '@/components/ui/artifact-chip'
 import { Button } from '@/components/ui/button'
 import { ContactSheetThumb } from '@/components/ui/contact-sheet-thumb'
 import { IconButton } from '@/components/ui/icon-button'
 import { ProgressBar } from '@/components/ui/progress-bar'
 import { ResizeHandle } from '@/components/ui/resize-handle'
+import { Skeleton } from '@/components/ui/skeleton'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
 import { SettingsRow } from '@/components/ui/settings-row'
 import { TimelineTrack } from '@/components/ui/timeline-track'
 import { Toggle } from '@/components/ui/toggle'
 import { TopBar } from '@/components/ui/top-bar'
 import { Toast } from '@/components/ui/toast'
-import { AppShell } from '@/features/navigation/app-shell'
+import { usePublishNavContext } from '@/features/navigation/nav-context'
+import { DrawerOverlay } from '@/features/navigation/collapsible-panel'
+import { TRANSITION_BASE, TRANSITION_INSTANT } from '@/lib/motion/tokens'
+import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePersistentToggle } from '@/lib/hooks/use-persistent-toggle'
 import { useResizablePanel } from '@/lib/hooks/use-resizable-panel'
@@ -41,9 +46,11 @@ export function ExportWorkspace({
   const runtime = useExportRuntime(projectId)
   const disabled = !runtime.readiness?.ready || runtime.exporting
   const shotClips = buildShotClips(laneKeys)
+
+  usePublishNavContext({ projectId, rendererNodeId })
+
   return (
-    <AppShell active="export" projectId={projectId} rendererNodeId={rendererNodeId}>
-      <main className="h-full overflow-y-auto bg-bg text-label">
+    <main className="min-h-0 flex-1 overflow-y-auto bg-bg text-label">
         <TopBar
           title="合成与导出"
           actions={
@@ -64,7 +71,6 @@ export function ExportWorkspace({
           onExport={runtime.exportVideo}
         />
       </main>
-    </AppShell>
   )
 }
 
@@ -172,10 +178,38 @@ function ExportReview(props: {
   })
   const [overlayOpen, setOverlayOpen] = useState(false)
   const collapsed = autoCollapse || manualCollapsed
+  const drawerOpen = autoCollapse && overlayOpen
 
-  if (collapsed && !overlayOpen) {
-    return (
-      <section className="relative p-4">
+  return (
+    <section className="relative flex gap-4 p-4">
+      {!autoCollapse && (
+        <motion.div
+          className="relative shrink-0 overflow-hidden"
+          initial={false}
+          animate={{ width: manualCollapsed ? 0 : width }}
+          transition={manualCollapsed || !isDragging ? TRANSITION_BASE : TRANSITION_INSTANT}
+        >
+          <div className="mb-2 flex justify-end">
+            <IconButton
+              icon={ChevronRight}
+              aria-label="收起导出设置"
+              className="[&>svg]:rotate-180"
+              onClick={() => setManualCollapsed(true)}
+            />
+          </div>
+          <ExportSettings {...props} />
+          {!manualCollapsed && (
+            <ResizeHandle
+              className="absolute inset-y-0 right-0"
+              isDragging={isDragging}
+              onPointerDown={handlePointerDown}
+              onKeyAdjust={(delta) => setWidth(width + delta)}
+              aria-label="调节导出设置宽度"
+            />
+          )}
+        </motion.div>
+      )}
+      {collapsed && !drawerOpen && (
         <IconButton
           icon={ChevronRight}
           aria-label="展开导出设置"
@@ -185,72 +219,35 @@ function ExportReview(props: {
             else setManualCollapsed(false)
           }}
         />
-        <div className="pl-12">
-          <ExportQa {...props} />
-        </div>
-      </section>
-    )
-  }
-
-  if (collapsed && overlayOpen) {
-    return (
-      <section className="relative p-4">
+      )}
+      <div className={cn('min-w-0 flex-1', collapsed && !drawerOpen && 'pl-12')}>
         <ExportQa {...props} />
-        <button
-          type="button"
-          aria-label="关闭导出设置遮罩"
-          className="fixed inset-0 z-40 bg-scrim"
-          onClick={() => setOverlayOpen(false)}
-        />
-        <div
-          className="fixed inset-y-0 left-0 z-50 flex bg-surface shadow-float"
-          style={{ width }}
-        >
-          <div className="min-w-0 flex-1 overflow-auto p-4">
-            <div className="mb-2 flex justify-end">
-              <IconButton
-                icon={ChevronRight}
-                aria-label="关闭导出设置"
-                onClick={() => setOverlayOpen(false)}
-              />
-            </div>
-            <ExportSettings {...props} />
+      </div>
+      <DrawerOverlay
+        open={drawerOpen}
+        onDismiss={() => setOverlayOpen(false)}
+        side="left"
+        scrimLabel="关闭导出设置遮罩"
+        className="flex bg-surface"
+        style={{ width }}
+      >
+        <div className="min-w-0 flex-1 overflow-auto p-4">
+          <div className="mb-2 flex justify-end">
+            <IconButton
+              icon={ChevronRight}
+              aria-label="关闭导出设置"
+              onClick={() => setOverlayOpen(false)}
+            />
           </div>
-          <ResizeHandle
-            isDragging={isDragging}
-            onPointerDown={handlePointerDown}
-            onKeyAdjust={(delta) => setWidth(width + delta)}
-            aria-label="调节导出设置宽度"
-          />
+          <ExportSettings {...props} />
         </div>
-      </section>
-    )
-  }
-
-  return (
-    <section
-      className="grid gap-4 p-4"
-      style={{ gridTemplateColumns: `${width}px minmax(0,1fr)` }}
-    >
-      <div className="relative min-w-0">
-        <div className="mb-2 flex justify-end">
-          <IconButton
-            icon={ChevronRight}
-            aria-label="收起导出设置"
-            className="[&>svg]:rotate-180"
-            onClick={() => setManualCollapsed(true)}
-          />
-        </div>
-        <ExportSettings {...props} />
         <ResizeHandle
-          className="absolute inset-y-0 right-0"
           isDragging={isDragging}
           onPointerDown={handlePointerDown}
           onKeyAdjust={(delta) => setWidth(width + delta)}
           aria-label="调节导出设置宽度"
         />
-      </div>
-      <ExportQa {...props} />
+      </DrawerOverlay>
     </section>
   )
 }
@@ -305,6 +302,12 @@ function ExportQa({
           <ContactSheetThumb key={laneKey} label={laneKey} checked />
         ))}
       </div>
+      {!readiness && !error && (
+        <div className="flex items-center gap-2">
+          <Skeleton circle className="h-3.5 w-3.5" />
+          <Skeleton className="h-3 w-40" />
+        </div>
+      )}
       {!readiness?.ready && readiness && (
         <>
           <p className="flex items-center gap-2 text-xs text-label-secondary">

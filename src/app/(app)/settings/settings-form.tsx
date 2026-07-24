@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
 import { SettingsRow } from '@/components/ui/settings-row'
 import { StatusPill } from '@/components/ui/status-pill'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TextField } from '@/components/ui/text-field'
 import { Toggle } from '@/components/ui/toggle'
 import { Toast } from '@/components/ui/toast'
-import { AppShell } from '@/features/navigation/app-shell'
+import { usePublishNavContext } from '@/features/navigation/nav-context'
 import { ThemeControl } from './theme-control'
 
 type ValidationState = 'unconfigured' | 'validating' | 'valid' | 'invalid'
@@ -24,13 +25,17 @@ export function SettingsForm({
   const [apiKey, setApiKey] = useState('')
   const [reveal, setReveal] = useState(false)
   const [state, setState] = useState<ValidationState>('unconfigured')
+  const [initializing, setInitializing] = useState(true)
   const [error, setError] = useState<string>()
+
+  usePublishNavContext({ projectId, rendererNodeId })
 
   useEffect(() => {
     void fetch('/api/settings')
       .then((response) => response.json() as Promise<{ configured?: boolean }>)
       .then(({ configured }) => setState(configured ? 'valid' : 'unconfigured'))
       .catch(() => setState('unconfigured'))
+      .finally(() => setInitializing(false))
   }, [])
 
   async function validateAndSave() {
@@ -62,13 +67,7 @@ export function SettingsForm({
   }
 
   return (
-    <AppShell
-      active="settings"
-      projectId={projectId}
-      rendererNodeId={rendererNodeId}
-      contentClassName="overflow-y-auto"
-    >
-      <main className="mx-auto flex min-h-full w-full max-w-[720px] flex-col gap-6 px-4 py-10">
+    <main className="mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col gap-6 overflow-y-auto px-4 py-10">
         <h1 className="text-[28px] font-bold">设置</h1>
         <SettingsSection title="STEPFUN 模型服务">
           <SettingsRow label="API Key">
@@ -81,7 +80,11 @@ export function SettingsForm({
               className="w-[260px]"
             />
             <Button size="sm" variant="gray" onClick={validateAndSave} disabled={state === 'validating'}>校验</Button>
-            <StatusPill {...statusProps(state)} />
+            {initializing ? (
+              <Skeleton className="h-6 w-20 rounded-pill" />
+            ) : (
+              <StatusPill {...statusProps(state)} />
+            )}
           </SettingsRow>
           <SettingsSeparator />
           <SettingsRow label="显示 Key"><Toggle checked={reveal} onCheckedChange={setReveal} /></SettingsRow>
@@ -115,8 +118,7 @@ export function SettingsForm({
         </SettingsSection>
         {error && <Toast variant="error" title="StepFun Key 校验失败" body="请检查 Key 是否正确" />}
         <p className="text-center text-xs text-label-tertiary">CodeVideoCanvas · 本地优先的 AIGC 视频创作引擎</p>
-      </main>
-    </AppShell>
+    </main>
   )
 }
 

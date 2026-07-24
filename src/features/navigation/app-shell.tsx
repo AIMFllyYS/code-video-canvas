@@ -2,42 +2,34 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { AppSidebar } from './app-sidebar'
 import { AppSidebarShell } from './app-sidebar-shell'
+import { NavContextProvider } from './nav-context'
 import type { AppSection } from './types'
 
 export type { AppSection }
 export { AppSidebar }
 
 export interface AppShellProps {
-  active: AppSection
   children: ReactNode
-  projectId?: string
-  rendererNodeId?: string
   className?: string
-  contentClassName?: string
 }
 
 /**
- * 最新 canvas.pen 的统一应用壳。
+ * 常驻应用壳。由 `src/app/(app)/layout.tsx` 挂载一次：
+ * 侧栏跨路由不重挂，切页仅右侧内容变化。
  *
- * S1–S6 均以同一个 Sidebar symbol 为首列；页面只切换激活项，
- * 不再各自实现导航或顶部品牌栏。响应式/可调宽交互下沉到 AppSidebarShell。
+ * - `NavContextProvider` 同时包裹侧栏与页面内容：页面（后代）发布服务端
+ *   可信的 `{ projectId, rendererNodeId }`，侧栏（后代）读取它构造深链。
+ * - 侧栏 active/响应式/可调宽等交互全部下沉到 `AppSidebarShell`，
+ *   由 `usePathname()` 自行推导激活项，页面不再传 active。
+ * - 内容区只给一个 `flex-1` 容器；各页在自身根元素上决定滚动/全高布局。
  */
-export function AppShell({
-  active,
-  children,
-  projectId,
-  rendererNodeId,
-  className,
-  contentClassName,
-}: AppShellProps) {
+export function AppShell({ children, className }: AppShellProps) {
   return (
-    <div className={cn('flex h-screen w-screen overflow-hidden bg-bg text-label', className)}>
-      <AppSidebarShell
-        active={active}
-        projectId={projectId}
-        rendererNodeId={rendererNodeId}
-      />
-      <div className={cn('min-w-0 flex-1', contentClassName)}>{children}</div>
-    </div>
+    <NavContextProvider>
+      <div className={cn('flex h-screen w-screen overflow-hidden bg-bg text-label', className)}>
+        <AppSidebarShell />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+      </div>
+    </NavContextProvider>
   )
 }

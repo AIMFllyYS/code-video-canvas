@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Card, CardBody, CardTitle } from '@/components/ui/card'
 import { getCanvasGraph, listProjects } from '@/features/canvas'
-import { AppShell } from '@/features/navigation/app-shell'
+import { PublishNavContext } from '@/features/navigation/nav-context'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,13 +12,9 @@ export default function ProjectsPage() {
     ? getCanvasGraph(activeProject.id).nodes.find((node) => node.type === 'shot-codegen')?.id
     : undefined
   return (
-    <AppShell
-      active="projects"
-      projectId={activeProject?.id}
-      rendererNodeId={rendererNodeId}
-      contentClassName="overflow-y-auto"
-    >
-      <main className="mx-auto max-w-4xl p-8">
+    <>
+      <PublishNavContext projectId={activeProject?.id} rendererNodeId={rendererNodeId} />
+      <main className="mx-auto min-h-0 w-full max-w-4xl flex-1 overflow-y-auto p-8">
         <h1 className="text-2xl font-bold">项目列表</h1>
         <p className="mt-2 text-sm text-label-secondary">共 {projects.length} 个项目（本地 SQLite）。</p>
 
@@ -43,6 +39,6 @@ export default function ProjectsPage() {
           </Link>
         </div>
       </main>
-    </AppShell>
+    </>
   )
 }

@@ -11,6 +11,7 @@ import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group
 import { SettingsRow } from '@/components/ui/settings-row'
 import { StatusPill, type StatusPillVariant } from '@/components/ui/status-pill'
 import { Toast } from '@/components/ui/toast'
+import { AnimatedAside, DrawerOverlay } from '@/features/navigation/collapsible-panel'
 import type { CanvasGraphNode } from '@/features/canvas'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { usePersistentToggle } from '@/lib/hooks/use-persistent-toggle'
@@ -98,70 +99,58 @@ export function CanvasInspector({
     />
   )
 
-  if (collapsed && !overlayOpen) {
-    return (
-      <aside className="flex w-8 shrink-0 flex-col items-center border-l border-separator bg-surface py-3">
-        <IconButton
-          icon={ChevronRight}
-          aria-label="展开分镜合同"
-          className="[&>svg]:rotate-180"
-          onClick={() => {
-            if (autoCollapse) setOverlayRequested(true)
-            else setManualCollapsed(false)
-          }}
-        />
-      </aside>
-    )
-  }
-
-  if (collapsed && overlayOpen) {
-    return (
-      <>
-        <aside className="flex w-8 shrink-0 flex-col items-center border-l border-separator bg-surface py-3">
-          <IconButton
-            icon={ChevronRight}
-            aria-label="关闭分镜合同"
-            onClick={() => setOverlayRequested(false)}
-          />
-        </aside>
-        <button
-          type="button"
-          aria-label="关闭分镜合同遮罩"
-          className="fixed inset-0 z-40 bg-scrim"
-          onClick={() => setOverlayRequested(false)}
-        />
-        <div
-          className="fixed inset-y-0 right-0 z-50 flex shadow-float"
-          style={{ width }}
-        >
-          <ResizeHandle
-            isDragging={isDragging}
-            onPointerDown={handlePointerDown}
-            onKeyAdjust={(delta) => setWidth(width - delta)}
-            aria-label="调节分镜合同宽度"
-          />
-          <div className="min-w-0 flex-1 overflow-auto border-l border-separator bg-surface">
-            {body}
-          </div>
-        </div>
-      </>
-    )
-  }
-
   return (
-    <aside
-      className="relative flex shrink-0 flex-col border-l border-separator bg-surface"
-      style={{ width }}
-    >
-      <ResizeHandle
-        className="absolute inset-y-0 left-0"
-        isDragging={isDragging}
-        onPointerDown={handlePointerDown}
-        onKeyAdjust={(delta) => setWidth(width - delta)}
-        aria-label="调节分镜合同宽度"
-      />
-      {body}
-    </aside>
+    <div className="relative flex h-full shrink-0">
+      <AnimatedAside
+        width={collapsed ? 32 : width}
+        animateWidth={!isDragging}
+        className="flex h-full flex-col border-l border-separator bg-surface"
+      >
+        {collapsed ? (
+          <div className="flex flex-col items-center py-3">
+            <IconButton
+              icon={ChevronRight}
+              aria-label={overlayOpen ? '关闭分镜合同' : '展开分镜合同'}
+              className={overlayOpen ? undefined : '[&>svg]:rotate-180'}
+              onClick={() => {
+                if (overlayOpen) setOverlayRequested(false)
+                else if (autoCollapse) setOverlayRequested(true)
+                else setManualCollapsed(false)
+              }}
+            />
+          </div>
+        ) : (
+          body
+        )}
+      </AnimatedAside>
+      {!collapsed && (
+        <ResizeHandle
+          className="absolute inset-y-0 left-0"
+          isDragging={isDragging}
+          onPointerDown={handlePointerDown}
+          onKeyAdjust={(delta) => setWidth(width - delta)}
+          aria-label="调节分镜合同宽度"
+        />
+      )}
+      <DrawerOverlay
+        open={overlayOpen}
+        onDismiss={() => setOverlayRequested(false)}
+        side="right"
+        scrimLabel="关闭分镜合同遮罩"
+        className="flex"
+        style={{ width }}
+      >
+        <ResizeHandle
+          isDragging={isDragging}
+          onPointerDown={handlePointerDown}
+          onKeyAdjust={(delta) => setWidth(width - delta)}
+          aria-label="调节分镜合同宽度"
+        />
+        <div className="min-w-0 flex-1 overflow-auto border-l border-separator bg-surface">
+          {body}
+        </div>
+      </DrawerOverlay>
+    </div>
   )
 }
 

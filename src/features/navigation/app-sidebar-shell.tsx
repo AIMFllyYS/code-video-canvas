@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { ChevronRight, LayoutDashboard } from 'lucide-react'
 import { IconButton } from '@/components/ui/icon-button'
 import { ResizeHandle } from '@/components/ui/resize-handle'
@@ -16,30 +17,21 @@ import {
   SIDEBAR_RAIL_WIDTH,
 } from '@/lib/layout/breakpoints'
 import { AppSidebar } from './app-sidebar'
-import type { AppSection } from './types'
+import { AnimatedAside, DrawerOverlay } from './collapsible-panel'
+import { useNavContext } from './nav-context'
+import { resolveActiveSection, resolveSidebarMode } from './sidebar-mode'
 
-export type SidebarMode = 'expanded' | 'rail' | 'hidden'
+export { resolveActiveSection, resolveSidebarMode } from './sidebar-mode'
+export type { SidebarMode } from './sidebar-mode'
 
-/** 纯函数：互斥三态。hidden > rail > expanded。 */
-export function resolveSidebarMode(
-  isHidden: boolean,
-  isNarrow: boolean,
-  manualCollapsed: boolean,
-): SidebarMode {
-  if (isHidden) return 'hidden'
-  if (isNarrow || manualCollapsed) return 'rail'
-  return 'expanded'
-}
+export function AppSidebarShell() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const nav = useNavContext()
+  const active = resolveActiveSection(pathname)
+  const projectId = searchParams.get('projectId') ?? nav.projectId ?? undefined
+  const rendererNodeId = nav.rendererNodeId
 
-export function AppSidebarShell({
-  active,
-  projectId,
-  rendererNodeId,
-}: {
-  active: AppSection
-  projectId?: string
-  rendererNodeId?: string
-}) {
   const isHidden = useMediaQuery(`(max-width: ${BP_SIDEBAR_HIDDEN - 1}px)`)
   const isNarrow = useMediaQuery(`(max-width: ${BP_SIDEBAR_RAIL - 1}px)`)
   const [manualCollapsed, setManualCollapsed] = usePersistentToggle(
@@ -75,73 +67,66 @@ export function AppSidebarShell({
           className="fixed left-2 top-2 z-40 shadow-float"
           onClick={() => setDrawerRequested(true)}
         />
-        {drawerOpen && (
-          <>
-            <button
-              type="button"
-              aria-label="关闭导航遮罩"
-              className="fixed inset-0 z-40 bg-scrim"
-              onClick={() => setDrawerRequested(false)}
-            />
-            <div className="fixed inset-y-0 left-0 z-50 shadow-float">
-              <AppSidebar
-                active={active}
-                projectId={projectId}
-                rendererNodeId={rendererNodeId}
-                style={{ width: SIDEBAR_DEFAULT_WIDTH }}
-              />
-            </div>
-          </>
-        )}
+        <DrawerOverlay
+          open={drawerOpen}
+          onDismiss={() => setDrawerRequested(false)}
+          side="left"
+          scrimLabel="关闭导航遮罩"
+          style={{ width: SIDEBAR_DEFAULT_WIDTH }}
+        >
+          <AppSidebar
+            active={active}
+            projectId={projectId}
+            rendererNodeId={rendererNodeId}
+            className="h-full w-full"
+          />
+        </DrawerOverlay>
       </>
     )
   }
 
-  if (mode === 'rail') {
-    return (
-      <div className="relative flex h-full shrink-0">
+  const compact = mode === 'rail'
+  const asideWidth = compact ? SIDEBAR_RAIL_WIDTH : width
+
+  return (
+    <div className="relative flex h-full shrink-0">
+      <AnimatedAside width={asideWidth} animateWidth={!isDragging} className="h-full">
         <AppSidebar
           active={active}
           projectId={projectId}
           rendererNodeId={rendererNodeId}
-          compact
-          style={{ width: SIDEBAR_RAIL_WIDTH }}
+          compact={compact}
+          className="h-full w-full"
         />
-        {!isNarrow && (
-          <IconButton
-            icon={ChevronRight}
-            aria-label="展开侧边栏"
-            className="absolute -right-3 top-3 z-20 shadow-card"
-            onClick={() => setManualCollapsed(false)}
-          />
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative flex h-full shrink-0">
-      <AppSidebar
-        active={active}
-        projectId={projectId}
-        rendererNodeId={rendererNodeId}
-        style={{ width }}
-      />
-      <div className="absolute right-2 top-3 z-20">
-        <IconButton
-          icon={ChevronRight}
-          aria-label="收起侧边栏"
-          className="shadow-card [&>svg]:rotate-180"
-          onClick={() => setManualCollapsed(true)}
-        />
-      </div>
-      <ResizeHandle
-        className="absolute inset-y-0 right-0"
-        isDragging={isDragging}
-        onPointerDown={handlePointerDown}
-        onKeyAdjust={(delta) => setWidth(width + delta)}
-        aria-label="调节导航侧边栏宽度"
-      />
+      </AnimatedAside>
+      {compact
+        ? !isNarrow && (
+            <IconButton
+              icon={ChevronRight}
+              aria-label="展开侧边栏"
+              className="absolute -right-3 top-3 z-20 shadow-card"
+              onClick={() => setManualCollapsed(false)}
+            />
+          )
+        : (
+            <>
+              <div className="absolute right-2 top-3 z-20">
+                <IconButton
+                  icon={ChevronRight}
+                  aria-label="收起侧边栏"
+                  className="shadow-card [&>svg]:rotate-180"
+                  onClick={() => setManualCollapsed(true)}
+                />
+              </div>
+              <ResizeHandle
+                className="absolute inset-y-0 right-0"
+                isDragging={isDragging}
+                onPointerDown={handlePointerDown}
+                onKeyAdjust={(delta) => setWidth(width + delta)}
+                aria-label="调节导航侧边栏宽度"
+              />
+            </>
+          )}
     </div>
   )
 }

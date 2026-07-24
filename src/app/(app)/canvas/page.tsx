@@ -1,7 +1,7 @@
 import { Clapperboard } from 'lucide-react'
 import { EmptyState } from '@/components/ui/empty-state'
 import { computeLayout, getCanvasGraph, listProjects } from '@/features/canvas'
-import { AppShell } from '@/features/navigation/app-shell'
+import { PublishNavContext } from '@/features/navigation/nav-context'
 import { CanvasLoader } from './canvas-loader'
 
 export const dynamic = 'force-dynamic'
@@ -40,10 +40,11 @@ export default async function CanvasPage({ searchParams }: CanvasPageProps) {
 
 function CanvasEmptyState({ description, projectId }: { description: string; projectId?: string }) {
   return (
-    <AppShell active="canvas" projectId={projectId}>
-      <main className="flex h-full items-center justify-center">
+    <>
+      <PublishNavContext projectId={projectId} />
+      <main className="flex min-h-0 flex-1 items-center justify-center">
         <EmptyState icon={Clapperboard} title="画布尚未生成" description={description} />
       </main>
-    </AppShell>
+    </>
   )
 }
