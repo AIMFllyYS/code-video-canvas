@@ -3,22 +3,12 @@ schema_version: 1
 locale: zh-CN
 branch: main
 nodes_managed: true
-exported_at: "2026-07-24T02:54:33Z"
+exported_at: "2026-07-24T04:24:02Z"
 modules:
     "":
-        dir_name: Next.js 全栈应用根配置与构建管线
-        title: Next.js 全栈应用根配置与构建管线
-        scope:
-            - README.md
-            - .gitignore
-            - package.json
-            - pnpm-lock.yaml
-            - next.config.ts
-            - tsconfig.json
-            - drizzle.config.ts
-            - eslint.config.mjs
-            - postcss.config.mjs
-            - vitest.config.ts
+        dir_name: CodeVideoCanvas 全栈应用（Next.js + 节点式视频画布）
+        title: CodeVideoCanvas 全栈应用（Next.js + 节点式视频画布）
+        scope: []
         source_files: []
         children: []
         depends_on: []

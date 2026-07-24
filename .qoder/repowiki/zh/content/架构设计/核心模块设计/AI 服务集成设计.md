@@ -15,7 +15,15 @@
 - [src/features/director/session-store.ts](file://src/features/director/session-store.ts)
 - [src/features/director/queue-handler.ts](file://src/features/director/queue-handler.ts)
 - [src/app/api/render/route.ts](file://src/app/api/render/route.ts)
+- [docs/issues/issue-02-stepfun-key-validation-strategy.md](file://docs/issues/issue-02-stepfun-key-validation-strategy.md)
 </cite>
+
+## 更新摘要
+**变更内容**   
+- 新增 StepFun API 密钥验证策略和认证机制的详细说明
+- 更新认证授权章节，包含具体的密钥验证流程和错误处理
+- 增强配置管理部分，涵盖环境变量验证和安全存储
+- 补充认证失败的故障排查指南和最佳实践
 
 ## 目录
 1. [简介](#简介)
@@ -33,7 +41,7 @@
 本设计文档面向 CodeVideoCanvas 的 AI 服务集成，重点阐述适配器模式在统一多厂商 AI 能力接入中的应用。文档覆盖以下主题：
 - AIAdapter 抽象接口设计与 StepFun 适配器的具体实现
 - 统一的服务调用接口、提示词管理、响应解析与错误处理机制
-- AI 服务的配置管理、认证授权与限流控制
+- AI 服务的配置管理、认证授权与限流控制，包括详细的 API 密钥验证策略
 - 如何扩展支持新的 AI 服务提供商
 - 与导演系统的集成方式与数据流转过程
 - 异步响应的处理方式与示例路径
@@ -104,7 +112,7 @@ PProbeTs --> AStep
 
 ## 核心组件
 - AIAdapter 抽象接口：定义统一的 AI 调用契约（如生成文本/图像/视频、流式输出、重试与超时控制），屏蔽底层厂商差异。
-- StepFun 适配器：基于 StepFun 平台的具体实现，负责鉴权、请求构造、响应解析与错误映射。
+- StepFun 适配器：基于 StepFun 平台的具体实现，负责鉴权、请求构造、响应解析与错误映射，包含完善的 API 密钥验证策略。
 - 类型与模式：types.ts 提供跨模块共享的类型定义；schemas.ts 提供输入/输出的校验模式。
 - 探针脚本：pi-stepfun-probe.* 用于快速验证 StepFun 连通性与基本能力。
 
@@ -116,7 +124,7 @@ PProbeTs --> AStep
 - [scripts/pi-stepfun-probe.ts](file://scripts/pi-stepfun-probe.ts)
 
 ## 架构总览
-整体采用“适配器 + 工厂”的统一接入方案：上层仅依赖 AIAdapter 抽象，运行时根据配置选择具体适配器（当前为 StepFun）。导演系统通过 pipeline 编排阶段，stage-runner 执行阶段逻辑并调用 AI 能力，结果持久化到 runtime-repository，会话状态由 session-store 维护，队列由 queue-handler 调度。
+整体采用"适配器 + 工厂"的统一接入方案：上层仅依赖 AIAdapter 抽象，运行时根据配置选择具体适配器（当前为 StepFun）。导演系统通过 pipeline 编排阶段，stage-runner 执行阶段逻辑并调用 AI 能力，结果持久化到 runtime-repository，会话状态由 session-store 维护，队列由 queue-handler 调度。
 
 ```mermaid
 sequenceDiagram
@@ -179,6 +187,7 @@ class StepFunAdapter {
 -buildRequest()
 -parseResponse()
 -mapError()
+-validateApiKey()
 }
 AIAdapter <|.. StepFunAdapter : "实现"
 ```
@@ -192,7 +201,7 @@ AIAdapter <|.. StepFunAdapter : "实现"
 - [src/features/ai/stepfun-adapter.ts](file://src/features/ai/stepfun-adapter.ts)
 
 ### StepFun 适配器实现要点
-- 认证授权：从配置中获取凭据，构造请求头或令牌刷新策略。
+- 认证授权：从配置中获取凭据，构造请求头或令牌刷新策略，包含完整的 API 密钥验证流程。
 - 请求构建：将统一参数转换为 StepFun 所需的请求体与查询参数。
 - 响应解析：将 StepFun 的响应结构映射为内部 Result 模型，确保字段一致。
 - 错误映射：将 HTTP 状态码、业务错误码映射为内部错误类型，便于上层统一处理。
@@ -200,7 +209,8 @@ AIAdapter <|.. StepFunAdapter : "实现"
 
 ```mermaid
 flowchart TD
-Start(["进入 StepFun 调用"]) --> Auth["认证与鉴权"]
+Start(["进入 StepFun 调用"]) --> ValidateKey["验证 API 密钥格式"]
+ValidateKey --> Auth["认证与鉴权"]
 Auth --> BuildReq["构建请求参数"]
 BuildReq --> SendReq["发送网络请求"]
 SendReq --> Resp{"响应成功?"}
@@ -216,6 +226,47 @@ Normalize --> ReturnOk["返回结果"]
 
 章节来源
 - [src/features/ai/stepfun-adapter.ts](file://src/features/ai/stepfun-adapter.ts)
+
+### API 密钥验证策略与认证机制
+**新增** 本节详细说明 StepFun API 密钥的验证策略和认证机制实现。
+
+#### 密钥验证流程
+- **格式验证**：检查 API 密钥的基本格式要求（长度、字符集、前缀）
+- **存在性验证**：确保密钥不为空且符合预期的命名规范
+- **缓存策略**：对已验证的密钥进行内存缓存，避免重复验证开销
+- **动态刷新**：支持密钥轮换时的无缝切换机制
+
+#### 认证授权机制
+- **请求头注入**：自动将有效的 API 密钥添加到每个请求的 Authorization 头
+- **令牌管理**：实现令牌的自动获取、缓存和过期刷新
+- **错误处理**：区分认证失败与其他网络错误的特定处理逻辑
+- **安全存储**：在生产环境中使用环境变量或密钥管理服务存储敏感信息
+
+#### 密钥验证错误分类
+- **格式错误**：密钥格式不符合规范要求
+- **无效密钥**：密钥格式正确但未被服务商认可
+- **权限不足**：密钥有效但缺少所需的操作权限
+- **配额限制**：密钥达到调用次数或资源使用限制
+
+```mermaid
+flowchart TD
+A["接收 API 密钥"] --> B["格式验证"]
+B --> C{"格式正确?"}
+C -- "否" --> D["抛出格式错误"]
+C -- "是" --> E["检查缓存"]
+E --> F{"缓存命中?"}
+F -- "是" --> G["使用缓存密钥"]
+F -- "否" --> H["发送到服务商验证"]
+H --> I{"验证成功?"}
+I -- "否" --> J["记录错误日志"]
+J --> K["抛出认证错误"]
+I -- "是" --> L["缓存密钥"]
+L --> M["返回有效密钥"]
+```
+
+**章节来源**
+- [src/features/ai/stepfun-adapter.ts](file://src/features/ai/stepfun-adapter.ts)
+- [docs/issues/issue-02-stepfun-key-validation-strategy.md](file://docs/issues/issue-02-stepfun-key-validation-strategy.md)
 
 ### 提示词管理系统
 - 职责：集中管理导演流程中的提示词模板、变量替换、版本控制与回滚。
@@ -249,10 +300,13 @@ Normalize --> ReturnOk["返回结果"]
 - 认证授权：
   - 支持多种认证方式（API Key、OAuth、JWT）
   - 自动刷新令牌与缓存
+  - **新增** 完善的 API 密钥验证策略，包括格式检查、存在性验证和缓存机制
 - 限流控制：
   - 令牌桶/漏桶算法
   - 每租户/每模型维度限流
   - 动态调整并发度与重试间隔
+
+**更新** 增强了认证授权部分，新增了详细的 API 密钥验证策略说明。
 
 章节来源
 - [src/lib/config](file://src/lib/config)
@@ -262,13 +316,14 @@ Normalize --> ReturnOk["返回结果"]
 - 步骤概览：
   1) 新增适配器类，实现 AIAdapter 接口
   2) 在工厂或注册表中注册新适配器
-  3) 添加配置项与鉴权逻辑
+  3) 添加配置项与鉴权逻辑，包括密钥验证策略
   4) 编写单元测试与探针脚本
   5) 在导演系统中按需启用
 - 建议：
   - 保持适配器无状态，避免全局可变状态
   - 使用 schemas 做输入输出校验
   - 提供最小可用探针以快速验证
+  - **新增** 实现完整的密钥验证和认证机制
 
 章节来源
 - [src/features/ai/index.ts](file://src/features/ai/index.ts)
@@ -385,13 +440,15 @@ ProbeTs["pi-stepfun-probe.ts"] --> Adapter
 - 容错与稳定性：
   - 指数退避重试与熔断，防止雪崩
   - 幂等写入与去重，保障重复调用的安全性
+  - **新增** 密钥验证结果的缓存机制，减少重复验证开销
 - 资源优化：
   - 合理设置超时与取消令牌，及时释放资源
   - 缓存热点提示词与中间产物，减少重复计算
+  - **新增** 认证令牌的智能缓存和自动刷新机制
 
 ## 故障排查指南
 - 常见问题定位：
-  - 认证失败：检查凭据与令牌刷新逻辑
+  - 认证失败：检查凭据与令牌刷新逻辑，重点关注 API 密钥验证流程
   - 限流/配额不足：查看限流策略与重试间隔
   - 响应格式不一致：核对 schemas 与解析器映射
   - 流式中断：确认连接保活与断线重连
@@ -399,6 +456,13 @@ ProbeTs["pi-stepfun-probe.ts"] --> Adapter
   - 启用结构化日志与链路追踪
   - 使用探针脚本快速复现问题
   - 回放阶段产物与提示词快照
+- **新增** 认证相关故障排查：
+  - 检查环境变量配置是否正确加载
+  - 验证 API 密钥格式是否符合要求
+  - 查看密钥验证缓存是否正常工作
+  - 确认服务商端的密钥状态和权限设置
+
+**更新** 新增了认证相关的故障排查内容和诊断手段。
 
 章节来源
 - [src/features/ai/stepfun-adapter.ts](file://src/features/ai/stepfun-adapter.ts)
@@ -407,7 +471,7 @@ ProbeTs["pi-stepfun-probe.ts"] --> Adapter
 - [scripts/pi-stepfun-probe.ts](file://scripts/pi-stepfun-probe.ts)
 
 ## 结论
-通过 AIAdapter 抽象与 StepFun 适配器的落地，CodeVideoCanvas 实现了与 AI 能力的松耦合集成。配合提示词管理、响应解析、错误处理、配置与限流机制，系统在可扩展性、稳定性与可观测性方面具备良好基础。未来可按相同模式接入更多 AI 提供商，并在导演系统中灵活编排。
+通过 AIAdapter 抽象与 StepFun 适配器的落地，CodeVideoCanvas 实现了与 AI 能力的松耦合集成。配合提示词管理、响应解析、错误处理、配置与限流机制，系统在可扩展性、稳定性与可观测性方面具备良好基础。**新增的 API 密钥验证策略和认证机制进一步增强了系统的安全性和可靠性**。未来可按相同模式接入更多 AI 提供商，并在导演系统中灵活编排。
 
 ## 附录
 - 关键路径参考：
@@ -418,3 +482,4 @@ ProbeTs["pi-stepfun-probe.ts"] --> Adapter
   - 运行期存储与会话：[src/features/director/runtime-repository.ts](file://src/features/director/runtime-repository.ts)、[src/features/director/session-store.ts](file://src/features/director/session-store.ts)
   - 队列调度：[src/features/director/queue-handler.ts](file://src/features/director/queue-handler.ts)
   - 渲染 API 入口：[src/app/api/render/route.ts](file://src/app/api/render/route.ts)
+  - **新增** API 密钥验证策略文档：[docs/issues/issue-02-stepfun-key-validation-strategy.md](file://docs/issues/issue-02-stepfun-key-validation-strategy.md)
