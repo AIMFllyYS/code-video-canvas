@@ -14,11 +14,15 @@
 - `docs/video-director/` 是**参考语料库，不是运行时依赖**：其方法论已/正被移植为本项目原生代码（`features/director/prompts/`+`schemas/`），应用运行时不读取该目录。**不使用 Pi 的 Skills 机制**挂载它。
 - 所有 UI 视觉组件的唯一来源是 `docs/designs/canvas.pen`（通过 Pencil MCP 一比一移植），唯一登记处是 `/playbook`（`src/app/playbook/registry.ts`）；页面代码只允许 `import` 已登记组件，禁止重复实现视觉原语。
 - 最新 `canvas.pen` 中 S1–S6（含 S2 背景和暗色镜像）统一采用常驻
-  `Sidebar(240) | Main(1200)`。唯一组合入口为
-  `src/features/navigation/app-shell.tsx`；页面只提供 active section 与可信
-  project/node 上下文，禁止各页再建 TopNav、复制 Sidebar 或生成会 404 的
-  无 projectId 导出链接。AppShell 只是已登记视觉原语的业务组合，不作为新的
-  `/playbook` 组件登记。
+  `Sidebar(240) | Main(1200)`。常驻侧栏由**共享路由组 layout**
+  `src/app/(app)/layout.tsx` → `src/features/navigation/app-shell.tsx` 挂载
+  **一次**，跨路由不重挂、切页仅右侧变；页面不再各自渲染 AppShell，而是通过
+  `nav-context` 的 `usePublishNavContext()` / `<PublishNavContext>` 发布服务端
+  可信的 `{ projectId, rendererNodeId }`，侧栏 active 由 `usePathname()` 推导。
+  禁止各页再建 TopNav、复制 Sidebar 或生成会 404 的无 projectId 导出链接，
+  禁止客户端猜节点 ID（仍由页面发布可信上下文）。AppShell / AppSidebarShell /
+  collapsible-panel 只是已登记视觉原语的业务组合，不作为新的 `/playbook` 组件登记；
+  `/playbook` 在路由组之外，不带壳。
 - 完整需求见 [PRD](./docs/specs/2026-07-23-prd-code-video-canvas.md)，架构见 [平台架构设计](./docs/designs/2026-07-23-platform-architecture-design.md)，施工方法见 [Harness 总纲](./docs/specs/2026-07-23-ai-development-harness.md) 与 [任务拆解清单](./docs/specs/2026-07-23-harness-task-breakdown.md)。
 
 ## Tech Stack
@@ -32,6 +36,7 @@
 - **设计源**: `docs/designs/canvas.pen`，经 Pencil MCP 工具链一比一移植为 `src/components/*`（见 Harness 总纲 §5.6，Track P）
 - **渲染**: HyperFrames 思想 — Playwright（自带 Chromium）逐帧 `seek` + CDP 截帧 → `ffmpeg-static`
 - **动画**: GSAP（`paused` timeline + 每帧 `seek`，确定性）
+- **应用 UI 动效**: `motion`（framer-motion 现名，`motion/react`）+ 设计 token（`--duration-*` / `--ease-*`，见设计系统清单 §3.8）；统一收起/展开缓动、抽屉、骨架、页面进入。**仅用于应用 UI，绝不进入 shot 渲染**；跟随 `prefers-reduced-motion` 降级。动效原语在 `src/lib/motion/` 与 `features/navigation/collapsible-panel.tsx`。
 - **Agent**: Pi Agent（`@earendil-works/pi-agent-core` 的 `Agent + JsonlSessionRepo` + `pi-ai`）仅作裸 tool-calling 循环引擎，由项目原生 `createDirectorSession()` 封装；**不依赖 `pi-coding-agent`，不使用 Skills/Extensions 加载机制**；`docs/video-director/` 的方法论已移植为 `features/director/prompts/`+`schemas/` 原生代码（见 Harness 总纲 §3），编码 video-director 六阶段（应用层统一口径，见 Harness 总纲 §6.5）
 - **AI**: StepFun（阶跃星辰，OpenAI 兼容端点，用户自带 Key）
 - **存储**: SQLite（Drizzle ORM）+ 本地文件系统（经 StorageAdapter）

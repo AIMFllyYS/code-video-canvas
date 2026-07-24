@@ -137,6 +137,25 @@ y≈5803    Zone D · 暗色页面（对齐 S1–S6 正下方）
 
 圆角：`radius-sm` 6 · `md` 10 · `lg` 14 · `xl` 20 · `pill` 999。
 
+### 3.8 动效（Motion）
+
+应用 UI 的动画统一走这套 token；权威源同步至 `globals.css`（`--duration-*` / `--ease-*` / `--animate-shimmer`）与 `src/lib/motion/`（JS 镜像 + `AppMotionConfig`）。**确定性红线只约束视频 shot 渲染，应用 UI 允许过渡/动画**；所有动效在系统「减弱动态效果」下自动降级为静态（`prefers-reduced-motion` 全局规则 + motion `reducedMotion="user"`）。
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--duration-fast` | 120ms | 悬停 / 颜色态 / 离场 |
+| `--duration-base` | 220ms | 收起/展开、抽屉进入、页面进入 |
+| `--duration-slow` | 360ms | 大位移 / 强调 |
+| `--ease-standard` | cubic-bezier(0.4, 0, 0.2, 1) | 通用 |
+| `--ease-emphasized` | cubic-bezier(0.22, 1, 0.36, 1) | 进入 / 展开 |
+| `--ease-exit` | cubic-bezier(0.4, 0, 1, 1) | 离场 / 收起 |
+
+约定：
+
+- 侧栏 / 面板收起展开用 motion 缓动宽度（`AnimatedAside` / 缓动列）；拖拽调宽时关闭动画保证 1:1 跟手。
+- 抽屉（窄屏 / 自动收起）用 `AnimatePresence` 的 `DrawerOverlay`：scrim 淡入淡出 + 面板从边缘滑入/滑出。
+- 骨架 shimmer 用 `--animate-shimmer`（1.6s ease-in-out 无限），仅在真实懒加载 / 异步等待时出现。
+
 ---
 
 ## 4. 组件体系（Zone B · 30 reusable）
@@ -188,6 +207,15 @@ y≈5803    Zone D · 暗色页面（对齐 S1–S6 正下方）
 | TimelineTrack | 合成时间线 |
 | ContactSheetThumb | QA 抽帧联系表 |
 | SettingsRow / SettingsGroup | 设置页行组 |
+
+### B5 交互 chrome（Pencil 之外，登记于 /playbook）
+
+非 canvas.pen reusable symbol 的交互原语，作为可复用视觉原语登记于 `/playbook`：
+
+| 组件 | 场景 |
+|---|---|
+| ResizeHandle | 分栏面板拖拽调宽把手 |
+| Skeleton | 懒加载 / 异步等待占位（shimmer） |
 
 连线 Edge 不建 reusable，画布层用 `path` 绘制。
 
