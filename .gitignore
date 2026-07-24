@@ -104,6 +104,7 @@ out_intellij/
 # ========================
 .cursor/
 .cursorrules
+.kiro/
 
 # ========================
 # IDE - Sublime Text
