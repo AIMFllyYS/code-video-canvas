@@ -32,7 +32,7 @@ export default function HomePage() {
       contentClassName="overflow-y-auto"
     >
       <main className="min-h-full">
-        <section className="flex h-[179px] flex-col items-center justify-center gap-4 px-20 text-center">
+        <section className="flex h-[179px] flex-col items-center justify-center gap-4 px-4 text-center sm:px-10 lg:px-20">
           <h1 className="text-[34px] font-bold leading-tight">把一段稿子，变成一支专业视频</h1>
           <p className="text-[15px] text-label-secondary">
             语义分镜 · 节点画布 · 逐镜代码视频 · 本机一键导出
@@ -40,11 +40,11 @@ export default function HomePage() {
           <NewProjectDialog />
         </section>
 
-        <section className="h-24 px-20">
+        <section className="h-24 px-4 sm:px-10 lg:px-20">
           <NewProjectDialog featured />
         </section>
 
-        <section className="px-20 py-8">
+        <section className="px-4 py-8 sm:px-10 lg:px-20">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-[22px] font-semibold">我的项目</h2>
             <SearchField aria-label="搜索项目" placeholder="搜索项目" />
@@ -74,7 +74,7 @@ export default function HomePage() {
         </section>
 
         {projectCards.length > 0 && (
-          <section className="px-20 pb-12">
+          <section className="px-4 pb-12 sm:px-10 lg:px-20">
             <h2 className="mb-3 text-[13px] font-semibold text-label-secondary">最近渲染</h2>
             <div className="flex gap-4 overflow-x-auto pb-2">
               {projectCards.slice(0, 4).map((project) => (

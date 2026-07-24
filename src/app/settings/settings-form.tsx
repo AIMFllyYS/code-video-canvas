@@ -68,7 +68,7 @@ export function SettingsForm({
       rendererNodeId={rendererNodeId}
       contentClassName="overflow-y-auto"
     >
-      <main className="mx-auto flex min-h-full w-[720px] flex-col gap-6 py-10">
+      <main className="mx-auto flex min-h-full w-full max-w-[720px] flex-col gap-6 px-4 py-10">
         <h1 className="text-[28px] font-bold">设置</h1>
         <SettingsSection title="STEPFUN 模型服务">
           <SettingsRow label="API Key">
