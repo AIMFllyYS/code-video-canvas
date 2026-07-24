@@ -322,7 +322,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 ### C1.1 — `fan-out.ts`：分镜通道物化
 
-- 状态：◐（2026-07-24 更新：`INGEST/DIRECT/SHOT_SPEC/FABRICATE` 四个 stage 的 `directorInput` 组装缺口已在 `fix/director-input`（`0a24e07`）修复；`ASSEMBLE`/`FINALIZE` 两个 stage 仍隐式回退到未组装的 `row.data.directorInput`，属于新登记的 P0 缺口，见 `docs/issues/issue-01-director-stage-input-contract-completion.md`）
+- 状态：✅（2026-07-24 更新：`INGEST/DIRECT/SHOT_SPEC/FABRICATE` 四个 stage 的 `directorInput` 组装在 `fix/director-input`（`0a24e07`）修复；`ASSEMBLE`（`score`/`shot-sfx`/`shot-subtitle`）与 `FINALIZE`（`export`/`shot-qa`）已在 issue-01 补全，`resolveDirectorInput` 按 `(stage, nodeType)` 显式分支、不再隐式回退到 `row.data.directorInput`，见 `docs/issues/issue-01-director-stage-input-contract-completion.md`）
 - 前置任务：F0.4, F0.5
 - 允许改动范围：`src/features/canvas/fan-out.ts`（新建）、`src/features/canvas/fan-out.test.ts`
 - 禁止改动：`src/features/canvas/actions.ts`、`queries.ts`（不要把物化逻辑塞进这两个文件）
@@ -703,7 +703,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.3 — `stage-runner.ts`：单阶段运行编排
 
-- 状态：◐（2026-07-24 更新：`runtime-repository.ts` 的 `resolveDirectorInput` 已为 `INGEST/DIRECT/SHOT_SPEC/FABRICATE` 按 stage 从上游 artifact 真实组装输入（`0a24e07`），六阶段输入契约表见 [Harness 总纲 §3.5.2](./2026-07-23-ai-development-harness.md#352-六阶段输入契约表2026-07-24-补充回应-track-h-issue-01)；`ASSEMBLE`/`FINALIZE` 仍未覆盖，见 `docs/issues/issue-01-director-stage-input-contract-completion.md`）
+- 状态：✅（2026-07-24 更新：`runtime-repository.ts` 的 `resolveDirectorInput` 已为全部六个 stage 从上游 artifact 真实组装输入（前四阶段 `0a24e07`；`ASSEMBLE`/`FINALIZE` 见 issue-01），六阶段输入契约表见 [Harness 总纲 §3.5.2](./2026-07-23-ai-development-harness.md#352-六阶段输入契约表2026-07-24-补充回应-track-h-issue-01)；`ASSEMBLE`/`FINALIZE` 按 `nodeType` 二次路由到角色专属 prompt builder，见 `docs/issues/issue-01-director-stage-input-contract-completion.md`）
 - 前置任务：D0.1, D0.2, D1.1, D1.2
 - 允许改动范围：`src/features/director/stage-runner.ts`、`stage-prompt.ts`、`runtime-repository.ts`（均新建）、对应测试及 `pipeline.ts`（仅移除空接口）
 - 禁止改动：`src/lib/queue/**`（本卡只消费队列接口，不改队列实现）

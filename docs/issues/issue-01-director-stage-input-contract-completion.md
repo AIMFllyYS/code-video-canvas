@@ -1,7 +1,7 @@
 # issue-01 — Director 六阶段输入契约补全（ASSEMBLE/FINALIZE）
 
 > Created: 2026-07-24
-> Status: 已拍板，可开工（决策记录见 §3）
+> Status: ✅ 已完成（2026-07-24）——`resolveDirectorInput` 已补全 `score`/`shot-sfx`/`shot-subtitle`/`export`/`shot-qa` 五种节点分支，`stage-prompt.ts` 按 `nodeType` 二次路由；六阶段输入契约无 mock 全部可跑通（决策记录见 §3）
 > Priority: P0（见 `docs/specs/2026-07-23-harness-task-breakdown.md` Track H 索引）
 > 关联：`docs/specs/2026-07-23-ai-development-harness.md` §3.5.1、§3.5.2
 > 范围外延后项（本 issue 不做）：ASSEMBLE/FINALIZE 输出结构化归一、DIRECT/SHOT_SPEC/FABRICATE 存量测试补齐，见 [GitHub Issue #7](https://github.com/AIMFllyYS/code-video-canvas/issues/7)

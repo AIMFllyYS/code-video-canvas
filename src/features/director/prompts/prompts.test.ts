@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { buildAssemblePrompt } from './assemble'
+import {
+  buildScoreAssemblePrompt,
+  buildShotSfxPrompt,
+  buildShotSubtitlePrompt,
+} from './assemble'
 import { buildDirectPrompt } from './direct'
 import { buildFabricatePrompt } from './fabricate'
-import { buildFinalizePrompt } from './finalize'
+import { buildExportFinalizePrompt, buildShotQaPrompt } from './finalize'
 import { buildIngestPrompt } from './ingest'
 import { buildShotSpecPrompt } from './shot-spec'
 
@@ -82,19 +86,46 @@ describe('director prompt templates', () => {
       })
     ).toContain('full-canvas')
     expect(
-      buildAssemblePrompt({
+      buildScoreAssemblePrompt({
+        styleBible: '风格圣经',
         shotPlan,
         audioAllocation,
         renderedArtifactKeys: ['shots/S001.mp4'],
       })
     ).toContain('ASSEMBLE')
     expect(
-      buildFinalizePrompt({
+      buildExportFinalizePrompt({
         shotPlan,
         draftArtifactKey: 'draft/final.mp4',
         qaFindings: [],
       })
     ).toContain('ffprobe')
+  })
+
+  it('builds per-shot ASSEMBLE and FINALIZE prompts by node role', () => {
+    const shotAllocation = audioAllocation.shots[0]!
+    expect(
+      buildShotSfxPrompt({
+        shot,
+        shotAllocation,
+        renderedArtifactKey: 'shots/S001.mp4',
+        styleBible: '风格圣经',
+      })
+    ).toContain('shot-sfx')
+    expect(
+      buildShotSubtitlePrompt({
+        shot,
+        scriptUnit: scriptUnits[0]!,
+        shotAllocation,
+      })
+    ).toContain('shot-subtitle')
+    expect(
+      buildShotQaPrompt({
+        shot,
+        renderedArtifactKey: 'shots/S001.mp4',
+        shotAllocation,
+      })
+    ).toContain('shot-qa')
   })
 
   it('ports all ten positive visual laws without omissions', () => {

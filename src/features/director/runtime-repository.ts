@@ -1,6 +1,6 @@
 import 'server-only'
 import { randomUUID } from 'node:crypto'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, isNotNull } from 'drizzle-orm'
 import { z } from 'zod'
 import type { Db } from '@/lib/db/migrate'
 import { artifacts, canvasNodes, projects } from '@/lib/db/schema'
@@ -13,8 +13,14 @@ import {
   ingestStageResultSchema,
   type AudioAllocation,
   type AudioManifest,
+  type ScriptUnit,
+  type ShotAllocation,
 } from './schemas/ingest'
-import { directorShotPlanSchema, type DirectorShotPlan } from './schemas/director-shot-plan'
+import {
+  directorShotPlanSchema,
+  type DirectorShot,
+  type DirectorShotPlan,
+} from './schemas/director-shot-plan'
 import type { PipelineStage } from './types'
 
 const storageKeySchema = z
@@ -34,6 +40,7 @@ const directArtifactSchema = z
 export interface DirectorStageContext {
   projectId: string
   nodeId: string
+  nodeType: string | null
   stage: PipelineStage
   status: 'pending'
   projectTitle: string
@@ -48,6 +55,18 @@ export interface ArtifactPointerInput {
   kind: string
   storageKey: string
   contentHash?: string
+}
+
+/** `loadStageContext` 查出的行形状，供 `resolveDirectorInput` 及其 stage 帮手复用。 */
+interface StageContextRow {
+  projectTitle: string
+  projectScript: string
+  nodeProjectId: string
+  nodeStage: string | null
+  status: string
+  data: Record<string, unknown>
+  nodeType: string | null
+  laneKey: string | null
 }
 
 /** Director 持久化端口；封装执行上下文、artifact 指针与错误记录。 */
@@ -118,6 +137,7 @@ export class DirectorRuntimeRepository {
     return {
       projectId,
       nodeId,
+      nodeType: row.nodeType,
       stage,
       status: 'pending',
       projectTitle: row.projectTitle,
@@ -184,16 +204,7 @@ export class DirectorRuntimeRepository {
   }
 
   private async resolveDirectorInput(
-    row: {
-      projectTitle: string
-      projectScript: string
-      nodeProjectId: string
-      nodeStage: string | null
-      status: string
-      data: Record<string, unknown>
-      nodeType: string | null
-      laneKey: string | null
-    },
+    row: StageContextRow,
     stage: PipelineStage
   ): Promise<unknown> {
     if (stage === 'INGEST') {
@@ -233,11 +244,103 @@ export class DirectorRuntimeRepository {
         styleBible: direct.styleBible,
       }
     }
-    return row.data.directorInput
+    if (stage === 'ASSEMBLE') {
+      return this.resolveAssembleInput(row)
+    }
+    if (stage === 'FINALIZE') {
+      return this.resolveFinalizeInput(row)
+    }
+    throw new Error(`未处理的 Director stage：${stage}`)
+  }
+
+  private async resolveAssembleInput(row: StageContextRow): Promise<unknown> {
+    const direct = await this.loadDirectArtifact(row.nodeProjectId)
+    if (row.nodeType === 'score') {
+      const ingest = await this.loadIngestArtifact(row.nodeProjectId)
+      const shotPlan = await this.loadAllShotSpecs(row.nodeProjectId)
+      const rendered = this.loadAllRenderedArtifactKeys(row.nodeProjectId)
+      return {
+        styleBible: direct.styleBible,
+        shotPlan,
+        audioAllocation: ingest.audioAllocation,
+        renderedArtifactKeys: rendered.map((item) => item.storageKey),
+      }
+    }
+    if (row.nodeType === 'shot-sfx' || row.nodeType === 'shot-subtitle') {
+      if (!row.laneKey) throw new Error(`${row.nodeType} 节点缺少 laneKey`)
+      const ingest = await this.loadIngestArtifact(row.nodeProjectId)
+      const shot = await this.loadShot(row.nodeProjectId, row.laneKey)
+      const shotAllocation = this.requireShotAllocation(
+        ingest.audioAllocation,
+        row.laneKey
+      )
+      if (row.nodeType === 'shot-sfx') {
+        return {
+          shot,
+          shotAllocation,
+          renderedArtifactKey: this.loadRenderedArtifactKey(
+            row.nodeProjectId,
+            row.laneKey
+          ),
+          styleBible: direct.styleBible,
+        }
+      }
+      const scriptUnit = ingest.scriptUnits.find(
+        (unit) => unit.unitId === shotAllocation.audioUnitId
+      )
+      if (!scriptUnit) {
+        throw new Error(`script units 中找不到 ${shotAllocation.audioUnitId}`)
+      }
+      return { shot, scriptUnit, shotAllocation }
+    }
+    throw new Error(`未知 ASSEMBLE 节点类型：${row.nodeType ?? 'null'}`)
+  }
+
+  private async resolveFinalizeInput(row: StageContextRow): Promise<unknown> {
+    if (row.nodeType === 'export') {
+      const shotPlan = await this.loadAllShotSpecs(row.nodeProjectId)
+      const draftArtifactKey = this.loadFinalExportArtifact(row.nodeProjectId)
+      const qaFindings = await this.loadShotQaFindings(row.nodeProjectId)
+      return { shotPlan, draftArtifactKey, qaFindings }
+    }
+    if (row.nodeType === 'shot-qa') {
+      if (!row.laneKey) throw new Error('shot-qa 节点缺少 laneKey')
+      const ingest = await this.loadIngestArtifact(row.nodeProjectId)
+      const shot = await this.loadShot(row.nodeProjectId, row.laneKey)
+      const shotAllocation = this.requireShotAllocation(
+        ingest.audioAllocation,
+        row.laneKey
+      )
+      return {
+        shot,
+        renderedArtifactKey: this.loadRenderedArtifactKey(
+          row.nodeProjectId,
+          row.laneKey
+        ),
+        shotAllocation,
+      }
+    }
+    throw new Error(`未知 FINALIZE 节点类型：${row.nodeType ?? 'null'}`)
+  }
+
+  private async loadShot(projectId: string, laneKey: string): Promise<DirectorShot> {
+    const shotPlan = await this.loadShotSpecArtifact(projectId, laneKey)
+    const shot = shotPlan.shots.find((item) => item.id === laneKey)
+    if (!shot) throw new Error(`shot plan 中找不到 ${laneKey}`)
+    return shot
+  }
+
+  private requireShotAllocation(
+    audioAllocation: AudioAllocation,
+    laneKey: string
+  ): ShotAllocation {
+    const allocation = audioAllocation.shots.find((item) => item.id === laneKey)
+    if (!allocation) throw new Error(`audio allocation 中找不到 ${laneKey}`)
+    return allocation
   }
 
   private async loadIngestArtifact(projectId: string): Promise<{
-    scriptUnits: unknown
+    scriptUnits: ScriptUnit[]
     audioManifest: AudioManifest
     audioAllocation: AudioAllocation
   }> {
@@ -277,6 +380,95 @@ export class DirectorRuntimeRepository {
     return directorShotPlanSchema.parse(raw)
   }
 
+  private async loadAllShotSpecs(projectId: string): Promise<DirectorShotPlan> {
+    const nodes = this.findNodeIds(projectId, 'shot-script')
+    if (nodes.length === 0) throw new Error('项目缺少 shot-script 节点')
+    const ordered = [...nodes].sort((left, right) =>
+      (left.laneKey ?? '').localeCompare(right.laneKey ?? '')
+    )
+    const shots: DirectorShot[] = []
+    for (const node of ordered) {
+      if (!node.laneKey) continue
+      const raw = await this.loadArtifactJson(projectId, node.id, 'director-shot-spec')
+      const plan = directorShotPlanSchema.parse(raw)
+      const shot = plan.shots.find((item) => item.id === node.laneKey)
+      if (!shot) throw new Error(`shot plan 中找不到 ${node.laneKey}`)
+      shots.push(shot)
+    }
+    if (shots.length === 0) throw new Error('项目缺少可聚合的分镜合同')
+    return { schemaVersion: 1, shots }
+  }
+
+  private loadRenderedArtifactKey(projectId: string, laneKey: string): string {
+    const nodeId = this.findNodeId(projectId, 'shot-codegen', laneKey)
+    const path = this.resolveLatestArtifactPath(projectId, nodeId, 'render-mp4')
+    if (!path) throw new Error(`找不到 render-mp4 产物：${laneKey}`)
+    return path
+  }
+
+  private loadAllRenderedArtifactKeys(
+    projectId: string
+  ): Array<{ laneKey: string; storageKey: string }> {
+    const nodes = this.db
+      .select({ id: canvasNodes.id, laneKey: canvasNodes.laneKey })
+      .from(canvasNodes)
+      .where(
+        and(
+          eq(canvasNodes.projectId, projectId),
+          eq(canvasNodes.type, 'shot-codegen'),
+          isNotNull(canvasNodes.laneKey)
+        )
+      )
+      .all()
+    if (nodes.length === 0) throw new Error('项目缺少 shot-codegen 分镜渲染节点')
+    const renderArtifacts = this.db
+      .select({ nodeId: artifacts.nodeId, path: artifacts.path })
+      .from(artifacts)
+      .where(and(eq(artifacts.projectId, projectId), eq(artifacts.kind, 'render-mp4')))
+      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
+      .all()
+    const latestByNode = new Map<string, string>()
+    for (const artifact of renderArtifacts) {
+      if (artifact.nodeId && !latestByNode.has(artifact.nodeId)) {
+        latestByNode.set(artifact.nodeId, artifact.path)
+      }
+    }
+    return nodes
+      .flatMap((node) => {
+        if (!node.laneKey) return []
+        const storageKey = latestByNode.get(node.id)
+        if (!storageKey) throw new Error(`找不到 render-mp4 产物：${node.laneKey}`)
+        return [{ laneKey: node.laneKey, storageKey }]
+      })
+      .sort((left, right) => left.laneKey.localeCompare(right.laneKey))
+  }
+
+  private loadFinalExportArtifact(projectId: string): string {
+    const artifact = this.db
+      .select({ path: artifacts.path })
+      .from(artifacts)
+      .where(and(eq(artifacts.projectId, projectId), eq(artifacts.kind, 'final-mp4')))
+      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
+      .get()
+    if (!artifact) throw new Error('请先完成合成导出：项目尚无 final-mp4 产物')
+    return artifact.path
+  }
+
+  private async loadShotQaFindings(projectId: string): Promise<string[]> {
+    const nodes = this.findNodeIds(projectId, 'shot-qa')
+    const ordered = [...nodes].sort((left, right) =>
+      (left.laneKey ?? '').localeCompare(right.laneKey ?? '')
+    )
+    const findings: string[] = []
+    for (const node of ordered) {
+      const path = this.resolveLatestArtifactPath(projectId, node.id, 'director-finalize')
+      if (!path) continue
+      const buffer = await this.storage.get(path)
+      findings.push(buffer.toString('utf-8'))
+    }
+    return findings
+  }
+
   private findNodeId(
     projectId: string,
     type: string,
@@ -296,12 +488,23 @@ export class DirectorRuntimeRepository {
     return node.id
   }
 
-  private async loadArtifactJson(
+  private findNodeIds(
+    projectId: string,
+    type: string
+  ): Array<{ id: string; laneKey: string | null }> {
+    return this.db
+      .select({ id: canvasNodes.id, laneKey: canvasNodes.laneKey })
+      .from(canvasNodes)
+      .where(and(eq(canvasNodes.projectId, projectId), eq(canvasNodes.type, type)))
+      .all()
+  }
+
+  private resolveLatestArtifactPath(
     projectId: string,
     nodeId: string,
     kind: string
-  ): Promise<unknown> {
-    const artifact = this.db
+  ): string | undefined {
+    return this.db
       .select({ path: artifacts.path })
       .from(artifacts)
       .where(
@@ -312,14 +515,22 @@ export class DirectorRuntimeRepository {
         )
       )
       .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
-      .get()
-    if (!artifact) throw new Error(`找不到 ${kind} 产物：${nodeId}`)
-    const buffer = await this.storage.get(artifact.path)
+      .get()?.path
+  }
+
+  private async loadArtifactJson(
+    projectId: string,
+    nodeId: string,
+    kind: string
+  ): Promise<unknown> {
+    const path = this.resolveLatestArtifactPath(projectId, nodeId, kind)
+    if (!path) throw new Error(`找不到 ${kind} 产物：${nodeId}`)
+    const buffer = await this.storage.get(path)
     const text = buffer.toString('utf-8')
     try {
       return JSON.parse(text) as unknown
     } catch {
-      throw new Error(`${kind} 产物不是合法 JSON：${artifact.path}`)
+      throw new Error(`${kind} 产物不是合法 JSON：${path}`)
     }
   }
 }

@@ -127,7 +127,7 @@ const inputDigestsSchema = z
   })
   .strict()
 
-const shotAllocationSchema = z
+export const shotAllocationSchema = z
   .object({
     id: shotIdSchema,
     audioUnitId: unitIdSchema,
@@ -172,6 +172,7 @@ function requireVnextField(
 
 export type ScriptUnit = z.infer<typeof scriptUnitSchema>
 export type ScriptUnits = z.infer<typeof scriptUnitsSchema>
+export type ShotAllocation = z.infer<typeof shotAllocationSchema>
 export type IngestStageResult = z.infer<typeof ingestStageResultSchema>
 export type AudioManifest = z.infer<typeof audioManifestSchema>
 export type AudioAllocation = z.infer<typeof audioAllocationSchema>

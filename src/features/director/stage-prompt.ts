@@ -1,6 +1,10 @@
 import {
-  buildAssemblePrompt,
-  assemblePromptInputSchema,
+  buildScoreAssemblePrompt,
+  buildShotSfxPrompt,
+  buildShotSubtitlePrompt,
+  scoreAssemblePromptInputSchema,
+  shotSfxPromptInputSchema,
+  shotSubtitlePromptInputSchema,
 } from './prompts/assemble'
 import { buildDirectPrompt, directPromptInputSchema } from './prompts/direct'
 import {
@@ -8,8 +12,10 @@ import {
   fabricatePromptInputSchema,
 } from './prompts/fabricate'
 import {
-  buildFinalizePrompt,
-  finalizePromptInputSchema,
+  buildExportFinalizePrompt,
+  buildShotQaPrompt,
+  exportFinalizePromptInputSchema,
+  shotQaPromptInputSchema,
 } from './prompts/finalize'
 import { buildIngestPrompt, ingestPromptInputSchema } from './prompts/ingest'
 import {
@@ -21,6 +27,7 @@ import type { PipelineStage } from './types'
 export interface StagePromptContext {
   projectTitle: string
   projectScript: string
+  nodeType: string | null
   directorInput: unknown
 }
 
@@ -45,13 +52,39 @@ export function buildStagePrompt(
         fabricatePromptInputSchema.parse(context.directorInput)
       )
     case 'ASSEMBLE':
-      return buildAssemblePrompt(
-        assemblePromptInputSchema.parse(context.directorInput)
-      )
+      return buildAssembleStagePrompt(context)
     case 'FINALIZE':
-      return buildFinalizePrompt(
-        finalizePromptInputSchema.parse(context.directorInput)
+      return buildFinalizeStagePrompt(context)
+  }
+}
+
+function buildAssembleStagePrompt(context: StagePromptContext): string {
+  switch (context.nodeType) {
+    case 'score':
+      return buildScoreAssemblePrompt(
+        scoreAssemblePromptInputSchema.parse(context.directorInput)
       )
+    case 'shot-sfx':
+      return buildShotSfxPrompt(shotSfxPromptInputSchema.parse(context.directorInput))
+    case 'shot-subtitle':
+      return buildShotSubtitlePrompt(
+        shotSubtitlePromptInputSchema.parse(context.directorInput)
+      )
+    default:
+      throw new Error(`未知 ASSEMBLE 节点类型：${context.nodeType ?? 'null'}`)
+  }
+}
+
+function buildFinalizeStagePrompt(context: StagePromptContext): string {
+  switch (context.nodeType) {
+    case 'export':
+      return buildExportFinalizePrompt(
+        exportFinalizePromptInputSchema.parse(context.directorInput)
+      )
+    case 'shot-qa':
+      return buildShotQaPrompt(shotQaPromptInputSchema.parse(context.directorInput))
+    default:
+      throw new Error(`未知 FINALIZE 节点类型：${context.nodeType ?? 'null'}`)
   }
 }
 

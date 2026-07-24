@@ -51,14 +51,14 @@ Wave 编号只表示"建议的先后顺序"，**不代表必须串行**。逐个
 
 | Issue | 优先级 | Wave | 依赖 | 一句话目标 | 状态 |
 |---|---|---|---|---|---|
-| [`issue-01-director-stage-input-contract-completion`](./issue-01-director-stage-input-contract-completion.md) | P0 | 1 | 无 | 补齐 ASSEMBLE/FINALIZE 的 `directorInput` 真实组装，使六阶段无 mock 全部跑通 | **已拍板，可开工**（Q1-Q4 决策记录见文档 §3；Q4 涉及的两项延后工作已登记 [GitHub Issue #7](https://github.com/AIMFllyYS/code-video-canvas/issues/7)） |
-| [`issue-02-stepfun-key-validation-strategy`](./issue-02-stepfun-key-validation-strategy.md) | P0 | 1 | 无 | 修复 `validateKey()` 用 `models.list()` 导致有效 Key 也判定失败的问题 | 待施工 |
+| [`issue-01-director-stage-input-contract-completion`](./issue-01-director-stage-input-contract-completion.md) | P0 | 1 | 无 | 补齐 ASSEMBLE/FINALIZE 的 `directorInput` 真实组装，使六阶段无 mock 全部跑通 | **已完成**（2026-07-24；Q1-Q4 决策记录见文档 §3；Q4 涉及的两项延后工作已登记 [GitHub Issue #7](https://github.com/AIMFllyYS/code-video-canvas/issues/7)） |
+| [`issue-02-stepfun-key-validation-strategy`](./issue-02-stepfun-key-validation-strategy.md) | P0 | 1 | 无 | 修复 `validateKey()` 用 `models.list()` 导致有效 Key 也判定失败的问题 | **已完成**（2026-07-24） |
 | [`issue-03-canvas-inspector-data-truthfulness`](./issue-03-canvas-inspector-data-truthfulness.md) | P1 | 2 | 部分展示依赖 issue-01 | Inspector 的内容哈希/合同 chips/进度/查看代码改为真实数据 | 待施工 |
 | [`issue-04-shot-thumbnail-infrastructure`](./issue-04-shot-thumbnail-infrastructure.md) | P1 | 2 | 无 | 新增共享的分镜静态帧缩略图生成能力 | 待施工 |
 | [`issue-05-shot-renderer-page-wiring`](./issue-05-shot-renderer-page-wiring.md) | P1 | 3 | issue-04 | 分镜渲染器页面播放器/缩略图/历史产物真实打通 | 待施工 |
 | [`issue-06-export-configurable-params-and-real-qa`](./issue-06-export-configurable-params-and-real-qa.md) | P1 | 4 | issue-04；建议 issue-01 后回归 | 导出参数最小可配置 + Final QA 真实抽帧检测 | **已拍板，可开工**（架构选"导出时缩放"；图像库已批准 `jimp`） |
 | [`issue-07-canvas-lane-panel-summary`](./issue-07-canvas-lane-panel-summary.md) | P2 | 2 | 无 | 分镜通道折叠面板补充子节点状态摘要 | **已完成**（2026-07-24，`29bba21`） |
-| [`issue-08-export-service-storage-adapter-boundary`](./issue-08-export-service-storage-adapter-boundary.md) | P2 | 2 | 无 | `export-service.ts` 裸 `fs` 改走 `StorageAdapter` | 待施工 |
+| [`issue-08-export-service-storage-adapter-boundary`](./issue-08-export-service-storage-adapter-boundary.md) | P2 | 2 | 无 | `export-service.ts` 裸 `fs` 改走 `StorageAdapter` | **已完成**（2026-07-24） |
 
 ## 关键决策记录（2026-07-24 已与负责人确认）
 
@@ -83,4 +83,5 @@ Wave 编号只表示"建议的先后顺序"，**不代表必须串行**。逐个
 | 2026-07-24 | 初版发布，8 个 issue 覆盖画布 Inspector/分镜通道折叠、分镜渲染器、合成导出三大症状的系统性打通修复；`issue-01`/`issue-04`/`issue-06` 经深度子智能体调研后由子智能体直接撰写并经人工复核修正一处事实错误，其余 issue 由直接读取当前代码撰写 |
 | 2026-07-24（决策轮） | 通过一轮结构化问答拍板了 `issue-01`（Q1-Q4）与 `issue-06`（Part A 架构、Part B 依赖选型）的全部待确认问题；`issue-01`/`issue-06` 状态更新为"已拍板，可开工"；Q4 涉及的两项范围外延后工作登记为 [GitHub Issue #7](https://github.com/AIMFllyYS/code-video-canvas/issues/7) |
 | 2026-07-24（并行分析） | 逐一核对 8 个 issue 的允许改动范围，确认 `issue-01/02/03/04/07/08` 六个互相零文件重叠、可立即同时并行开工；标出 `issue-06`/`issue-08` 都会改到 `export-service.ts` 这一处需要协调的文件级冲突 |
+| 2026-07-24（issue-02 完成） | `validateKey()` 由 `models.list()` 改为与 `StepfunAdapter.chat()` 一致的最小 `chat.completions.create()` 探测（`max_tokens:1` + per-request `timeout`/`maxRetries:0`），保留不泄露 Key 的服务端 `console.error` 日志；新增 4 个 `validateKey` 单测（共 9 tests 全绿）；经 `pnpm dev` + POST `/api/settings` 真实 Key 验证（有效→200/无效→422）；状态→已完成 |
 | 2026-07-24（issue-07 完成） | 画布从既有 `nodes` 投影纯派生固定五角色通道摘要，展开态显示真实状态徽章与脚本文本，不完整数据显式提示且不伪造状态；5 个新增测试、全量 168 tests、lint/tsc/build 与 production Chromium 交互验收通过；提交 `29bba21` |

@@ -6,6 +6,7 @@ const digest = `sha256:${'a'.repeat(64)}`
 const baseContext = {
   projectId: 'project-1',
   nodeId: 'node-1',
+  nodeType: null,
   status: 'pending' as const,
   projectTitle: '测试项目',
   projectScript: '第一句。第二句。',

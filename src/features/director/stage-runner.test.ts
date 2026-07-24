@@ -6,6 +6,7 @@ vi.mock('server-only', () => ({}))
 const context = {
   projectId: 'project-1',
   nodeId: 'node-1',
+  nodeType: 'script-import' as const,
   stage: 'INGEST' as const,
   status: 'pending' as const,
   projectTitle: '项目',
