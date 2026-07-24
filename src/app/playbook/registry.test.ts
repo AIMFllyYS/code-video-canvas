@@ -3,6 +3,7 @@ import {
   entriesByCategory,
   PENCIL_COMPONENT_FAMILY_COUNT,
   PENCIL_REUSABLE_SYMBOL_COUNT,
+  UI_COMPONENT_FAMILY_COUNT,
 } from './registry'
 
 const EXPECTED_PENCIL_FAMILIES = [
@@ -35,12 +36,15 @@ const EXPECTED_PENCIL_FAMILIES = [
   'top-bar',
 ] as const
 
+const EXPECTED_UI_FAMILIES = [...EXPECTED_PENCIL_FAMILIES, 'resize-handle'] as const
+
 describe('Track P playbook registry', () => {
-  it('accounts for 30 Pencil symbols as 27 component families', () => {
+  it('accounts for 30 Pencil symbols as 27 component families plus interaction chrome', () => {
     expect(PENCIL_REUSABLE_SYMBOL_COUNT).toBe(30)
     expect(PENCIL_COMPONENT_FAMILY_COUNT).toBe(27)
+    expect(UI_COMPONENT_FAMILY_COUNT).toBe(28)
     expect(entriesByCategory('ui').map(({ id }) => id).sort()).toEqual(
-      [...EXPECTED_PENCIL_FAMILIES].sort()
+      [...EXPECTED_UI_FAMILIES].sort()
     )
   })
 

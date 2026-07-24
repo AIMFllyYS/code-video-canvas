@@ -9,6 +9,7 @@ import { NavItemDemo } from '@/components/ui/nav-item.demo'
 import { SidebarDemo } from '@/components/ui/sidebar.demo'
 import { TopBarDemo } from '@/components/ui/top-bar.demo'
 import { ProgressBarDemo } from '@/components/ui/progress-bar.demo'
+import { ResizeHandleDemo } from '@/components/ui/resize-handle.demo'
 import { ContactSheetThumbDemo } from '@/components/ui/contact-sheet-thumb.demo'
 import { ProjectCardDemo } from '@/components/ui/project-card.demo'
 import { QueueStatusBarDemo } from '@/components/ui/queue-status-bar.demo'
@@ -39,6 +40,8 @@ export interface PlaybookEntry {
 
 export const PENCIL_REUSABLE_SYMBOL_COUNT = 30
 export const PENCIL_COMPONENT_FAMILY_COUNT = 27
+/** Pencil 族之外的交互原语（如 ResizeHandle）计入 UI 登记总数。 */
+export const UI_COMPONENT_FAMILY_COUNT = 28
 export const PENCIL_CONSOLIDATION_NOTE =
   'Button/Primary、Tinted、Gray、Destructive 四个 Pencil symbols 由一个 Button 组件的 variant 承载。'
 
@@ -60,6 +63,7 @@ export const PLAYBOOK_ENTRIES: PlaybookEntry[] = [
   { id: 'top-bar', name: 'TopBar', category: 'ui', Demo: TopBarDemo },
   { id: 'progress-bar', name: 'ProgressBar', category: 'ui', Demo: ProgressBarDemo },
   { id: 'project-card', name: 'ProjectCard', category: 'ui', Demo: ProjectCardDemo },
+  { id: 'resize-handle', name: 'ResizeHandle', category: 'ui', Demo: ResizeHandleDemo },
   { id: 'queue-status-bar', name: 'QueueStatusBar', category: 'ui', Demo: QueueStatusBarDemo },
   { id: 'search-field', name: 'SearchField', category: 'ui', Demo: SearchFieldDemo },
   { id: 'segmented-control', name: 'SegmentedControl', category: 'ui', Demo: SegmentedControlDemo },
