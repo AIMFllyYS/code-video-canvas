@@ -145,6 +145,26 @@ describe('RenderRepository export plan', () => {
     ])
   })
 
+  it('combines rule and Vision results without replacing the deterministic layer', () => {
+    repository.writeShotQaCheck('node-S001-shot-qa', {
+      passed: true,
+      checkedAt: 1,
+      thumbnailContentHash: 'rules',
+      results: [],
+    })
+    repository.writeShotQaVision('node-S001-shot-qa', {
+      passed: false,
+      checkedAt: 2,
+      thumbnailContentHash: 'vision',
+      model: 'step-3.7-flash',
+      summary: '缺少标题',
+      reportArtifactId: 'report-1',
+      reportKey: 'qa/report.json',
+    })
+
+    expect(repository.getExportPlan('project-1').shotQa.S001).toBe(false)
+  })
+
   it('excludes non-success shot-codegen from qa targets', () => {
     db.update(canvasNodes)
       .set({ status: 'pending' })

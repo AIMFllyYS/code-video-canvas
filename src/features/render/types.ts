@@ -86,3 +86,33 @@ export interface ShotQaCheckData {
   thumbnailContentHash: string
   results: ThumbnailQaResult[]
 }
+
+export interface VisionRequirementResult {
+  requirement: string
+  passed: boolean
+  evidence: string
+}
+
+/** `qa-vision-report` artifact 的完整、类型化内容。 */
+export interface VisionQaReport {
+  version: 1
+  shotId: string
+  model: string
+  passed: boolean
+  summary: string
+  mustShow: VisionRequirementResult[]
+  mustAvoid: VisionRequirementResult[]
+  findings: string[]
+  thumbnailArtifactIds: string[]
+}
+
+/** 写入 shot-qa 节点 data.qaVision 的可追踪摘要。 */
+export interface ShotQaVisionData {
+  passed: boolean
+  checkedAt: number
+  thumbnailContentHash: string
+  model: string
+  summary: string
+  reportArtifactId: string
+  reportKey: string
+}

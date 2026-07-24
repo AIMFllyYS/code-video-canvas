@@ -5,6 +5,7 @@ import {
   BLACK_FRAME_LUMINANCE_THRESHOLD,
   SOLID_COLOR_STDDEV_THRESHOLD,
   checkThumbnailQa,
+  runShotQaCheck,
   runShotQaChecks,
   type ShotQaDependencies,
 } from './qa-check'
@@ -131,5 +132,16 @@ describe('runShotQaChecks', () => {
     await expect(
       runShotQaChecks('p', { ...deps, capture: boom as unknown as ShotQaDependencies['capture'] })
     ).resolves.toBeUndefined()
+  })
+
+  it('runs one requested shot strictly and surfaces missing targets', async () => {
+    const { deps, written } = makeDeps()
+
+    await runShotQaCheck('p', 'q1', deps)
+    expect(written).toHaveLength(1)
+
+    await expect(runShotQaCheck('p', 'missing', deps)).rejects.toThrow(
+      '不具备 QA 前置条件'
+    )
   })
 })

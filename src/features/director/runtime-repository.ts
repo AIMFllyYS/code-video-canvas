@@ -297,9 +297,16 @@ export class DirectorRuntimeRepository {
         ingest.audioAllocation,
         row.laneKey
       )
+      const scriptUnit = ingest.scriptUnits.find(
+        (unit) => unit.unitId === shotAllocation.audioUnitId
+      )
+      if (!scriptUnit) {
+        throw new Error(`script units 中找不到 ${shotAllocation.audioUnitId}`)
+      }
       if (row.nodeType === 'shot-sfx') {
         return {
           shot,
+          scriptUnit,
           shotAllocation,
           renderedArtifactKey: this.loadRenderedArtifactKey(
             row.nodeProjectId,
@@ -307,12 +314,6 @@ export class DirectorRuntimeRepository {
           ),
           styleBible: direct.styleBible,
         }
-      }
-      const scriptUnit = ingest.scriptUnits.find(
-        (unit) => unit.unitId === shotAllocation.audioUnitId
-      )
-      if (!scriptUnit) {
-        throw new Error(`script units 中找不到 ${shotAllocation.audioUnitId}`)
       }
       return { shot, scriptUnit, shotAllocation }
     }

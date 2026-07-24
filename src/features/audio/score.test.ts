@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { generateScore } from './index'
+
+vi.mock('server-only', () => ({}))
 
 describe('generateScore', () => {
   it('returns a typed P1 placeholder without throwing', async () => {

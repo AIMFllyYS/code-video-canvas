@@ -14,6 +14,7 @@ import { FRAME_THUMBNAIL_KIND, thumbnailOutputPath } from './types'
 import type {
   RenderJob,
   ShotQaCheckData,
+  ShotQaVisionData,
   ThumbnailArtifactRecord,
   ThumbnailContext,
 } from './types'
@@ -317,6 +318,21 @@ export class RenderRepository {
       .run()
   }
 
+  /** 将 Vision QA 摘要写回节点；完整报告保存在 qa-vision-report artifact。 */
+  writeShotQaVision(nodeId: string, qaVision: ShotQaVisionData): void {
+    const node = this.db
+      .select({ data: canvasNodes.data })
+      .from(canvasNodes)
+      .where(eq(canvasNodes.id, nodeId))
+      .get()
+    if (!node) throw new Error(`节点不存在：${nodeId}`)
+    this.db
+      .update(canvasNodes)
+      .set({ data: { ...node.data, qaVision } })
+      .where(eq(canvasNodes.id, nodeId))
+      .run()
+  }
+
   private getRenderNode(projectId: string, nodeId: string) {
     const node = this.db
       .select({
@@ -382,7 +398,14 @@ function qaPassedOf(data: Record<string, unknown>): boolean | null {
   const qaCheck = data.qaCheck
   if (qaCheck && typeof qaCheck === 'object' && 'passed' in qaCheck) {
     const passed = (qaCheck as { passed: unknown }).passed
-    if (typeof passed === 'boolean') return passed
+    if (typeof passed === 'boolean') {
+      const qaVision = data.qaVision
+      if (qaVision && typeof qaVision === 'object' && 'passed' in qaVision) {
+        const visionPassed = (qaVision as { passed: unknown }).passed
+        if (typeof visionPassed === 'boolean') return passed && visionPassed
+      }
+      return passed
+    }
   }
   return null
 }

@@ -107,6 +107,7 @@ describe('director prompt templates', () => {
     expect(
       buildShotSfxPrompt({
         shot,
+        scriptUnit: scriptUnits[0]!,
         shotAllocation,
         renderedArtifactKey: 'shots/S001.mp4',
         styleBible: '风格圣经',

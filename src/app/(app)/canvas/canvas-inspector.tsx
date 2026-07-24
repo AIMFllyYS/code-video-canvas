@@ -274,6 +274,10 @@ const ARTIFACT_FILENAME: Record<string, string> = {
   'director-fabricate': 'shot.html',
   'director-assemble': 'assemble-plan.json',
   'director-finalize': 'finalize-report.json',
+  'voiceover-audio': 'voiceover.mp3',
+  'voiceover-metadata': 'voiceover-metadata.json',
+  'subtitle-track': 'subtitle-track.json',
+  'qa-vision-report': 'vision-qa-report.json',
   'render-mp4': 'render.mp4',
   'final-mp4': 'final.mp4',
 }

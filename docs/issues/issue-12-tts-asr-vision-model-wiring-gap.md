@@ -6,7 +6,7 @@
 | Wave | 7（**硬依赖 issue-10**：必须先有统一 config resolver 才有可信的模型配置来源） |
 | 依赖 | issue-10（`getStepfunConfig()` 提供 ttsModel/asrModel/visionModel） |
 | 关联证据 | grep 核实：`STEPFUN_TTS_MODEL` / `STEPFUN_ASR_MODEL` / `STEPFUN_VISION_MODEL` 在 `src/` 内 0 处引用 |
-| 状态 | 待施工（可先只做本文档 §「短期最小动作」，完整接线按 P1 排期） |
+| 状态 | **实现完成**（2026-07-24；真实外部 API 与浏览器端测在 issue-11~13 + Gemini 统一验收阶段执行） |
 
 ## 现状核查
 
@@ -66,13 +66,30 @@ issue-10 的边界是"配置值备好、可解析、可在设置页配置"；本
 
 **完成条件**（完整接线时逐项打勾；短期最小动作只需前两项）：
 
-- [ ] 设置页三类模型行有显式"尚未启用"占位声明（短期）
-- [ ] `.env.example` 注释标注接线状态并指向本 issue（短期）
-- [ ] TTS 真实生成配音音频并落盘登记（Part A）
-- [ ] ASR 真实产出词级时间轴字幕轨道（Part B）
-- [ ] Vision 验收报告与规则检测并存输出（Part C）
-- [ ] 三类调用全部通过 `getStepfunConfig()` 取模型名，0 处散点 env 读取
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿
+- [x] 设置页真实标注 TTS→配音、ASR→字幕时间轴、Vision→分镜验收的生效消费方
+- [x] `.env.example` 三类模型注释标注为已接线
+- [x] TTS 真实生成配音音频并落盘登记（Part A）
+- [x] ASR 真实产出词级时间轴字幕轨道（Part B）
+- [x] Vision 验收报告与规则检测并存输出（Part C）
+- [x] 三类调用全部通过 `getStepfunConfig()` 取模型名，0 处散点 env 读取
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿
+
+## 2026-07-24 实施记录
+
+- `shot-sfx` 的类型化输入新增真实 `scriptUnit`，阶段提交后调用 StepFun
+  `audio/speech`，下载 MP3，并以 `voiceover-audio` +
+  `voiceover-metadata` 两类 artifact 登记；索引失败会补偿删除字节。
+- `shot-subtitle` 只读取同项目、同 lane 的已登记配音，调用
+  `audio/asr/sse`，要求服务端返回完整 transcript 与词级时间戳后才登记
+  `subtitle-track`；缺音频或缺时间戳均显式失败，不伪造时间轴。
+- `shot-qa` 阶段先严格执行既有黑帧/纯色规则 QA，再复用同一批
+  25%/60%/95% 缩略图执行多模态 Vision QA；模型 JSON 经 Zod 归一，
+  `mustShow` / `mustAvoid` 必须逐条且恰好覆盖，完整报告登记为
+  `qa-vision-report`，导出判定组合规则层与 Vision 层。
+- stage 副作用采用独立应用端口并在运行时动态加载，避免 queue 模块导入时
+  打开 SQLite 或引入重型 Vision 依赖。
+- 新鲜验证：`pnpm lint`、`pnpm tsc --noEmit`、73 files / 324 tests、
+  `pnpm build` 全部通过。
 
 ## 与其他 issue 的并行性
 

@@ -51,6 +51,7 @@ ${JSON.stringify(parsed.renderedArtifactKeys)}
 export const shotSfxPromptInputSchema = z
   .object({
     shot: directorShotSchema,
+    scriptUnit: scriptUnitSchema,
     shotAllocation: shotAllocationSchema,
     renderedArtifactKey: z.string().min(1),
     styleBible: z.string().min(1),
@@ -73,6 +74,8 @@ export function buildShotSfxPrompt(input: ShotSfxPromptInput): string {
 
 shot contract：
 ${JSON.stringify(parsed.shot)}
+script unit（真实配音文本）：
+${JSON.stringify(parsed.scriptUnit)}
 shot allocation：
 ${JSON.stringify(parsed.shotAllocation)}
 rendered artifact key：${parsed.renderedArtifactKey}

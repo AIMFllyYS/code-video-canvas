@@ -57,6 +57,9 @@ function createHarness(
   const commitResult = vi.fn(() => {
     calls.push('commit')
   })
+  const runStageEffect = vi.fn(async () => {
+    calls.push('effect')
+  })
   const advancePipeline = vi.fn(async () => {
     calls.push('advance')
   })
@@ -68,6 +71,7 @@ function createHarness(
     writeArtifact,
     prepareResult,
     commitResult,
+    runStageEffect,
     advancePipeline,
   })
   return {
@@ -78,6 +82,7 @@ function createHarness(
     writeArtifact,
     prepareResult,
     commitResult,
+    runStageEffect,
     advancePipeline,
     runner,
   }
@@ -95,6 +100,7 @@ describe('createStageRunner', () => {
       'run',
       'artifact',
       'commit',
+      'effect',
       'close',
       'success',
       'advance',
@@ -108,6 +114,11 @@ describe('createStageRunner', () => {
       })
     )
     expect(harness.repository.persistStreamLog).toHaveBeenCalledTimes(1)
+    expect(harness.runStageEffect).toHaveBeenCalledWith(
+      context,
+      { content: '阶段产出' },
+      { id: 'artifact-1', storageKey: 'director/output.txt', contentHash: 'hash' }
+    )
     expect(harness.repository.persistStreamLog).toHaveBeenCalledWith(
       'project-1',
       'node-1',
@@ -160,6 +171,7 @@ describe('createStageRunner', () => {
       writeArtifact: harness.writeArtifact,
       prepareResult: harness.prepareResult,
       commitResult: harness.commitResult,
+      runStageEffect: harness.runStageEffect,
       advancePipeline: harness.advancePipeline,
     })
 
@@ -185,11 +197,34 @@ describe('createStageRunner', () => {
       writeArtifact: harness.writeArtifact,
       prepareResult: harness.prepareResult,
       commitResult: harness.commitResult,
+      runStageEffect: harness.runStageEffect,
       advancePipeline: harness.advancePipeline,
     })
 
     await expect(runner('project-1', 'node-1', 'INGEST')).rejects.toThrow('pending')
     expect(createSession).not.toHaveBeenCalled()
     expect(harness.transitionNodeStatus).not.toHaveBeenCalled()
+  })
+
+  it('fails the stage when an application side effect cannot produce its real artifact', async () => {
+    const harness = createHarness()
+    harness.runStageEffect.mockRejectedValueOnce(new Error('TTS 失败'))
+
+    await expect(harness.runner('project-1', 'node-1', 'INGEST')).rejects.toThrow(
+      'TTS 失败'
+    )
+
+    expect(harness.calls).toEqual([
+      'running',
+      'pointer',
+      'run',
+      'artifact',
+      'commit',
+      'close',
+      'failed',
+      'error',
+    ])
+    expect(harness.transitionNodeStatus).not.toHaveBeenCalledWith('node-1', 'success')
+    expect(harness.advancePipeline).not.toHaveBeenCalled()
   })
 })

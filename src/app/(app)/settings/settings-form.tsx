@@ -193,6 +193,11 @@ export function SettingsForm({
             </div>
           ))}
           <SettingsSeparator />
+          <SettingsRow
+            label="能力接线"
+            value="TTS → 配音 · ASR → 字幕时间轴 · Vision → 分镜验收"
+          />
+          <SettingsSeparator />
           <SettingsRow label="模型设置">
             <span className="text-[13px] text-label-tertiary">留空回退环境变量/内置默认</span>
             <Button size="sm" variant="gray" onClick={saveModelSettings} disabled={modelSaving}>

@@ -6,7 +6,10 @@ export interface Caption {
 
 export interface VoiceoverTrack {
   shotId: string
+  audioArtifactId: string
   audioKey: string
+  metadataArtifactId: string
+  metadataKey: string
   durationMs: number
 }
 
@@ -22,12 +25,19 @@ export interface SfxCue {
 }
 
 export interface SubtitleInput {
+  projectId: string
+  nodeId: string
   shotId: string
   script: string
-  durationMs?: number
+  audioArtifactId: string
+  audioKey: string
+  audioBytes: Buffer
+  audioFormat: 'mp3' | 'wav' | 'ogg' | 'pcm'
 }
 
 export interface VoiceoverInput {
+  projectId: string
+  nodeId: string
   shotId: string
   text: string
   voiceId?: string
@@ -49,16 +59,25 @@ interface PlaceholderResult {
   note: '占位实现，P1 补齐'
 }
 
-export interface SubtitleResult extends PlaceholderResult {
+export interface SubtitleResult {
   kind: 'subtitle'
+  status: 'ready'
   shotId: string
   captions: Caption[]
+  transcript: string
+  model: string
+  alignmentSource: 'stepfun-asr'
+  trackArtifactId: string
+  trackKey: string
 }
 
-export interface VoiceoverResult extends PlaceholderResult {
+export interface VoiceoverResult {
   kind: 'voiceover'
+  status: 'ready'
   shotId: string
-  track: VoiceoverTrack | null
+  model: string
+  nativeCaptions: Caption[]
+  track: VoiceoverTrack
 }
 
 export interface SfxResult extends PlaceholderResult {

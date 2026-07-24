@@ -67,6 +67,7 @@ describe('buildStagePrompt', () => {
       nodeType: 'shot-sfx',
       directorInput: {
         shot: { id: 'S001' },
+        scriptUnit: { unitId: 'U001', text: '测试文稿' },
         shotAllocation,
         renderedArtifactKey: 'shots/S001.mp4',
         styleBible: '风格圣经',

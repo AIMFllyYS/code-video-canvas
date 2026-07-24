@@ -310,11 +310,13 @@ describe('DirectorRuntimeRepository ASSEMBLE/FINALIZE 输入契约', () => {
     const sfx = (await repository.loadStageContext('p1', 'n-sfx-1', 'ASSEMBLE'))
       .directorInput as {
       shot: { id: string }
+      scriptUnit: { unitId: string }
       shotAllocation: { id: string }
       renderedArtifactKey: string
       styleBible: string
     }
     expect(sfx.shot.id).toBe('S001')
+    expect(sfx.scriptUnit.unitId).toBe('U001')
     expect(sfx.shotAllocation.id).toBe('S001')
     expect(sfx.renderedArtifactKey).toBe('r/S001.mp4')
     expect(sfx.styleBible).toBe('风格圣经')

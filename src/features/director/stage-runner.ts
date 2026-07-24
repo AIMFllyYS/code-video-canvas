@@ -60,6 +60,11 @@ interface StageRunnerDependencies {
     result: PreparedStageResult,
     artifact: ArtifactCommitResult
   ) => void
+  runStageEffect: (
+    context: DirectorStageContext,
+    result: PreparedStageResult,
+    artifact: ArtifactCommitResult
+  ) => Promise<void>
   advancePipeline: (
     projectId: string,
     completedNodeId: string
@@ -91,6 +96,17 @@ function createDefaultRunner(): StageRunner {
     prepareResult: prepareStageResult,
     commitResult: (context, result, artifact) =>
       commitStageResult(repository, context, result, artifact),
+    runStageEffect: async (context) => {
+      if (
+        context.nodeType !== 'shot-sfx' &&
+        context.nodeType !== 'shot-subtitle' &&
+        context.nodeType !== 'shot-qa'
+      ) {
+        return
+      }
+      const { runDirectorStageEffect } = await import('./stage-effects')
+      await runDirectorStageEffect(context)
+    },
     advancePipeline,
   })
 }
@@ -124,6 +140,7 @@ export function createStageRunner(
         outputArtifact(context, prepared.content)
       )
       dependencies.commitResult(context, prepared, artifact)
+      await dependencies.runStageEffect(context, prepared, artifact)
       // 持久化已流出的全文（回退 result.text）为可回看日志，并收尾流。
       await dependencies.repository.persistStreamLog(
         projectId,

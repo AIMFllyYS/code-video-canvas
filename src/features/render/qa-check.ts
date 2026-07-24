@@ -124,11 +124,27 @@ export async function runShotQaChecks(
   }
 }
 
+/** 对单个 shot-qa 节点严格执行规则 QA；前置条件或检测失败直接交给阶段状态机。 */
+export async function runShotQaCheck(
+  projectId: string,
+  qaNodeId: string,
+  deps: Partial<ShotQaDependencies> = {}
+): Promise<ShotQaCheckData> {
+  const dependencies = { ...defaultDependencies(), ...deps }
+  const target = dependencies.repository
+    .getShotQaTargets(projectId)
+    .find((candidate) => candidate.qaNodeId === qaNodeId)
+  if (!target) {
+    throw new Error(`shot-qa 节点不具备 QA 前置条件：${qaNodeId}`)
+  }
+  return runOneShotQa(projectId, target, dependencies)
+}
+
 async function runOneShotQa(
   projectId: string,
   target: ShotQaTarget,
   dependencies: ShotQaDependencies
-): Promise<void> {
+): Promise<ShotQaCheckData> {
   const context: ThumbnailContext = dependencies.repository.loadCompletedThumbnailContext(
     projectId,
     target.codegenNodeId
@@ -140,7 +156,9 @@ async function runOneShotQa(
   const thumbnailContentHash = aggregateHash(thumbnails)
 
   const existing = dependencies.repository.readShotQaCheck(target.qaNodeId)
-  if (existing && existing.thumbnailContentHash === thumbnailContentHash) return
+  if (existing && existing.thumbnailContentHash === thumbnailContentHash) {
+    return existing
+  }
 
   const results: ThumbnailQaResult[] = []
   for (const thumbnail of thumbnails) {
@@ -148,12 +166,14 @@ async function runOneShotQa(
     results.push(await dependencies.check(bytes, labelForFraction(thumbnail.fraction)))
   }
 
-  dependencies.repository.writeShotQaCheck(target.qaNodeId, {
+  const qaCheck = {
     passed: results.every((result) => result.passed),
     checkedAt: dependencies.now(),
     thumbnailContentHash,
     results,
-  } satisfies ShotQaCheckData)
+  } satisfies ShotQaCheckData
+  dependencies.repository.writeShotQaCheck(target.qaNodeId, qaCheck)
+  return qaCheck
 }
 
 /** 由本批缩略图 contentHash 派生聚合键，任一帧变化都会得到不同键。 */
