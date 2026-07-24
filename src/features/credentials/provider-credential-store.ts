@@ -120,7 +120,7 @@ export class PostgresProviderCredentialStore implements ProviderCredentialStore 
     return row
       ? {
           configured: true,
-          verifiedAt: row.verifiedAt.toISOString(),
+          verifiedAt: row.verifiedAt?.toISOString() ?? null,
           updatedAt: row.updatedAt.toISOString(),
         }
       : { configured: false, verifiedAt: null, updatedAt: null }

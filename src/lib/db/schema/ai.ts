@@ -116,7 +116,7 @@ export const providerCredentials = pgTable(
     nonce: bytea('nonce').notNull(),
     authTag: bytea('auth_tag').notNull(),
     keyVersion: text('key_version').notNull(),
-    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
