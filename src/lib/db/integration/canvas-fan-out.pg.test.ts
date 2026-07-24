@@ -11,7 +11,7 @@ import {
   createPgTestDatabase,
   type PgTestDatabase,
 } from '@/lib/db/test/pg-test-database'
-import { materializeShotLanes } from './fan-out'
+import { materializeShotLanes } from '@/features/canvas/fan-out'
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001'
 const OTHER_WORKSPACE_ID = '00000000-0000-4000-8000-000000000002'

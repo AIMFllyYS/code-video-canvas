@@ -136,9 +136,10 @@ function verifyEvidence(value: unknown): asserts value is JsonRecord {
   if (typeof value.generatedAt !== 'string' || !value.generatedAt) {
     throw new Error('EVIDENCE_GENERATED_AT_REQUIRED')
   }
-  const waived = isRecord(value.userWaivers)
-    && value.userWaivers.triggerLoginAndLiveRun === true
-  if (waived) verifyWaiver(value.userWaivers)
+  const userWaivers = value.userWaivers
+  const waived = isRecord(userWaivers)
+    && userWaivers.triggerLoginAndLiveRun === true
+  if (waived) verifyWaiver(userWaivers)
   verifyTrigger(value.trigger, waived)
   verifyPi(value.pi)
   verifyHyperframes(value.hyperframes)

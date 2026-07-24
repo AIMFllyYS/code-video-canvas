@@ -15,8 +15,11 @@ import {
   createProject,
   setProjectAutopilot,
   updateExportSettings,
-} from './actions'
-import { getExportSettings, getProjectAutopilot } from './queries'
+} from '@/features/canvas/actions'
+import {
+  getExportSettings,
+  getProjectAutopilot,
+} from '@/features/canvas/queries'
 
 const WORKSPACE_ID = '00000000-0000-4000-8000-000000000001'
 const { getDbMock } = vi.hoisted(() => ({
