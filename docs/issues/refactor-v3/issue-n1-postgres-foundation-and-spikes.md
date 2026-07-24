@@ -235,6 +235,8 @@ Expected: lint/typecheck/diff 通过；`.data/**` 不在 staged diff；commit �
 - Create: `src/lib/db/schema/index.ts`
 - Create: `src/lib/db/test/pg-test-database.ts`
 - Create: `src/lib/db/schema.pg.test.ts`
+- Create: `src/lib/db/postgres-client.test.ts`
+- Create: `src/lib/db/postgres-migrator.test.ts`
 - Create: `vitest.pg.config.ts`
 - Create: `docs/evidence/refactor-v3/n1/postgres-health.md`
 - Create: `docs/evidence/refactor-v3/n1/fresh-migration.md`
@@ -311,16 +313,21 @@ Expected: `postgres` 只出现一次且精确为 `3.4.9`；普通 `openai` 与�
 - `ai_invocations` 每个 provider round 一行，initial/repair 的组合 unique；
 - route 列 inventory 不含 `secret/key/ciphertext/nonce/auth_tag`，credential 列
   inventory 不含 plaintext secret。
+- `postgres-client.test.ts` 证明模块 import 不连接/迁移、并发调用复用 pending
+  Promise、rejected cache 被清除、失败 client 被关闭且修复配置后可重试；
+- `postgres-migrator.test.ts` 证明缺 URL fail closed，migration 成功或失败都关闭
+  专用 client，且 migration 只能由显式调用触发。
 
 Run:
 
 ```powershell
 docker compose -f docker-compose.dev.yml config
 pnpm vitest run --config vitest.pg.config.ts src/lib/db/schema.pg.test.ts
+pnpm test -- src/lib/db/postgres-client.test.ts src/lib/db/postgres-migrator.test.ts
 ```
 
-Expected: 第一条在 compose 尚不存在时或第二条因测试 helper/schema 不存在而
-FAIL；不得先手工建表让测试假绿。
+Expected: 第一条在 compose 尚不存在时、第二条因测试 helper/schema 不存在或两项
+unit test 因 PG client/migrator 行为尚未实现而 FAIL；不得先手工建表让测试假绿。
 
 - [ ] **Step 3: 建本地 Postgres Compose 与独立测试数据库**
 
@@ -452,6 +459,7 @@ $env:DATABASE_URL='postgresql://cvc:cvc_dev_only@127.0.0.1:54327/cvc'
 $env:TEST_DATABASE_URL='postgresql://cvc:cvc_dev_only@127.0.0.1:54327/cvc_test'
 pnpm db:migrate
 pnpm vitest run --config vitest.pg.config.ts src/lib/db/schema.pg.test.ts
+pnpm test -- src/lib/db/postgres-client.test.ts src/lib/db/postgres-migrator.test.ts
 pnpm typecheck
 ```
 
@@ -472,7 +480,7 @@ Run:
 ```powershell
 pnpm eslint drizzle.config.ts src/lib/db scripts/setup/db-migrate.ts
 git diff --check
-git add -- docker-compose.dev.yml scripts/setup/postgres-init.sql drizzle.config.ts src/lib/db/schema src/lib/db/test/pg-test-database.ts src/lib/db/schema.pg.test.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/migrations/pg scripts/setup/db-migrate.ts vitest.config.ts vitest.pg.config.ts package.json pnpm-lock.yaml docs/evidence/refactor-v3/n1/postgres-health.md docs/evidence/refactor-v3/n1/fresh-migration.md docs/evidence/refactor-v3/n1/constraint-matrix.md
+git add -- docker-compose.dev.yml scripts/setup/postgres-init.sql drizzle.config.ts src/lib/db/schema src/lib/db/test/pg-test-database.ts src/lib/db/schema.pg.test.ts src/lib/db/postgres-client.test.ts src/lib/db/postgres-migrator.test.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/migrations/pg scripts/setup/db-migrate.ts vitest.config.ts vitest.pg.config.ts package.json pnpm-lock.yaml docs/evidence/refactor-v3/n1/postgres-health.md docs/evidence/refactor-v3/n1/fresh-migration.md docs/evidence/refactor-v3/n1/constraint-matrix.md
 git diff --cached --check
 git commit -m "feat(db): establish Postgres v3 schema"
 ```
