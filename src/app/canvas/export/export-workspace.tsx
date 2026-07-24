@@ -1,11 +1,13 @@
 'use client'
 
-import { AudioLines, Captions, Download, Film, Music, TriangleAlert } from 'lucide-react'
+import { AudioLines, Captions, ChevronRight, Download, Film, Music, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ArtifactChip } from '@/components/ui/artifact-chip'
 import { Button } from '@/components/ui/button'
 import { ContactSheetThumb } from '@/components/ui/contact-sheet-thumb'
+import { IconButton } from '@/components/ui/icon-button'
 import { ProgressBar } from '@/components/ui/progress-bar'
+import { ResizeHandle } from '@/components/ui/resize-handle'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
 import { SettingsRow } from '@/components/ui/settings-row'
 import { TimelineTrack } from '@/components/ui/timeline-track'
@@ -13,6 +15,15 @@ import { Toggle } from '@/components/ui/toggle'
 import { TopBar } from '@/components/ui/top-bar'
 import { Toast } from '@/components/ui/toast'
 import { AppShell } from '@/features/navigation/app-shell'
+import { useMediaQuery } from '@/lib/hooks/use-media-query'
+import { usePersistentToggle } from '@/lib/hooks/use-persistent-toggle'
+import { useResizablePanel } from '@/lib/hooks/use-resizable-panel'
+import {
+  BP_SECONDARY_PANEL_COLLAPSE,
+  EXPORT_SETTINGS_DEFAULT_WIDTH,
+  EXPORT_SETTINGS_MAX_WIDTH,
+  EXPORT_SETTINGS_MIN_WIDTH,
+} from '@/lib/layout/breakpoints'
 import { loadExportReadiness, startProjectExport, type ExportReadiness } from './export-api'
 import { buildShotClips, fullTrackClip } from './export-view-model'
 
@@ -35,7 +46,11 @@ export function ExportWorkspace({
       <main className="h-full overflow-y-auto bg-bg text-label">
         <TopBar
           title="合成与导出"
-          actions={<Button size="sm" icon={Download} disabled={disabled} onClick={runtime.exportVideo}>导出 MP4</Button>}
+          actions={
+            <Button size="sm" icon={Download} disabled={disabled} onClick={runtime.exportVideo}>
+              导出 MP4
+            </Button>
+          }
         />
         <ExportPreview projectTitle={projectTitle} outputUrl={runtime.outputUrl} />
         <ExportTimeline laneKeys={laneKeys} shotClips={shotClips} />
@@ -60,9 +75,11 @@ function useExportRuntime(projectId: string) {
   const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
-    void loadExportReadiness(projectId).then(setReadiness).catch((cause: unknown) => {
-      setError(cause instanceof Error ? cause.message : '导出状态读取失败')
-    })
+    void loadExportReadiness(projectId)
+      .then(setReadiness)
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : '导出状态读取失败')
+      })
   }, [projectId])
 
   async function exportVideo() {
@@ -80,27 +97,55 @@ function useExportRuntime(projectId: string) {
   return { readiness, outputUrl, error, exporting, exportVideo }
 }
 
-function ExportPreview({ projectTitle, outputUrl }: { projectTitle: string; outputUrl?: string }) {
+function ExportPreview({
+  projectTitle,
+  outputUrl,
+}: {
+  projectTitle: string
+  outputUrl?: string
+}) {
   return (
     <section className="flex h-[257px] flex-col items-center gap-2 p-4">
-      <div className="flex h-[200px] w-[480px] items-center justify-center overflow-hidden rounded-lg bg-player-bg">
-        {outputUrl ? <video src={outputUrl} controls className="h-full w-full" /> : <Film className="h-10 w-10 text-text-inverse" />}
+      <div className="flex h-[200px] w-full max-w-[480px] items-center justify-center overflow-hidden rounded-lg bg-player-bg">
+        {outputUrl ? (
+          <video src={outputUrl} controls className="h-full w-full" />
+        ) : (
+          <Film className="h-10 w-10 text-text-inverse" />
+        )}
       </div>
       <p className="text-xs text-label-tertiary">{projectTitle} · 成片预览</p>
     </section>
   )
 }
 
-function ExportTimeline({ laneKeys, shotClips }: { laneKeys: string[]; shotClips: ReturnType<typeof buildShotClips> }) {
+function ExportTimeline({
+  laneKeys,
+  shotClips,
+}: {
+  laneKeys: string[]
+  shotClips: ReturnType<typeof buildShotClips>
+}) {
   return (
-    <section className="flex flex-col gap-1 px-6">
+    <section className="flex flex-col gap-1 px-4 sm:px-6">
       <div className="flex h-5 justify-between border-b border-separator text-[11px] font-mono text-label-tertiary">
-        {['00:00', '00:20', '00:40', '01:00', '01:20'].map((time) => <span key={time}>{time}</span>)}
+        {['00:00', '00:20', '00:40', '01:00', '01:20'].map((time) => (
+          <span key={time}>{time}</span>
+        ))}
       </div>
       <TimelineTrack icon={Film} label="分镜" clips={shotClips} />
       <TimelineTrack icon={Captions} label="字幕" clips={shotClips} color="bg-stage-direct" />
-      <TimelineTrack icon={AudioLines} label="配音" clips={fullTrackClip('配音', laneKeys.length)} color="bg-stage-audio" />
-      <TimelineTrack icon={Music} label="BGM" clips={fullTrackClip('配乐', laneKeys.length)} color="bg-stage-assemble" />
+      <TimelineTrack
+        icon={AudioLines}
+        label="配音"
+        clips={fullTrackClip('配音', laneKeys.length)}
+        color="bg-stage-audio"
+      />
+      <TimelineTrack
+        icon={Music}
+        label="BGM"
+        clips={fullTrackClip('配乐', laneKeys.length)}
+        color="bg-stage-assemble"
+      />
     </section>
   )
 }
@@ -114,15 +159,111 @@ function ExportReview(props: {
   disabled: boolean
   onExport: () => void
 }) {
+  const autoCollapse = useMediaQuery(`(max-width: ${BP_SECONDARY_PANEL_COLLAPSE - 1}px)`)
+  const [manualCollapsed, setManualCollapsed] = usePersistentToggle(
+    'cvc:export-settings-collapsed',
+    false,
+  )
+  const { width, isDragging, handlePointerDown, setWidth } = useResizablePanel({
+    storageKey: 'cvc:export-settings-width',
+    defaultWidth: EXPORT_SETTINGS_DEFAULT_WIDTH,
+    min: EXPORT_SETTINGS_MIN_WIDTH,
+    max: EXPORT_SETTINGS_MAX_WIDTH,
+  })
+  const [overlayOpen, setOverlayOpen] = useState(false)
+  const collapsed = autoCollapse || manualCollapsed
+
+  if (collapsed && !overlayOpen) {
+    return (
+      <section className="relative p-4">
+        <IconButton
+          icon={ChevronRight}
+          aria-label="展开导出设置"
+          className="absolute left-4 top-4 z-10 shadow-float [&>svg]:rotate-180"
+          onClick={() => {
+            if (autoCollapse) setOverlayOpen(true)
+            else setManualCollapsed(false)
+          }}
+        />
+        <div className="pl-12">
+          <ExportQa {...props} />
+        </div>
+      </section>
+    )
+  }
+
+  if (collapsed && overlayOpen) {
+    return (
+      <section className="relative p-4">
+        <ExportQa {...props} />
+        <button
+          type="button"
+          aria-label="关闭导出设置遮罩"
+          className="fixed inset-0 z-40 bg-scrim"
+          onClick={() => setOverlayOpen(false)}
+        />
+        <div
+          className="fixed inset-y-0 left-0 z-50 flex bg-surface shadow-float"
+          style={{ width }}
+        >
+          <div className="min-w-0 flex-1 overflow-auto p-4">
+            <div className="mb-2 flex justify-end">
+              <IconButton
+                icon={ChevronRight}
+                aria-label="关闭导出设置"
+                onClick={() => setOverlayOpen(false)}
+              />
+            </div>
+            <ExportSettings {...props} />
+          </div>
+          <ResizeHandle
+            isDragging={isDragging}
+            onPointerDown={handlePointerDown}
+            onKeyAdjust={(delta) => setWidth(width + delta)}
+            aria-label="调节导出设置宽度"
+          />
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <section className="grid grid-cols-[320px_minmax(0,1fr)] gap-4 p-4">
-      <ExportSettings {...props} />
+    <section
+      className="grid gap-4 p-4"
+      style={{ gridTemplateColumns: `${width}px minmax(0,1fr)` }}
+    >
+      <div className="relative min-w-0">
+        <div className="mb-2 flex justify-end">
+          <IconButton
+            icon={ChevronRight}
+            aria-label="收起导出设置"
+            className="[&>svg]:rotate-180"
+            onClick={() => setManualCollapsed(true)}
+          />
+        </div>
+        <ExportSettings {...props} />
+        <ResizeHandle
+          className="absolute inset-y-0 right-0"
+          isDragging={isDragging}
+          onPointerDown={handlePointerDown}
+          onKeyAdjust={(delta) => setWidth(width + delta)}
+          aria-label="调节导出设置宽度"
+        />
+      </div>
       <ExportQa {...props} />
     </section>
   )
 }
 
-function ExportSettings({ outputUrl, exporting, disabled, onExport }: Pick<Parameters<typeof ExportReview>[0], 'outputUrl' | 'exporting' | 'disabled' | 'onExport'>) {
+function ExportSettings({
+  outputUrl,
+  exporting,
+  disabled,
+  onExport,
+}: Pick<
+  Parameters<typeof ExportReview>[0],
+  'outputUrl' | 'exporting' | 'disabled' | 'onExport'
+>) {
   return (
     <SettingsGroup>
       <SettingsRow label="分辨率" value="1080×1920 · 竖屏" />
@@ -131,16 +272,28 @@ function ExportSettings({ outputUrl, exporting, disabled, onExport }: Pick<Param
       <SettingsSeparator />
       <SettingsRow label="格式" value="MP4 (H.264)" />
       <SettingsSeparator />
-      <SettingsRow label="字幕烧录"><Toggle checked readOnly /></SettingsRow>
+      <SettingsRow label="字幕烧录">
+        <Toggle checked readOnly />
+      </SettingsRow>
       <div className="flex flex-col gap-3 p-4">
-        <Button icon={Download} disabled={disabled} onClick={onExport}>开始导出</Button>
-        <ProgressBar value={outputUrl ? 100 : exporting ? 62 : 0} label="导出队列" className="w-full" />
+        <Button icon={Download} disabled={disabled} onClick={onExport}>
+          开始导出
+        </Button>
+        <ProgressBar
+          value={outputUrl ? 100 : exporting ? 62 : 0}
+          label="导出队列"
+          className="w-full"
+        />
       </div>
     </SettingsGroup>
   )
 }
 
-function ExportQa({ laneKeys, readiness, error }: Pick<Parameters<typeof ExportReview>[0], 'laneKeys' | 'readiness' | 'error'>) {
+function ExportQa({
+  laneKeys,
+  readiness,
+  error,
+}: Pick<Parameters<typeof ExportReview>[0], 'laneKeys' | 'readiness' | 'error'>) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -148,7 +301,9 @@ function ExportQa({ laneKeys, readiness, error }: Pick<Parameters<typeof ExportR
         <p className="text-xs text-label-tertiary">25% / 60% / 95% 三态联系表</p>
       </div>
       <div className="flex gap-4 overflow-x-auto">
-        {laneKeys.map((laneKey) => <ContactSheetThumb key={laneKey} label={laneKey} checked />)}
+        {laneKeys.map((laneKey) => (
+          <ContactSheetThumb key={laneKey} label={laneKey} checked />
+        ))}
       </div>
       {!readiness?.ready && readiness && (
         <>
@@ -156,7 +311,9 @@ function ExportQa({ laneKeys, readiness, error }: Pick<Parameters<typeof ExportR
             <TriangleAlert className="h-3.5 w-3.5 text-warning" />未完成分镜
           </p>
           <div className="flex max-h-20 flex-wrap gap-2 overflow-auto">
-            {readiness.incompleteNodeIds.map((id) => <ArtifactChip key={id} filename={id} />)}
+            {readiness.incompleteNodeIds.map((id) => (
+              <ArtifactChip key={id} filename={id} />
+            ))}
           </div>
         </>
       )}
