@@ -89,7 +89,7 @@ evidence 索引。
 | Track | 当前状态 | Blocked by | 阶段范围 | 详细 Issue |
 |---|---|---|---|---|
 | N0 | `done` | 无 | 基线封账与止血 | [`issue-n0-baseline-and-bleeding-fixes.md`](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md) |
-| N1 | `ready` | 无 | Postgres 地基与 Spike | [`issue-n1-postgres-foundation-and-spikes.md`](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md) |
+| N1 | `in_progress` | 无 | Postgres 地基与 Spike | [`issue-n1-postgres-foundation-and-spikes.md`](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md) |
 | N2 | `blocked` | N1 | Trigger 接管执行 | [`issue-n2-trigger-orchestration.md`](../issues/refactor-v3/issue-n2-trigger-orchestration.md) |
 | N3 | `blocked` | N2 | Pi structured runtime | [`issue-n3-pi-agent-runtime.md`](../issues/refactor-v3/issue-n3-pi-agent-runtime.md) |
 | N4 | `blocked` | N3 | Source/compiler/HyperFrames | [`issue-n4-artifact-compiler-hyperframes.md`](../issues/refactor-v3/issue-n4-artifact-compiler-hyperframes.md) |
@@ -223,7 +223,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
 ### Track N1 — Postgres foundation and spikes
 
 - [ ] **N1.1 SQLite Online Backup、quick_check、计数与 hash 证据** —
-  `task_state=todo; status=ready; blocked_by=none`;
+  `task_state=in_progress; status=ready; blocked_by=none; preflight=c880dff; scope_doc=91b9161`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n11)
 - [ ] **N1.2 Docker Postgres、Drizzle schema、约束与 tracked migration** —
   `task_state=todo; status=blocked; blocked_by=N1.1`;
