@@ -512,6 +512,34 @@ import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.
 - Create: `src/features/routing/model-route-repository.pg.test.ts`
 - Create: `src/features/routing/media-route-repository.ts`
 - Create: `src/features/routing/media-route-repository.pg.test.ts`
+- Create: `src/features/artifacts/commit.ts`
+- Create: `src/features/credentials/index.ts`
+- Create: `src/features/routing/index.ts`
+- Create: `src/features/director/advance-repository.ts`
+- Create: `src/features/director/runtime-artifact-reader.ts`
+- Create: `src/features/director/runtime-artifact-source.ts`
+- Create: `src/features/director/runtime-artifact-writer.ts`
+- Create: `src/features/director/runtime-node-data.ts`
+- Create: `src/features/render/persistence.ts`
+- Create: `src/features/render/render-artifact-repository.ts`
+- Create: `src/features/render/render.pg-fixture.ts`
+- Create: `src/lib/queue/in-process-queue.pg.test.ts`
+- Create: `src/features/canvas/actions.pg.test.ts`
+- Create: `src/features/canvas/fan-out.pg.test.ts`
+- Create: `src/features/canvas/queries.pg.test.ts`
+- Create: `src/features/canvas/status.pg.test.ts`
+- Create: `src/features/director/runtime-repository.pg.test.ts`
+- Create: `src/features/render/cache.pg.test.ts`
+- Create: `src/features/render/repository.pg.test.ts`
+- Create: `src/features/render/thumbnail.integration.pg.test.ts`
+- Delete: `src/features/canvas/actions.test.ts`
+- Delete: `src/features/canvas/fan-out.test.ts`
+- Delete: `src/features/canvas/queries.test.ts`
+- Delete: `src/features/canvas/status.test.ts`
+- Delete: `src/features/director/runtime-repository.test.ts`
+- Delete: `src/features/render/cache.test.ts`
+- Delete: `src/features/render/repository.test.ts`
+- Delete: `src/features/render/thumbnail.integration.test.ts`
 - Modify: `src/lib/db/client.ts`
 - Modify: `src/lib/db/index.ts`
 - Modify: `src/lib/db/migrate.ts`
@@ -531,6 +559,7 @@ import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.
 - Modify: `src/features/ai/model-routing.test.ts`
 - Modify: `src/features/ai/stepfun-adapter.test.ts`
 - Modify: `src/features/artifacts/service.ts`
+- Modify: `src/features/artifacts/index.ts`
 - Modify: `src/features/audio/repository.ts`
 - Modify: `src/features/audio/repository.test.ts`
 - Modify: `src/features/audio/runtime-repository.ts`
@@ -598,6 +627,11 @@ barrel 删除 legacy schema/client export。legacy `createDb()` 只迁到
 `src/lib/migration/legacy-sqlite-test-database.ts` 供即将在 N1.6 删除的
 `schema.test.ts` 使用；`src/lib/db/migrate.ts` 在 N1.3 收口为纯 PG migrator，
 不得继续 import SQLite。
+
+上述 PG 测试文件替换同名 SQLite 测试，确保常规 `pnpm test` 不依赖本地
+`TEST_DATABASE_URL`，而真实数据库合同只由 `vitest.pg.config.ts` 运行。Director 与
+Render 新文件是为满足生产文件 350 行硬上限而按 repository、artifact persistence
+与 test fixture 职责拆分；它们不得引入第二套状态或平行 artifact commit 实现。
 
 - [ ] **Step 1: 写 async/transaction/credential 的失败测试**
 
