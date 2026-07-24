@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getCanvasGraph } from '@/features/canvas'
 import { PIPELINE_STAGES } from '@/features/director'
 import { enqueueDirectorStage } from '@/features/director/queue-handler'
+import { initQueue } from '@/lib/queue/init'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ const requestSchema = z
   .strict()
 
 export async function POST(request: Request) {
+  await initQueue()
   const body: unknown = await request.json().catch(() => null)
   const parsed = requestSchema.safeParse(body)
   if (!parsed.success) {

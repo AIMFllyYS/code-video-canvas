@@ -295,6 +295,52 @@ $ git rev-parse origin/main
 
 ---
 
+## 10. `fix/director-input` 修复与二次走查（2026-07-24）
+
+### 10.1 本次修复的问题
+
+| # | 问题 | 根因 | 修复文件 | 关键改动 |
+|---|------|------|----------|----------|
+| 1 | `canvas_nodes.data.directorInput` 未在 `INGEST` 之后写入，下游 `DIRECT/SHOT_SPEC/FABRICATE` 运行时 `directorInput undefined` | `runtime-repository.ts` 原实现只透传 `canvas_nodes.data.directorInput`，从未从上游 artifact 构建 | `src/features/director/runtime-repository.ts` | `loadStageContext` 改为 `async`；按 stage 从 `StorageAdapter` 读取 `director-ingest`、`director-direct`、`director-shot-spec` artifact 并合成 `directorInput` |
+| 2 | Demo INGEST 没有真实音频轨道，下游 FABRICATE 缺少 `audioAllocation` | 原 `stage-result.ts` 未合成音频元数据 | `src/features/director/audio-demo.ts`（新增）、`src/features/director/stage-result.ts` | 从 `scriptUnits` 合成 `audioManifest` / `audioAllocation` 并写入 INGEST artifact；`runtime-repository.ts` 读入或 fallback |
+| 3 | DIRECT 输出是 Markdown 段落，无法被下游消费 | `stage-result.ts` 对 DIRECT 未做结构化 | `src/features/director/stage-result.ts` | 新增 `parseDirectOutput`，提取 `MASTER_PLAN` / `STYLE_BIBLE` 并输出 JSON |
+| 4 | `shot-codegen` 渲染前必须先跑完 `FABRICATE`，但 `FABRICATE` 跑完后节点变成 `success`，导致渲染队列无法再次 `running` | 状态机冲突：渲染节点与导演节点共用状态枚举 | `src/features/director/fabricate.ts`（新增）、`src/features/render/queue-handler.ts`、`src/features/render/repository.ts` | `fabricateShot` 作为渲染作业的子步骤运行，不改动节点状态；`registerRenderShotHandler` 在 `running` 时按需调用 `fabricateShot`；`assertRenderEnqueueable` 不再预检 fabricate 产物 |
+| 5 | dev 模式下 `instrumentation.ts` 不触发，队列未启动 | Next.js dev 不保证执行 `instrumentation.ts` | `src/lib/queue/init.ts`（新增）、`src/instrumentation.ts`、`src/app/api/director/stage/route.ts`、`src/app/api/render/route.ts` | 新增 `initQueue()` 幂等初始化；API 路由在首次请求时兜底调用；`instrumentation` 动态导入 `initQueue` |
+| 6 | `instrumentation.ts` 在 Edge Runtime 分析阶段把 Playwright/Node 依赖拉入 Edge bundle 报错 | `instrumentation.ts` 静态导入 `lib/queue/init`，后者静态导入 `features/render/queue-handler` | `src/instrumentation.ts`、`src/lib/queue/init.ts` | `instrumentation` 与 `initQueue` 全部改为动态 `import()`，仅在 `NEXT_RUNTIME === 'nodejs'` 时加载 |
+| 7 | `shotPlanSchema`（严格）与 SHOT_SPEC 提示词及 LLM 实际输出字段不匹配 | 提示词要求字段（`durationInFrames/audioUnitId/scriptRange/roles/...`）与 `shotPlanSchema` 字段不同 | `src/features/director/schemas/director-shot-plan.ts`（新增）、`src/features/director/stage-result.ts`、`src/features/director/runtime-repository.ts`、`src/features/director/prompts/fabricate.ts`、`src/features/director/tools/validate-shot-plan.ts` | 新增运行时 `directorShotPlanSchema` / `directorShotSchema` 最小校验并允许透传；SHOT_SPEC 产物与 FABRICATE 输入均使用这组 schema，保留原 `shotPlanSchema` 供测试与严格校验 |
+
+### 10.2 Tier A/B 二次验收结果
+
+| 检查项 | 命令 | 结果 |
+|--------|------|------|
+| Lint | `pnpm lint` | 通过 |
+| TypeScript | `pnpm tsc --noEmit` | 通过 |
+| 构建 | `pnpm build` | 通过 |
+| 单元测试 | `pnpm test` | 54 文件 / 147 测试 全部通过 |
+
+### 10.3 真实 API 端到端走查（2026-07-24，本地 `pnpm dev`）
+
+| 路径 | 实际结果 | 状态 |
+|------|----------|------|
+| `POST /api/projects` 新建项目 | 成功，返回 `projectId` 与 `ingestNodeId` | 通过 |
+| `POST /api/director/stage` INGEST（真实 StepFun `step-3.5-flash`） | 成功，`script-import` 节点 `success`，生成 `director-ingest` artifact，自动 fan-out 出 `shot-split`、`shot-script`、`shot-codegen` 等节点 | 通过 |
+| `POST /api/director/stage` DIRECT（真实 StepFun） | 成功，`shot-split` 节点 `success`，生成 `director-direct` artifact | 通过 |
+| `POST /api/director/stage` SHOT_SPEC（真实 StepFun） | **通过**；原先因 `shotPlanSchema` 严格校验失败，改为 `directorShotPlanSchema` 后成功写入 `director-shot-spec` artifact | 通过 |
+| `POST /api/render` 单镜渲染（真实 Playwright + ffmpeg） | **失败**。`fabricateShot` 已能生成 HTML，但 `deterministic-html` 校验报出以下违规：<br>`math-random@209: 禁止无种子 Math.random()`<br>`perf-now@254: 禁止 performance.now()`<br>`date-now@255: 禁止 Date.now()`<br>`raf@293/298: 禁止 requestAnimationFrame` | **未通过** |
+| 导出合并 | 未执行（单镜渲染未成功） | 阻塞 |
+| 设置页 StepFun Key 成功校验 | 仍失败（`models.list()` 不被该 Key 支持） | 未修复 |
+
+### 10.4 仍未解决 / 未分析的问题
+
+| # | 问题 | 说明 | 优先级 |
+|---|------|------|--------|
+| 1 | `FABRICATE` 生成 HTML 的确定性违规 | LLM 仍会在 HTML 中使用 `Math.random()`、`performance.now()`、`Date.now()`、`requestAnimationFrame` 等。当前仅依靠提示词红线约束，缺少可嵌入的确定性运行时骨架或后处理。建议：提供一段 `window.__CVC_RENDER__` 实现模板，强制 LLM 只填充 `drawFrame(frame, fps)`，并由运行时将 `Math.random/Date/performance` 置空或重写。 | P0 |
+| 2 | 设置页 StepFun Key 成功校验 | `validateKey()` 调用 `models.list()` 失败；该 Key 可能仅支持 `chat.completions`。改为轻量 `chat.completions` 探测即可。 | P1 |
+| 3 | 浏览器 UI 端侧走查 | 因 API 端到端未完成，本轮未重新执行首页/新建项目/画布折叠/导出页/暗色主题等点击路径。 | P2 |
+| 4 | 250+ 节点压力测试 | 依赖完整管线；未执行。 | P2 |
+| 5 | `export-service.ts` 裸 fs 操作 | 与 §7.3 相同，尚未修复。 | P2 |
+| 6 | SHOT_SPEC 产出的 `directorShotPlanSchema` 字段与 `shotPlanSchema` 严格字段的语义桥接 | 当前采用运行时透传，下游 `assemble` / `finalize` 若恢复严格 schema 可能失败。 | P2 |
+
 ## 附图目录
 
 截图保存在 `docs/updates/2026-07-23-cloud-e2e-review-screenshots/`：

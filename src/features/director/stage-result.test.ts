@@ -23,12 +23,13 @@ describe('prepareStageResult', () => {
       '```json\n{"scriptUnits":[{"unitId":"U001","text":"第一句。"},{"unitId":"U002","text":"第二句。"}]}\n```'
     )
 
-    expect(JSON.parse(result.content)).toEqual({
-      scriptUnits: [
-        { unitId: 'U001', text: '第一句。' },
-        { unitId: 'U002', text: '第二句。' },
-      ],
-    })
+    const parsed = JSON.parse(result.content)
+    expect(parsed.scriptUnits).toEqual([
+      { unitId: 'U001', text: '第一句。' },
+      { unitId: 'U002', text: '第二句。' },
+    ])
+    expect(parsed.audioManifest).toMatchObject({ version: 1, engine: 'demo-tts' })
+    expect(parsed.audioAllocation).toMatchObject({ schemaVersion: 1, fps: 30 })
     expect(result.ingestShots).toEqual([
       {
         shotId: 'S001',

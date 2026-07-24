@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCanvasGraph } from '@/features/canvas'
+import { initQueue } from '@/lib/queue/init'
 import { enqueueRenderShot } from '@/features/render/queue-handler'
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,7 @@ const requestSchema = z
   .strict()
 
 export async function POST(request: Request) {
+  await initQueue()
   const parsed = requestSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: '请求体无效' }, { status: 400 })

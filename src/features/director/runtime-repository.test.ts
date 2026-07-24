@@ -5,9 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { createDb, type Db } from '@/lib/db/migrate'
 import { artifacts, canvasNodes, projects } from '@/lib/db/schema'
+import type { StorageAdapter } from '@/lib/storage'
 import { DirectorRuntimeRepository } from './runtime-repository'
 
 vi.mock('server-only', () => ({}))
+
+function createMockStorage(): StorageAdapter {
+  return {
+    put: vi.fn(async () => 'mock-key'),
+    get: vi.fn(async () => Buffer.from('{}')),
+    exists: vi.fn(async () => false),
+    localPath: vi.fn(() => '/mock/path'),
+    delete: vi.fn(async () => {}),
+  }
+}
 
 describe('DirectorRuntimeRepository', () => {
   let directory: string
@@ -21,7 +32,7 @@ describe('DirectorRuntimeRepository', () => {
     const database = createDb(path.join(directory, 'test.db'))
     db = database.db
     sqlite = database.sqlite
-    repository = new DirectorRuntimeRepository(db)
+    repository = new DirectorRuntimeRepository(db, createMockStorage())
     db.insert(projects)
       .values({ id: 'project-1', title: '项目', script: '原始脚本' })
       .run()
@@ -43,25 +54,27 @@ describe('DirectorRuntimeRepository', () => {
     rmSync(directory, { recursive: true, force: true })
   })
 
-  it('loads only a matching pending stage context', () => {
-    expect(repository.loadStageContext('project-1', 'node-1', 'INGEST')).toMatchObject({
+  it('loads only a matching pending stage context', async () => {
+    await expect(
+      repository.loadStageContext('project-1', 'node-1', 'INGEST')
+    ).resolves.toMatchObject({
       projectId: 'project-1',
       nodeId: 'node-1',
       status: 'pending',
       projectScript: '原始脚本',
       directorInput: { rawScript: '节点脚本' },
     })
-    expect(() => repository.loadStageContext('project-1', 'node-1', 'DIRECT')).toThrow(
-      '阶段不匹配'
-    )
+    await expect(
+      repository.loadStageContext('project-1', 'node-1', 'DIRECT')
+    ).rejects.toThrow('阶段不匹配')
 
     db.update(canvasNodes)
       .set({ status: 'idle' })
       .where(eq(canvasNodes.id, 'node-1'))
       .run()
-    expect(() => repository.loadStageContext('project-1', 'node-1', 'INGEST')).toThrow(
-      'pending'
-    )
+    await expect(
+      repository.loadStageContext('project-1', 'node-1', 'INGEST')
+    ).rejects.toThrow('pending')
   })
 
   it('checks ownership, stage, and status before enqueueing', () => {

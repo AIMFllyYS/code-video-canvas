@@ -1,5 +1,6 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
+import { getDb } from '@/lib/db/client'
 import { transitionNodeStatus } from '@/features/canvas/status'
 import { createDirectorSession, type DirectorSession, type DirectorTool } from './pi-session'
 import { DirectorRuntimeRepository, type DirectorStageContext } from './runtime-repository'
@@ -9,6 +10,7 @@ import {
   prepareStageResult,
   type PreparedStageResult,
 } from './stage-result'
+import { storage } from '@/lib/storage'
 import { createCheckDeterminismTool } from './tools/check-determinism'
 import { createValidateShotPlanTool } from './tools/validate-shot-plan'
 import {
@@ -23,7 +25,7 @@ interface StageRepository {
     projectId: string,
     nodeId: string,
     stage: PipelineStage
-  ): DirectorStageContext
+  ): DirectorStageContext | Promise<DirectorStageContext>
   registerArtifactPointer(input: {
     projectId: string
     nodeId: string
@@ -67,7 +69,7 @@ export const runStage: StageRunner = (projectId, nodeId, stage) => {
 }
 
 function createDefaultRunner(): StageRunner {
-  const repository = new DirectorRuntimeRepository()
+  const repository = new DirectorRuntimeRepository(getDb(), storage)
   return createStageRunner({
     repository,
     transitionNodeStatus,
@@ -84,7 +86,7 @@ export function createStageRunner(
   dependencies: StageRunnerDependencies
 ): StageRunner {
   return async (projectId, nodeId, stage) => {
-    const context = dependencies.repository.loadStageContext(projectId, nodeId, stage)
+    const context = await dependencies.repository.loadStageContext(projectId, nodeId, stage)
     dependencies.transitionNodeStatus(nodeId, 'running')
     let session: DirectorSession | undefined
     let closed = false
