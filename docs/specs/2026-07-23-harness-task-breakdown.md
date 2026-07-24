@@ -1703,7 +1703,7 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 | `issue-04-shot-thumbnail-infrastructure` | P1 | 2 | 无 | 新增共享的分镜静态帧缩略图生成能力（`features/render/thumbnail.ts`） |
 | `issue-05-shot-renderer-page-wiring` | P1 | 3 | issue-04 | 分镜渲染器页面播放器/缩略图/历史产物真实打通 |
 | `issue-06-export-configurable-params-and-real-qa` | P1 | 4 | issue-04；建议 issue-01 后回归 | 导出参数最小可配置 + Final QA 真实抽帧检测 |
-| `issue-07-canvas-lane-panel-summary` | P2 | 2 | 无 | 分镜通道折叠面板补充子节点状态摘要 |
+| `issue-07-canvas-lane-panel-summary` | P2 | 2 | 无 | ✅ 已完成（2026-07-24，`29bba21`）：分镜通道折叠面板补充子节点真实状态摘要 |
 | `issue-08-export-service-storage-adapter-boundary` | P2 | 2 | 无 | `export-service.ts` 裸 `fs` 改走 `StorageAdapter` |
 
 推进顺序遵循 Wave 分组（同 Wave 内可并行）：Wave 1（issue-01/02）→ Wave 2（issue-03/04/07/08，可与 Wave 1 尾声并行）→ Wave 3（issue-05）→ Wave 4（issue-06）。

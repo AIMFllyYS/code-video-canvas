@@ -5,7 +5,7 @@
 | 优先级 | P2 |
 | Wave | 2（`docs/specs/2026-07-23-harness-task-breakdown.md` Track H） |
 | 依赖 | 无 |
-| 状态 | 待施工 |
+| 状态 | **已完成**（2026-07-24，代码提交 `29bba21`） |
 
 ## 背景
 
@@ -83,6 +83,15 @@ interface LaneSummary {
 - `src/features/canvas/fan-out.ts`、`layout.ts`、`status.ts`（不改数据模型，只在前端派生展示用的分组视图）
 
 **完成条件**：
-- [ ] 展开某个分镜通道后，面板内可见该通道 5 个子节点的真实状态徽章
-- [ ] 不发起额外网络请求（复用已有 `nodes` prop 派生）
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过
+- [x] 展开某个分镜通道后，面板内可见该通道 5 个子节点的真实状态徽章
+- [x] 不发起额外网络请求（复用已有 `nodes` prop 派生）
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过
+
+## 完成证据（2026-07-24）
+
+- `flow-elements.test.ts` 新增 5 个测试，覆盖固定角色顺序、真实状态、脚本摘要、
+  不完整通道及最终徽章文案；干净暂存快照全量测试为 58 files / 168 tests 通过。
+- 干净暂存快照执行 `pnpm lint`、`pnpm tsc --noEmit`、`pnpm build` 均退出 0。
+- production Chromium 使用本地 SQLite 真实项目验收：展开态显示 5 个真实徽章与
+  `sourceUnit.text` 摘要；鼠标折叠与键盘 Enter 展开均正确；交互前后网络请求最大
+  序号均为 34，未新增请求；900×700 视口无面板溢出，reduced-motion 生效。
