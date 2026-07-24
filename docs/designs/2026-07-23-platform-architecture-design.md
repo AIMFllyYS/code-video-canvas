@@ -178,3 +178,4 @@ src/
 | 2026-07-24（修订十一） | 主题状态统一为 light/dark/system 本机值，根布局在 hydration 前应用暗色类，避免首屏闪烁。 |
 | 2026-07-24（修订十二） | `ffmpeg-static` 保持 Next server external，由 Node 在 Windows 生产运行时解析真实平台二进制路径。 |
 | 2026-07-24（修订十三） | 分离 renderKey 与产物 contentHash：前者只定位缓存路径，后者始终是 MP4 实体 SHA-256。 |
+| 2026-07-24（修订十四） | 深度审查发现 ASSEMBLE/FINALIZE 两个 Director stage 的输入组装、以及画布 Inspector/分镜渲染器/合成导出页多处 UI 字段真实性存在系统性缺口（架构结论未变，仅实现未达标）；不在本文档展开细节，具体修复模块见 [`docs/issues/known-issues.md`](../issues/known-issues.md)（Track H），修复完成后回填对应章节。 |

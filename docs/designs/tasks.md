@@ -195,6 +195,42 @@
     - 对应 task-breakdown：U1.8
     - _Requirements: F1~F9 端到端功能性验证（不含视觉/内容质量的主观评价，见总纲 §8.3）_
 
+- [ ] 8. Fix — 系统性前后端打通修复（U1.8 里程碑收口后新发现）
+  - 对应 Goal：Track H（每个 issue 建议独立一次 Goal，详见 task-breakdown Track H 章节与 `docs/issues/known-issues.md`）
+  - _Requirements: 修复 F4/F5/F6/F8/F9 已声称完成但实际存在 UI 字段真实性缺口的部分；无新增 F 编号_
+
+  - [ ] 8.1 Director 六阶段输入契约补全（ASSEMBLE/FINALIZE）
+    - 对应 task-breakdown：Track H issue-01
+    - _Requirements: F2、F3、F4（六阶段无 mock 全部跑通，此前只覆盖 INGEST~FABRICATE）_
+
+  - [ ] 8.2 StepFun Key 校验策略修复
+    - 对应 task-breakdown：Track H issue-02
+    - _Requirements: F8（设置页"成功"路径至今未被验证）_
+
+  - [ ] 8.3 Canvas Inspector 数据真实性
+    - 对应 task-breakdown：Track H issue-03
+    - _Requirements: F6（画布编辑，Inspector 展示字段需可追溯真实数据）_
+
+  - [ ] 8.4 分镜缩略图共享基础设施
+    - 对应 task-breakdown：Track H issue-04
+    - _Requirements: F4、F9（供 8.5/8.6 复用，避免重复实现截帧逻辑）_
+
+  - [ ] 8.5 分镜渲染器页面真实数据打通
+    - 对应 task-breakdown：Track H issue-05
+    - _Requirements: F4、F5（播放器/缩略图/历史产物需真实接入，依赖 8.4）_
+
+  - [ ] 8.6 合成导出：可配置参数 + Final QA 真实检测
+    - 对应 task-breakdown：Track H issue-06
+    - _Requirements: F9（导出参数与 QA 面板需真实生效，依赖 8.4，建议 8.1 完成后回归）_
+
+  - [ ] 8.7 画布分镜通道折叠面板信息摘要
+    - 对应 task-breakdown：Track H issue-07
+    - _Requirements: F6（折叠面板补充子节点状态摘要）_
+
+  - [ ] 8.8 export-service StorageAdapter 边界治理
+    - 对应 task-breakdown：Track H issue-08
+    - _Requirements: 架构合规性修复（消除裸 `fs` 违规），无新增 F 编号_
+
 ## Task Dependency Graph
 
 顶层任务（Goal 颗粒度）之间的依赖关系（单向 DAG，对应 [Harness 总纲](../specs/2026-07-23-ai-development-harness.md) §9.1 的 Track 依赖速览）：
@@ -211,12 +247,15 @@
    ├──▶ 5. Pencil 组件港口           │
    │         │                      │
    │         └──────────────────────┴──▶ 7. UI（六页面实装）
+   │                                            │
+   │                                            └──▶ 8. Fix（系统性打通修复，U1.8 里程碑收口后新发现）
 ```
 
 - **1 Foundation** 必须最先完成，且内部子任务严格顺序执行（1.1 的 Spike 结论决定 1.2~1.7 怎么写）。
 - **2 Canvas DAG / 3 Director / 4 Render / 5 Pencil 组件港口** 在 1 完成后可并行推进（互不依赖，可对应并行启动的独立 Goal 会话）。
 - **6 Audio** 依赖 2、3 完成（需要通道节点已建、阶段编排已通）。
 - **7 UI** 依赖 5（组件港口，强制前置）以及 2、3、4 已完成对应 API；**7 不能在 5 之前开始**。
+- **8 Fix** 依赖 7（U1.8 里程碑走查后才暴露这批系统性缺口）；内部子任务 8.1/8.2 无依赖可最先做，8.4 是 8.5/8.6 的共享基础设施前置，详见 task-breakdown Track H 的 Wave 分组。
 - 子任务级别的依赖（如 2.4 依赖 2.1~2.3）见各顶层任务下的子任务列表顺序，以及 task-breakdown 对应 Task 规格中的「前置任务」字段。
 
 Wave 定义（按依赖关系分组的并行执行批次；同一 wave 内的顶层任务互不依赖，可对应并行启动的独立 Goal 会话；跨 wave 必须按顺序推进）：
@@ -238,6 +277,11 @@ Wave 定义（按依赖关系分组的并行执行批次；同一 wave 内的顶
       "wave": 3,
       "tasks": ["6", "7"],
       "description": "Audio 占位（依赖 2、3）与 UI 六页面实装（依赖 5，以及 2、3、4 的对应 API）"
+    },
+    {
+      "wave": 4,
+      "tasks": ["8"],
+      "description": "Fix：系统性打通修复（依赖 7 的 U1.8 里程碑走查暴露问题；内部 8.1/8.2/8.3/8.4/8.7/8.8 互不依赖可并行，8.5/8.6 依赖 8.4，详见 task-breakdown Track H）"
     }
   ]
 }
@@ -255,14 +299,14 @@ Wave 定义（按依赖关系分组的并行执行批次；同一 wave 内的顶
 | PRD 功能 | 优先级 | 覆盖任务 |
 |---|---|---|
 | F1 script 导入 | P0 | 7.2 |
-| F2 语义分镜 | P0 | 2.1, 3.1, 3.2, 3.3, 3.5, 3.6, 3.7 |
+| F2 语义分镜 | P0 | 2.1, 3.1, 3.2, 3.3, 3.5, 3.6, 3.7, 8.1 |
 | F3 分镜脚本撰写 | P0 | 3.1, 3.2, 3.3, 3.5, 3.6, 3.7 |
-| F4 分镜节点渲染 | P0 | 1.5, 1.6, 1.7, 2.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.3, 4.5, 4.6, 5.5, 7.4 |
-| F5 定向重渲染 | P0 | 1.4, 2.3, 4.2, 4.5, 7.4 |
-| F6 画布编辑 | P0 | 1.4, 1.5, 2.2, 2.4, 2.5, 5.5, 7.3 |
+| F4 分镜节点渲染 | P0 | 1.5, 1.6, 1.7, 2.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.3, 4.5, 4.6, 5.5, 7.4, 8.1, 8.4, 8.5 |
+| F5 定向重渲染 | P0 | 1.4, 2.3, 4.2, 4.5, 7.4, 8.5 |
+| F6 画布编辑 | P0 | 1.4, 1.5, 2.2, 2.4, 2.5, 5.5, 7.3, 8.3, 8.7 |
 | F7 本地项目存储 | P0 | 7.1 |
-| F8 StepFun Key 设置 | P0 | 1.2, 1.3, 7.6 |
-| F9 合成导出 | P0 | 1.6, 4.4, 4.6, 7.5 |
+| F8 StepFun Key 设置 | P0 | 1.2, 1.3, 7.6, 8.2 |
+| F9 合成导出 | P0 | 1.6, 4.4, 4.6, 7.5, 8.4, 8.6 |
 | F10 字幕 | P1 | 6.1（占位） |
 | F11 配音 | P1 | 6.1（占位） |
 | F12 整体配乐 BGM | P1 | 6.1（占位） |
@@ -271,8 +315,11 @@ Wave 定义（按依赖关系分组的并行执行批次；同一 wave 内的顶
 
 **覆盖核查**：PRD 全部 P0 功能（F1~F9）在 Task 1~5、7 中均有对应任务覆盖真实实现；P1/P2 功能（F10~F14）在 Demo 阶段仅通过 Task 6 做占位骨架，真实生成逻辑按总纲 §4.1 决策延后到 P1 迭代，不在本轮 Track 范围内产出。
 
+**2026-07-24 补充核查**：U1.8 里程碑收口后的深度审查发现，F4/F5/F6/F8/F9 此前标注的"真实实现"在 UI 层存在字段真实性缺口（Inspector 展示假数据、分镜渲染器播放器/缩略图纯占位、导出参数不可配置、Final QA 恒真等），详见 Task 8（Fix）与 `docs/issues/known-issues.md`。这不改变 F1~F9 已有实现的"后端链路真实性"结论（enqueue/渲染/导出等核心动作已接真实 API），但说明"任务卡验收通过"不等于"用户可见的每个字段都真实"，后续任务卡的完成条件需要显式覆盖字段级真实性（见 AGENTS.md「UI 字段真实性门禁」）。
+
 ## 变更记录
 
 | 日期 | 变更 |
 |---|---|
 | 2026-07-23 | 初版发布，按 Kiro Spec `tasks.md` 格式建立与 [`harness-task-breakdown.md`](../specs/2026-07-23-harness-task-breakdown.md) 的任务追溯映射，补充 PRD 功能编号覆盖矩阵 |
+| 2026-07-24 | 新增顶层任务 **8. Fix — 系统性前后端打通修复**（对应 task-breakdown Track H，详细规格见 `docs/issues/`），更新依赖图与 Wave 4 定义；追溯矩阵补充 F4/F5/F6/F8/F9 的 Task 8 覆盖行与"UI 字段真实性缺口"核查说明 |

@@ -322,7 +322,7 @@ docs/specs/2026-07-23-harness-task-breakdown.md 的 Track C 章节逐一执行�
 
 ### C1.1 — `fan-out.ts`：分镜通道物化
 
-- 状态：◐（e2e 发现 shot 节点未写入 directorInput，下游 SHOT_SPEC/FABRICATE 阶段缺少输入）
+- 状态：◐（2026-07-24 更新：`INGEST/DIRECT/SHOT_SPEC/FABRICATE` 四个 stage 的 `directorInput` 组装缺口已在 `fix/director-input`（`0a24e07`）修复；`ASSEMBLE`/`FINALIZE` 两个 stage 仍隐式回退到未组装的 `row.data.directorInput`，属于新登记的 P0 缺口，见 `docs/issues/issue-01-director-stage-input-contract-completion.md`）
 - 前置任务：F0.4, F0.5
 - 允许改动范围：`src/features/canvas/fan-out.ts`（新建）、`src/features/canvas/fan-out.test.ts`
 - 禁止改动：`src/features/canvas/actions.ts`、`queries.ts`（不要把物化逻辑塞进这两个文件）
@@ -703,7 +703,7 @@ docs/video-director/ 只读参照，不在运行时代码路径中读取或挂�
 
 ### D1.3 — `stage-runner.ts`：单阶段运行编排
 
-- 状态：◐（stage-runner 从 canvas_nodes.data.directorInput 取输入，但未与上游 artifact 或 fan-out 打通，真实运行时报 undefined）
+- 状态：◐（2026-07-24 更新：`runtime-repository.ts` 的 `resolveDirectorInput` 已为 `INGEST/DIRECT/SHOT_SPEC/FABRICATE` 按 stage 从上游 artifact 真实组装输入（`0a24e07`），六阶段输入契约表见 [Harness 总纲 §3.5.2](./2026-07-23-ai-development-harness.md#352-六阶段输入契约表2026-07-24-补充回应-track-h-issue-01)；`ASSEMBLE`/`FINALIZE` 仍未覆盖，见 `docs/issues/issue-01-director-stage-input-contract-completion.md`）
 - 前置任务：D0.1, D0.2, D1.1, D1.2
 - 允许改动范围：`src/features/director/stage-runner.ts`、`stage-prompt.ts`、`runtime-repository.ts`（均新建）、对应测试及 `pipeline.ts`（仅移除空接口）
 - 禁止改动：`src/lib/queue/**`（本卡只消费队列接口，不改队列实现）
@@ -1656,7 +1656,7 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 
 ### U1.8 — 端到端 UI 走查（Tier B 里程碑收口）
 
-- 状态：◐（2026-07-23 e2e：新建项目/画布 fan-out/暗色主题可通，真实 AI Director、单镜渲染、导出合并未跑通，见 docs/updates/2026-07-23-cloud-e2e-review-report.md）
+- 状态：◐（2026-07-23 e2e 首次发现 directorInput 缺口后，2026-07-24 二次走查确认 INGEST→DIRECT→SHOT_SPEC→FABRICATE→单镜渲染→MP4 全部真实跑通，见 `docs/updates/2026-07-24-u1.8-demo-e2e-walkthrough.md`；但同一次深度审查进一步发现画布 Inspector/分镜通道折叠面板、分镜渲染器页、合成导出页存在系统性"UI 已搭建但未接入真实数据"缺口，且 ASSEMBLE/FINALIZE 的 directorInput 组装仍未覆盖——这些新发现的缺口已按低耦合模块拆分进 `docs/issues/known-issues.md`（Track H），不在本卡范围内直接修复）
 - 前置任务：U1.1~U1.7 全部完成
 - Task 规格：
   ```
@@ -1687,6 +1687,45 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 
 ---
 
+## Track H — 系统性前后端打通修复（详见 `docs/issues/`）
+
+**背景**：2026-07-24 深度审查发现，虽然 Track C/D/R/P/U 的 Tier A/Tier B 验收已通过，但画布 Inspector/分镜通道折叠面板、分镜渲染器页、合成导出页存在系统性"前端组件已搭建但未接入真实数据"的缺口，核心根因见 §3.5.2（六阶段输入契约缺口）与 AGENTS.md「UI 字段真实性门禁」——既往验收标准只测"按钮点击是否触发对应 API"，未测"页面展示的每个字段是否真实"。
+
+**与本文档其余 Track 的关系**：Track H 不新建 Task 卡片格式的完整规格（避免本文档进一步膨胀），具体的目标/前置任务/允许改动范围/禁止改动/完成条件维护在 `docs/issues/issue-NN-*.md`，本节只登记索引、优先级与依赖关系，供后续 Codex Goal 会话直接引用对应 issue 文件作为 Task 规格来源。
+
+**总索引**：[`docs/issues/known-issues.md`](../issues/known-issues.md)
+
+| Issue | 优先级 | Wave | 依赖 | 一句话目标 |
+|---|---|---|---|---|
+| `issue-01-director-stage-input-contract-completion` | P0 | 1 | 无 | 补齐 ASSEMBLE/FINALIZE 的 `directorInput` 真实组装，使六阶段无 mock 全部跑通 |
+| `issue-02-stepfun-key-validation-strategy` | P0 | 1 | 无 | 修复 `validateKey()` 用 `models.list()` 导致有效 Key 也判定失败的问题 |
+| `issue-03-canvas-inspector-data-truthfulness` | P1 | 2 | 部分展示依赖 issue-01 | Inspector 的内容哈希/合同 chips/进度/查看代码改为真实数据 |
+| `issue-04-shot-thumbnail-infrastructure` | P1 | 2 | 无 | 新增共享的分镜静态帧缩略图生成能力（`features/render/thumbnail.ts`） |
+| `issue-05-shot-renderer-page-wiring` | P1 | 3 | issue-04 | 分镜渲染器页面播放器/缩略图/历史产物真实打通 |
+| `issue-06-export-configurable-params-and-real-qa` | P1 | 4 | issue-04；建议 issue-01 后回归 | 导出参数最小可配置 + Final QA 真实抽帧检测 |
+| `issue-07-canvas-lane-panel-summary` | P2 | 2 | 无 | 分镜通道折叠面板补充子节点状态摘要 |
+| `issue-08-export-service-storage-adapter-boundary` | P2 | 2 | 无 | `export-service.ts` 裸 `fs` 改走 `StorageAdapter` |
+
+推进顺序遵循 Wave 分组（同 Wave 内可并行）：Wave 1（issue-01/02）→ Wave 2（issue-03/04/07/08，可与 Wave 1 尾声并行）→ Wave 3（issue-05）→ Wave 4（issue-06）。
+
+**Goal 启动提示词模板**（每个 issue 建议独立一次 Goal，不强制合并）：
+```
+Goal：完成 docs/issues/issue-NN-*.md 描述的修复，严格按该文件的目标/允许改动范围/
+禁止改动/完成条件执行。
+
+执行要求：
+- 落笔前先重新核实该 issue 引用的文件是否已被后续提交修改（行号/路径可能已偏移）
+- 完成后运行 pnpm lint && pnpm tsc --noEmit（涉及 src/ 改动时还需 pnpm build 与相关测试）
+- 在 docs/issues/known-issues.md 对应行更新状态
+
+完成条件：
+- [ ] issue 文件列出的完成条件全部满足
+- [ ] pnpm lint / pnpm tsc --noEmit 通过（如涉及测试变更，pnpm test 通过）
+- [ ] known-issues.md 状态已同步
+```
+
+---
+
 ## 任务卡总览统计
 
 | Track | 任务数 | 说明 |
@@ -1698,7 +1737,8 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 | P（Pencil 组件港口，SSOT 强制） | 6 | 必须排在 Track U 之前完成 |
 | A（音频，Demo 占位） | 1 | P1 真实实现延后 |
 | U（UI） | 9 | 依赖 Track P + C/D/R 对应 API；含 U1.6a 主题状态补充卡 |
-| **合计** | **40** | 另有 Tier B 里程碑验收穿插在每个 Track 完成后触发，不单独计入任务数 |
+| H（系统性打通修复，详见 `docs/issues/`） | 8 | U1.8 里程碑收口后新发现，详细 Task 规格在 `docs/issues/`，不在本文档重复维护 |
+| **合计** | **48** | 另有 Tier B 里程碑验收穿插在每个 Track 完成后触发，不单独计入任务数 |
 
 ## 变更记录
 
@@ -1721,3 +1761,4 @@ projectId/rendererNodeId。`AppShell` 是业务布局组合，不是新视觉原
 | 2026-07-24（修订十四） | **U1.8 暴露的 Windows 编码断点**：`ffmpeg-static` 必须保持 Next server external，避免生产 bundle 将真实二进制路径改写为 `/ROOT` 后导致 `spawn ENOENT`。 |
 | 2026-07-24（修订十五） | **U1.8 暴露的哈希语义冲突**：输入派生 renderKey 只负责缓存寻址；`artifacts.contentHash` 与 RenderResult 必须保存最终 MP4 实体 SHA-256。 |
 | 2026-07-24（修订十六） | **最新 Pencil 应用壳纠偏**：S1–S6、S2 背景与暗色镜像统一为常驻 Sidebar；补充唯一 `features/navigation/AppShell` 边界，S4 恢复预览/代码/合同三栏，S5 禁止示例常量冒充真实项目投影。 |
+| 2026-07-24（修订十七） | **新增 Track H — 系统性前后端打通修复**：U1.8 里程碑收口后的深度审查发现画布 Inspector/分镜通道折叠、分镜渲染器页、合成导出页存在系统性 UI 字段真实性缺口，且 ASSEMBLE/FINALIZE 的 `directorInput` 组装仍未覆盖（对应修正 C1.1/D1.3/U1.8 状态描述为精确表述）；8 个具体修复模块按低耦合原则拆分进 `docs/issues/`（索引见 `known-issues.md`），本文档只登记 Track H 索引不重复维护 Task 卡细节；任务卡合计 40→48。 |

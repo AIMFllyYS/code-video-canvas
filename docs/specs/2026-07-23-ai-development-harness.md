@@ -108,6 +108,21 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 - 任一归一化、产物写入或副作用提交失败，节点都必须进入 failed，不得先标 success。副作用提交后才能关闭会话并推进 success。
 - `stage-result.ts` 只做纯归一化与可信元数据派生；`stage-result-committer.ts` 通过 Canvas 公开入口和 Director repository 提交业务状态。stage runner 继续不直接操作 Drizzle。
 
+#### 3.5.2 六阶段输入契约表（2026-07-24 补充，回应 Track H issue-01）
+
+`resolveDirectorInput`（`runtime-repository.ts`）是六阶段真正的输入组装点，之前只用一条隐式 if/else 链实现且只覆盖了前四个 stage，这里把完整契约显式化，防止后续再遗漏：
+
+| Stage | 依赖的上游 artifact | 组装出的 `directorInput` 字段 | 组装方（现状） |
+|---|---|---|---|
+| `INGEST` | 无（首个阶段） | `{ rawScript }`（来自 `projects.script`，或既有 `row.data.directorInput`） | ✅ 已实现 |
+| `DIRECT` | `script-import` 节点的 `director-ingest` artifact | `{ projectTitle, scriptUnits, audioManifest, audioAllocation }` | ✅ 已实现（`loadIngestArtifact`） |
+| `SHOT_SPEC` | `director-ingest` + `shot-split` 节点的 `director-direct` artifact | `{ scriptUnits, audioAllocation, masterPlan, styleBible }` | ✅ 已实现（`loadIngestArtifact` + `loadDirectArtifact`） |
+| `FABRICATE` | `director-ingest` + `director-direct` + 本通道 `shot-script` 节点的 `director-shot-spec` artifact | `{ shot, audioAllocation, styleBible }`（按 `laneKey` 定位具体 shot） | ✅ 已实现（`loadShotSpecArtifact`） |
+| `ASSEMBLE`（`score`/`shot-sfx`/`shot-subtitle`） | 应为：全部通道的 `director-fabricate` 产物指针 + `director-direct` 的 `styleBible`（配乐/音效/字幕选型都需要风格上下文） | **未组装**，当前直接 `return row.data.directorInput`，该字段从未被写入 | ❌ 缺口，issue-01 的核心修复对象 |
+| `FINALIZE`（`export`/`shot-qa`） | 应为：全部通道 `shot-codegen` 节点的渲染状态/artifact 指针（用于验收/导出前汇总） | **未组装**，同上回退到未写入的 `row.data.directorInput` | ❌ 缺口，issue-01 的核心修复对象 |
+
+**强制规则**：任何新增/修改 stage 的输入组装逻辑，必须在这张表里登记对应行，不允许再有 stage 隐式落到 `return row.data.directorInput` 兜底分支（该分支只应该在"这个 stage 本身就不需要上游 artifact"时使用，目前六个 stage 里没有一个属于这种情况）。
+
 ### 3.6 与 `features/director` 现有骨架的关系
 
 `pipeline.ts` 只保留阶段元数据，不再声明一套平行的 `AgentRunner` 抽象；运行契约以 `pi-session.ts` 的项目原生 `DirectorSession` 为唯一来源。具体实现由 `pi-session.ts` 组合 Pi `Agent` 与 `JsonlSessionRepo`，但不把 Pi 内部类型泄漏到 `features/director` 外部。具体改动在 task-breakdown 的 Director Track 中逐张任务卡给出，且每张卡的 Tool 实现都必须能在 §3.1 移植映射表中找到对应行。
@@ -235,6 +250,7 @@ Pi Agent 的会话是 JSONL 树文件格式，与项目现有"SQLite 为结构�
 | `renderer.ts` | 可信顶层编排：HTML 守卫 → cache → frame sequence → encode → Storage/索引 | finally 清理临时资源，不直接暴露给路由 |
 | `queue-handler.ts`（新增） | render-shot 入队/状态机/失败补偿与 handler | 与 Director 共用单例队列和 instrumentation 启动；模块导入不得打开 SQLite，默认 repository 延迟到 enqueue/handler 执行时创建 |
 | `concat.ts` + `export-service.ts`（新增） | 已渲染 mp4 稳定排序后流拷贝拼接，可选混入配乐并提交终片 | 不重新逐帧渲染；未完成节点结构化返回 |
+| `thumbnail.ts`（2026-07-24 补充新增，回应 Track H issue-04） | 复用 `frame-capture.ts` 的 CDP 截帧能力，给定 shot HTML + 百分比/时间点数组，产出并登记静态帧缩略图（新 artifact kind，如 `frame-thumbnail`） | 单一职责：只做"抽指定帧"，不做视频编码；是分镜渲染器页面缩略图轨道与合成导出页 Final QA 抽帧检测的**共享基础设施**，两个消费方不得各自重复实现一套截帧逻辑 |
 
 ### 5.5 `features/audio/`（字幕/配音/音效/配乐）
 
@@ -328,6 +344,14 @@ stage：`shot-script→SHOT_SPEC`、`shot-codegen→FABRICATE`、
 
 **决策**：CVC 应用层（`features/director/pipeline.ts` 的 `PipelineStage` 类型、UI 阶段徽章）统一采用 **PRD 的 6 阶段**口径。video-director 的 INIT 并入 INGEST 阶段的会话初始化步骤，CALIBRATE 并入 FABRICATE 阶段内部的一个 QA 检查点（对应 L2 层的子步骤，不在 L1/L3 单独建节点）。设计系统里多出的第 7 个 `stage-*` token，在 UI 实装任务卡中核查后删除或重新映射，不新增第 7 个阶段。
 
+### 6.6 导出可配置参数的存储位置（已拍板，回应 Track H issue-06）
+
+合成导出页当前展示的分辨率/帧率/格式是纯静态文本（详见 `docs/issues/issue-06-*.md`），`export-service.ts` 也完全没有参数概念。本轮决策目标是支持**最小可配置**（2~3 档分辨率预设）。2026-07-24 已拍板：
+
+**采用方案：`projects` 表新增 `exportSettings`（`text`，`mode: 'json'`）列**，存 `{ resolutionPreset, subtitleBurnIn }` 等，随项目走，默认值兜底为当前固定的 `1080×1920 · 30fps`（更贴合"每项目一份导出配置"的语义，且不需要额外 join）。未采用候选方案：新建独立 `export_settings` 表（`projectId` 唯一外键）——与 `projects` 解耦更彻底，但当前档位数量少，不值得多引入一张表。落地时需走 Drizzle 迁移，禁止手改 `meta/*.json` snapshot。
+
+分辨率切换的实现层级同样已拍板：**在合并导出阶段用 ffmpeg `scale` 滤镜统一缩放，不在 FABRICATE/单镜渲染阶段按分辨率分档**——理由是分辨率下沉到渲染层会因为 `renderKey` 变化导致已渲染分镜缓存失效，代价远高于导出时才做的一次性 `scale`；默认预设仍走原有 `-c:v copy` 无损直通路径，零回归风险。
+
 ---
 
 ## 7. 环境变量契约
@@ -374,6 +398,7 @@ STEPFUN_VISION_MODEL=step-1.5v    # 视觉模型验收节点（多模态，P1 �
 - 涉及 shot 渲染代码路径的改动，`lib/determinism` 的规则扫描必须零违规
 - 未越界修改任务卡"允许改动范围"之外的文件（`git diff --stat` 核对）
 - 若执行中发现现有规范文档（`docs/conventions/*`、`AGENTS.md` 等）有缺口或过时内容，任务卡完成汇报中必须**提出修订建议**，不允许任务执行者自行改动规范文档
+- **新增/修改的可见 UI 字段需附字段—数据源映射说明**（2026-07-24 补充，回应 AGENTS.md「UI 字段真实性门禁」）：任务完成汇报中，凡涉及向用户展示数据/状态/进度/检测结果的改动，必须逐字段列出"字段名 → 数据来源（DB 列/artifact kind/API 响应字段）"；无法列出真实来源的字段必须在汇报中显式标注为"Demo 占位，理由：……"，不允许静默留下恒定假值
 
 ### 8.2 Tier B —— 里程碑级验收（若干 Task 组成一个 Track，Track 完成后触发，较重）
 
@@ -509,3 +534,4 @@ docs/specs/2026-07-23-harness-task-breakdown.md 中 Track <X> 章节逐一执行
 | 2026-07-24（修订十九） | **主题启动合同**：light/dark/system 写入本机 localStorage；根布局在 hydration 前按显式值或系统偏好应用 `.dark`，设置页复用 SegmentedControl。 |
 | 2026-07-24（修订二十） | **Windows 生产渲染路径**：`ffmpeg-static` 设为 Next server external，防止 Turbopack 将平台二进制绝对路径重写为不可执行的 `/ROOT`。 |
 | 2026-07-24（修订二十一） | **渲染键与产物哈希分离**：输入派生 renderKey 只用于缓存寻址路径；`artifacts.contentHash` 与 API 结果统一保存实际 MP4 SHA-256。 |
+| 2026-07-24（修订二十二） | **系统性打通修复立项（Track H）**：深度审查发现画布 Inspector/分镜通道折叠、分镜渲染器页、合成导出页存在大量"前端组件已搭好但未接入真实数据"的系统性缺口，核心根因是 ASSEMBLE/FINALIZE 两个 stage 的 `directorInput` 组装从未被覆盖（新增 §3.5.2 六阶段输入契约表显式化）、以及既往验收标准只测"按钮点击触发 API"未测"展示字段是否真实"。新增 AGENTS.md「UI 字段真实性门禁」规则、§8.1 Tier A 字段-数据源映射检查项、§5.4 `thumbnail.ts` 共享缩略图基础设施职责、§6.6 导出参数存储决策待办；8 个具体修复模块按低耦合原则拆分进 `docs/issues/`（`known-issues.md` 总索引），不在本文档重复维护 Task 卡细节。 |

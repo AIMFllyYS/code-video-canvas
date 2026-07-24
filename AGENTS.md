@@ -153,8 +153,17 @@ docs/  scripts/  public/
 
 ### 存储
 
-- 结构化数据走 Drizzle+SQLite；二进制产物走 `StorageAdapter`；不要在业务里散落裸 `fs` 调用（便于未来换对象存储）。
+- 结构化数据走 Drizzle+SQLite；二进制产物走 `StorageAdapter`；不要在业务里散落裸 `fs` 调用（便于未来换对象存储）。**这条边界覆盖临时目录场景**：需要临时工作目录/读取产物内容/清理临时文件时，先看 `StorageAdapter` 是否已有等价方法（如 `tempDir(prefix)`/`read(key)`/`remove(dir)`），没有就先扩展适配器接口，禁止直接 `import { mkdtemp, readFile, rm } from 'node:fs/promises'`（`src/features/render/export-service.ts` 曾经这样做，属于已登记的技术债，见 `docs/issues/issue-08-*.md`，新代码不得重复此模式）。
 - Pi JSONL 是特殊的追加式文件产物：只能由 `DirectorSessionStore` 在 `StorageAdapter.localPath('pi-sessions')` 分配的根目录内操作；业务层只持有相对 `storageKey`，SQLite 只登记指针。
+
+### UI 字段真实性门禁（新增）
+
+> 何时读：新增/修改任何向用户展示数据、状态、进度、检测结果的 UI 之前。这条规则是本项目"前端组件已搭好但和后端功能没打通"系统性问题的直接对策，详见 `docs/issues/known-issues.md`。
+
+- **每个可见字段必须能追溯到真实数据源**：页面上展示给用户的每个数据字段、状态徽章、进度条、检测结果，必须能在代码里指向一个真实的 DB 列、`artifacts`/`jobs` 记录或 API 响应字段。禁止用"看起来像真实状态"的静态值伪装成真实数据——典型违规模式：固定百分比（如恒为 `62%` 的进度条）、固定文件名但无 `href`/查询的 chip、恒为 `true`/`checked` 的校验结果、写死的时间戳/分辨率文本却配一个看起来可交互的控件外观。
+- **Demo 阶段允许占位，但必须显式声明**：如果某个字段在当前阶段确实没有真实数据源（比如某功能延后到 P1），必须让它在视觉上显式呈现"占位/未实现"（如 `EmptyState`、禁用态说明文案、或代码注释 `// Demo 占位，见 docs/issues/issue-XX-*.md`），不允许用足以让用户误信为真实结果的静态值填充。
+- **控件外观与实际可操作性必须一致**：如果某个参数在当前阶段不可配置（如导出分辨率/帧率），对应控件要么做成真正 controlled（有 `value`/`onChange` 并接入真实状态），要么明确降级为纯展示（去掉看起来可点击/可切换的视觉暗示，或加禁用态说明），不允许"看起来能调、点了却没反应"。
+- **加载态用真实异步边界，不用来掩盖固定假值**：`Skeleton`/loading 态只应该覆盖真实的网络请求/异步等待窗口（参照 `src/components/ui/skeleton.tsx` 现有用法：路由懒加载、Key 校验请求中、`fetch` 分镜代码中、导出 readiness 查询中），不能给一个本质上永久返回固定值的字段套一层 loading 壳来让它"看起来像"真实数据。
 
 ### Director 执行边界
 
@@ -163,6 +172,7 @@ docs/  scripts/  public/
 - 分镜通道 fan-out 时必须持久化节点对应的 Director stage；Inspector 只使用
   服务端读模型返回值，禁止按 CanvasNodeType 在客户端猜 stage。
 - 节点阶段输入持久化在 `canvas_nodes.data.directorInput`；`stage-prompt.ts` 只调用六阶段原生 prompt builder，禁止临时拼无类型 prompt。
+- **`resolveDirectorInput`（`runtime-repository.ts`）必须为全部六个 stage（`INGEST/DIRECT/SHOT_SPEC/FABRICATE/ASSEMBLE/FINALIZE`）维护显式的输入组装契约**，逐 stage 声明依赖哪些上游 artifact 的哪些字段（完整契约表见 [Harness 总纲 §3.5.1](./docs/specs/2026-07-23-ai-development-harness.md#351-阶段结果提交协议u18-前置架构纠正)）；**禁止任何 stage 隐式回退到未组装的 `row.data.directorInput`**——`ASSEMBLE`（`score`/`shot-sfx`/`shot-subtitle`）与 `FINALIZE`（`export`/`shot-qa`）当前正处于这个回退分支、缺少真实输入组装，是已登记的 P0 缺口（`docs/issues/issue-01-*.md`），新代码不得再为其他 stage 引入同类回退。
 - `enqueueDirectorStage()` 先验证 project/node/stage/可入队状态，再把节点推进到 `pending` 并入队；`runStage()` 只接受 pending 节点，执行 `pending → running → success|failed`。
 - enqueue 持久化失败时必须补偿为 `pending → running → failed` 并记录错误，禁止留下悬挂 pending 节点。
 - `stage-runner.ts` 是显式应用编排器，可通过各领域公开入口组合 canvas/AI/storage；Drizzle 细节收口在 `runtime-repository.ts`，不得散落到 runner。
@@ -199,6 +209,7 @@ docs/  scripts/  public/
 - **设计 Token 违规**：是否散落硬编码 hex/rgba 颜色（应引用 token）；是否使用了已删除色（pink/indigo）；阴影是否统一用 `shadow-card`/`shadow-float`。
 - **图标违规**：是否使用了 Lucide 白名单外图标或 emoji；图标名是否用旧名（如 `plus-circle` 应为 `circle-plus`）。
 - **动效违规**：是否硬编码毫秒 / 贝塞尔或裸写 CSS `transition`/`animation`（应引用 `--duration-*`/`--ease-*` 或 `src/lib/motion` token）；是否手搓定时器动画绕过 `prefers-reduced-motion` 降级；是否重复实现 `collapsible-panel` 已有的收起 / 抽屉；motion 是否误入 shot 渲染管线。
+- **UI 字段真实性违规**：新增/修改的可见字段是否能指向真实 DB 列/artifact/API 响应；是否存在恒定假值（固定百分比、恒真 `checked`、无 `href` 的死链 chip）伪装成真实状态；Demo 占位字段是否显式标注；Skeleton 是否被用来掩盖固定假值而非覆盖真实异步窗口。
 
 ## Git Workflow
 
@@ -243,6 +254,7 @@ docs/  scripts/  public/
 - `docs/designs/2026-07-23-ui-design-handoff.md` — UI 设计交接（逐页规格 + 文案复用库）
 - `docs/conventions/` — 编码 / 架构 / Git 完整规范
 - `docs/designs/2026-07-23-design-system-inventory.md` — 设计系统清单（Token / 颜色 / 图标 / 组件 / 布局）
+- `docs/issues/known-issues.md` — **系统性打通修复清单（Track H）**：已发现的前后端脱节问题（Director 输入契约缺口、UI 字段真实性缺口等）按低耦合模块拆分的 Task 卡索引，施工前先查是否已有对应 issue
 - `next.config.ts` — Next.js 配置（全栈；原生 SQLite 与 `ffmpeg-static` 平台二进制保持 server external）
 - `src/lib/db/` — Drizzle + SQLite
 - `src/lib/determinism/` — 确定性守卫
