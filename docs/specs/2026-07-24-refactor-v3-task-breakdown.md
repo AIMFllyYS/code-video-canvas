@@ -232,7 +232,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   U+FFFD 与越界 staged path 扫描均为 0；最终只读审计 PASS；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n11)
 - [ ] **N1.2 Docker Postgres、Drizzle schema、约束与 tracked migration** —
-  `task_state=todo; status=ready; blocked_by=none`;
+  `task_state=in_progress; status=ready; blocked_by=none; preflight=636fb9b`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n12)
 - [ ] **N1.3 repository async 化与逐域 Postgres cutover** —
   `task_state=todo; status=blocked; blocked_by=N1.2`;
