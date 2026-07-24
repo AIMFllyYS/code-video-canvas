@@ -178,7 +178,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   stage，Task 精确路径 `diff --check` 通过）;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n01)
 - [ ] **N0.2 修复 Pi Tool 参数与 result details 提取** —
-  `task_state=todo; status=ready; blocked_by=none`;
+  `task_state=in_progress; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n02)
 - [ ] **N0.3 把 source/runtime 合同检查前移到 render enqueue** —
   `task_state=todo; status=ready; blocked_by=none`;
