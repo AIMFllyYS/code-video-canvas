@@ -8,6 +8,7 @@ describe('createCheckDeterminismTool', () => {
     })
 
     expect(result.details).toEqual({ ok: true, violations: [] })
+    expect(result.terminate).toBe(true)
   })
 
   it('returns violations without throwing', async () => {

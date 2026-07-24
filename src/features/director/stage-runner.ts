@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { getDb } from '@/lib/db/client'
 import { transitionNodeStatus } from '@/features/canvas/status'
 import { createDirectorSession, type DirectorSession, type DirectorTool } from './pi-session'
+import type { DirectorOutputPolicy } from './pi-output'
 import { DirectorRuntimeRepository, type DirectorStageContext } from './runtime-repository'
 import { buildStagePrompt } from './stage-prompt'
 import { commitStageResult } from './stage-result-committer'
@@ -82,6 +83,23 @@ type StageRunner = (
 
 export const MAX_GATE_RETRIES = 2
 
+const STAGE_OUTPUT: Record<PipelineStage, DirectorOutputPolicy> = {
+  INGEST: { kind: 'assistant-text' },
+  DIRECT: { kind: 'assistant-text' },
+  SHOT_SPEC: {
+    kind: 'validated-tool-argument',
+    toolName: 'validate_shot_plan',
+    argumentKey: 'shotPlan',
+  },
+  FABRICATE: {
+    kind: 'validated-tool-argument',
+    toolName: 'check_determinism',
+    argumentKey: 'source',
+  },
+  ASSEMBLE: { kind: 'assistant-text' },
+  FINALIZE: { kind: 'assistant-text' },
+}
+
 let defaultRunner: StageRunner | undefined
 
 /** 首次真正执行作业时才打开 SQLite，模块导入保持无副作用。 */
@@ -140,7 +158,7 @@ export function createStageRunner(
         kind: 'pi-session',
         storageKey: session.storageKey,
       })
-      const { rawText, prepared, artifact } = await generateValidatedArtifact({
+      const { displayText, prepared, artifact } = await generateValidatedArtifact({
         stage,
         context,
         session,
@@ -149,12 +167,11 @@ export function createStageRunner(
       })
       dependencies.commitResult(context, prepared, artifact)
       await dependencies.runStageEffect(context, prepared, artifact)
-      // 持久化已流出的全文（回退 result.text）为可回看日志，并收尾流。
       await dependencies.repository.persistStreamLog(
         projectId,
         nodeId,
         stage,
-        streamBus.getSnapshot(streamKey).text || rawText
+        displayText
       )
       streamBus.markDone(streamKey)
       await session.close()
@@ -227,7 +244,7 @@ async function generateValidatedArtifact(input: {
   initialPrompt: string
   dependencies: StageRunnerDependencies
 }): Promise<{
-  rawText: string
+  displayText: string
   prepared: PreparedStageResult
   artifact: ArtifactCommitResult
 }> {
@@ -237,13 +254,17 @@ async function generateValidatedArtifact(input: {
     const result = await input.session.run({
       prompt,
       tools: toolsForStage(input.stage),
+      output: STAGE_OUTPUT[input.stage],
     })
-    const prepared = input.dependencies.prepareResult(input.context, result.text)
+    const prepared = input.dependencies.prepareResult(
+      input.context,
+      result.artifactContent
+    )
     try {
       const artifact = await input.dependencies.writeArtifact(
         outputArtifact(input.context, prepared.content)
       )
-      return { rawText: result.text, prepared, artifact }
+      return { displayText: result.displayText, prepared, artifact }
     } catch (error) {
       if (
         !(error instanceof ArtifactValidationError) ||

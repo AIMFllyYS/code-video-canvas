@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDirectorSession, type DirectorTool } from './pi-session'
 import { PIPELINE_STAGES } from './types'
 
+const assistantOutput = { kind: 'assistant-text' } as const
+
 const mocks = vi.hoisted(() => {
   const appendMessage = vi.fn()
   const closeStore = vi.fn()
@@ -11,6 +13,7 @@ const mocks = vi.hoisted(() => {
   const createProvider = vi.fn(() => ({}))
   const resolveDirectorModelTarget = vi.fn()
   const agentInstances: MockAgent[] = []
+  const promptMessages: unknown[][] = []
 
   class MockAgent {
     readonly listeners: Array<(event: unknown) => Promise<void> | void> = []
@@ -45,7 +48,7 @@ const mocks = vi.hoisted(() => {
     }
 
     async prompt(prompt: string) {
-      const messages = [
+      const messages = promptMessages.shift() ?? [
         { role: 'user', content: [{ type: 'text', text: prompt }], timestamp: 2 },
         {
           role: 'assistant',
@@ -85,6 +88,7 @@ const mocks = vi.hoisted(() => {
     createProvider,
     resolveDirectorModelTarget,
     agentInstances,
+    promptMessages,
     MockAgent,
   }
 })
@@ -128,6 +132,7 @@ describe('createDirectorSession', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.agentInstances.length = 0
+    mocks.promptMessages.length = 0
     mocks.resolveDirectorModelTarget.mockReturnValue({
       provider: 'stepfun',
       baseUrl: 'https://api.stepfun.test/v1',
@@ -161,7 +166,11 @@ describe('createDirectorSession', () => {
       parameters: { type: 'object', properties: {}, additionalProperties: false },
       execute: vi.fn(async () => ({ content: 'ok', details: { ok: true } })),
     }
-    const result = await session.run({ prompt: '执行阶段', tools: [tool] })
+    const result = await session.run({
+      prompt: '执行阶段',
+      tools: [tool],
+      output: assistantOutput,
+    })
 
     const agent = mocks.agentInstances[0]!
     expect(agent.state.messages[0]).toMatchObject({ role: 'user' })
@@ -170,7 +179,11 @@ describe('createDirectorSession', () => {
       'user',
       'assistant',
     ])
-    expect(result.text).toBe('完成')
+    expect(result).toEqual({
+      artifactContent: '完成',
+      displayText: '完成',
+      provenance: { kind: 'assistant-text', timestamp: 3 },
+    })
     expect(Object.keys(session).sort()).toEqual(['close', 'id', 'run', 'storageKey'])
     expect(agent.state.systemPrompt).not.toContain('Skill')
   })
@@ -202,7 +215,7 @@ describe('createDirectorSession', () => {
       nodeId: 'node-1',
       stage: 'INGEST',
     })
-    await session.run({ prompt: '执行阶段' })
+    await session.run({ prompt: '执行阶段', output: assistantOutput })
 
     expect(mocks.publish.mock.calls).toEqual([
       ['project-1:node-1', '完'],
@@ -245,6 +258,143 @@ describe('createDirectorSession', () => {
       })
     )
     await session.close()
+  })
+
+  it('separates validated Tool arguments from display text and omits thinking from storage', async () => {
+    mocks.promptMessages.push([
+      {
+        role: 'user',
+        content: [{ type: 'text', text: '执行阶段' }],
+        timestamp: 2,
+      },
+      {
+        role: 'assistant',
+        content: [
+          { type: 'thinking', thinking: '不得持久化的隐藏推理' },
+          {
+            type: 'toolCall',
+            id: 'call-1',
+            name: 'validate_shot_plan',
+            arguments: { shotPlan: { schemaVersion: 1, shots: [] } },
+          },
+        ],
+        timestamp: 3,
+        stopReason: 'toolUse',
+        usage: {},
+      },
+      {
+        role: 'toolResult',
+        toolCallId: 'call-1',
+        toolName: 'validate_shot_plan',
+        content: [{ type: 'text', text: '{"ok":true}' }],
+        details: { ok: true },
+        isError: false,
+        timestamp: 4,
+      },
+      {
+        role: 'assistant',
+        content: [{ type: 'text', text: '完成' }],
+        timestamp: 5,
+        stopReason: 'stop',
+        usage: {},
+      },
+    ])
+    const session = await createDirectorSession({
+      projectId: 'project-1',
+      nodeId: 'node-1',
+      stage: 'SHOT_SPEC',
+    })
+
+    const result = await session.run({
+      prompt: '执行阶段',
+      output: {
+        kind: 'validated-tool-argument',
+        toolName: 'validate_shot_plan',
+        argumentKey: 'shotPlan',
+      },
+    })
+
+    expect(result).toEqual({
+      artifactContent: '{"schemaVersion":1,"shots":[]}',
+      displayText: '完成',
+      provenance: {
+        kind: 'tool-argument',
+        toolName: 'validate_shot_plan',
+        toolCallId: 'call-1',
+      },
+    })
+    expect(JSON.stringify(mocks.appendMessage.mock.calls)).not.toContain(
+      '不得持久化的隐藏推理'
+    )
+  })
+
+  it('does not reuse a successful Tool result from restored history', async () => {
+    mocks.buildContext.mockResolvedValueOnce({
+      messages: [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'toolCall',
+              id: 'old-call',
+              name: 'validate_shot_plan',
+              arguments: { shotPlan: { stale: true } },
+            },
+          ],
+        },
+        {
+          role: 'toolResult',
+          toolCallId: 'old-call',
+          toolName: 'validate_shot_plan',
+          content: [{ type: 'text', text: '{"ok":true}' }],
+          details: { ok: true },
+          isError: false,
+        },
+      ],
+    })
+    mocks.promptMessages.push([
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'toolCall',
+            id: 'new-call',
+            name: 'validate_shot_plan',
+            arguments: { shotPlan: { current: true } },
+          },
+        ],
+      },
+      {
+        role: 'toolResult',
+        toolCallId: 'new-call',
+        toolName: 'validate_shot_plan',
+        content: [{ type: 'text', text: '{"ok":false}' }],
+        details: { ok: false },
+        isError: false,
+      },
+      {
+        role: 'assistant',
+        content: [{ type: 'text', text: '仍然完成' }],
+      },
+    ])
+    const session = await createDirectorSession({
+      projectId: 'project-1',
+      nodeId: 'node-1',
+      stage: 'SHOT_SPEC',
+    })
+
+    await expect(
+      session.run({
+        prompt: '执行阶段',
+        output: {
+          kind: 'validated-tool-argument',
+          toolName: 'validate_shot_plan',
+          argumentKey: 'shotPlan',
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'DIRECTOR_TOOL_OUTPUT_MISSING',
+    })
   })
 
   it('fails explicitly instead of falling back when the selected provider has no key', async () => {

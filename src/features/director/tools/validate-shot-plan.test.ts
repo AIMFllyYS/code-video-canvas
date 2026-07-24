@@ -42,7 +42,7 @@ describe('createValidateShotPlanTool', () => {
     const result = await createValidateShotPlanTool().execute({ shotPlan: validShotPlan })
 
     expect(result.details).toMatchObject({ ok: true, shotCount: 1 })
-    expect(result.terminate).toBeUndefined()
+    expect(result.terminate).toBe(true)
   })
 
   it('returns structured issues for an invalid shot plan', async () => {

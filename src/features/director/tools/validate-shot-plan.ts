@@ -44,6 +44,7 @@ export function createValidateShotPlanTool(): DirectorTool {
       return {
         content: JSON.stringify({ ok: true, shotCount: validation.value.shots.length }),
         details: { ok: true, shotCount: validation.value.shots.length },
+        terminate: true,
       }
     },
   }

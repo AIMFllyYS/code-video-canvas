@@ -45,7 +45,7 @@ export function createCheckDeterminismTool(): DirectorTool {
       return {
         content: JSON.stringify(details),
         details,
-        terminate: details.ok ? undefined : false,
+        terminate: details.ok,
       }
     },
   }

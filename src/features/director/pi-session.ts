@@ -20,6 +20,11 @@ import {
 } from '@/features/ai/model-routing'
 import { streamBus } from '@/lib/stream/stream-bus'
 import { STAGE_META } from './pipeline'
+import {
+  extractDirectorOutput,
+  type DirectorOutput,
+  type DirectorOutputPolicy,
+} from './pi-output'
 import { DirectorSessionStore, type SessionStoreInput } from './session-store'
 import type { PipelineStage } from './types'
 
@@ -41,11 +46,12 @@ export interface DirectorTool {
 export interface DirectorRunInput {
   prompt: string
   tools?: readonly DirectorTool[]
+  output: DirectorOutputPolicy
 }
 
-export interface DirectorRunResult {
-  text: string
-}
+// 保留施工合同规定的命名接口，供调用方稳定引用。
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface DirectorRunResult extends DirectorOutput {}
 
 export interface DirectorSession {
   id: string
@@ -88,7 +94,7 @@ export async function createDirectorSession(
           lastText = text
         }
       } else if (event.type === 'message_end') {
-        await stored.session.appendMessage(event.message)
+        await stored.session.appendMessage(withoutHiddenThinking(event.message))
       }
     })
     return wrapSession(stored.id, stored.storageKey, agent, store, unsubscribe)
@@ -112,10 +118,14 @@ function wrapSession(
     async run(input) {
       if (closed) throw new Error('DirectorSession 已关闭')
       agent.state.tools = (input.tools ?? []).map(adaptDirectorTool)
+      const messageStart = agent.state.messages.length
       await agent.prompt(input.prompt)
       await agent.waitForIdle()
       if (agent.state.errorMessage) throw new Error(agent.state.errorMessage)
-      return { text: lastAssistantText(agent.state.messages) }
+      return extractDirectorOutput(
+        agent.state.messages.slice(messageStart),
+        input.output
+      )
     },
     async close() {
       if (closed) return
@@ -256,14 +266,10 @@ function messageText(message: AgentMessage): string {
     .join('')
 }
 
-function lastAssistantText(messages: AgentMessage[]): string {
-  const message = [...messages].reverse().find((item) => item.role === 'assistant')
-  if (!message || message.role !== 'assistant') {
-    throw new Error('Director 未返回 assistant 消息')
+function withoutHiddenThinking(message: AgentMessage): AgentMessage {
+  if (message.role !== 'assistant') return message
+  return {
+    ...message,
+    content: message.content.filter((item) => item.type !== 'thinking'),
   }
-  return message.content
-    .filter((item) => item.type === 'text')
-    .map((item) => item.text)
-    .join('')
-    .trim()
 }

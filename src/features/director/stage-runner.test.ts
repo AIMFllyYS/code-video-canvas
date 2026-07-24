@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createStageRunner } from './stage-runner'
+import type { DirectorRunResult } from './pi-session'
 import type { DirectorStageContext } from './runtime-repository'
 import { ArtifactValidationError } from './tools/write-artifact'
 
@@ -17,11 +18,22 @@ const context: DirectorStageContext = {
   resumeSessionKey: undefined,
 }
 
+function directorResult(
+  artifactContent: string,
+  displayText = artifactContent
+): DirectorRunResult {
+  return {
+    artifactContent,
+    displayText,
+    provenance: { kind: 'assistant-text' },
+  }
+}
+
 function createHarness(
-  run: (input: unknown) => Promise<{ text: string }> = vi.fn(
+  run: (input: unknown) => Promise<DirectorRunResult> = vi.fn(
     async (input: unknown) => {
       void input
-      return { text: '阶段产出' }
+      return directorResult('业务产物', '展示完成')
     }
   )
 ) {
@@ -111,24 +123,70 @@ describe('createStageRunner', () => {
       expect.objectContaining({
         projectId: 'project-1',
         nodeId: 'node-1',
-        content: '阶段产出',
+        content: '业务产物',
         validation: 'non-empty',
       })
     )
+    expect(harness.session.run).toHaveBeenCalledWith({
+      prompt: '类型化阶段提示词',
+      tools: [],
+      output: { kind: 'assistant-text' },
+    })
     expect(harness.repository.persistStreamLog).toHaveBeenCalledTimes(1)
     expect(harness.runStageEffect).toHaveBeenCalledWith(
       context,
-      { content: '阶段产出' },
+      { content: '业务产物' },
       { id: 'artifact-1', storageKey: 'director/output.txt', contentHash: 'hash' }
     )
     expect(harness.repository.persistStreamLog).toHaveBeenCalledWith(
       'project-1',
       'node-1',
       'INGEST',
-      '阶段产出'
+      '展示完成'
     )
     expect(harness.advancePipeline).toHaveBeenCalledWith('project-1', 'node-1')
   })
+
+  it.each([
+    ['INGEST', 'script-import', { kind: 'assistant-text' }],
+    ['DIRECT', 'shot-split', { kind: 'assistant-text' }],
+    [
+      'SHOT_SPEC',
+      'shot-script',
+      {
+        kind: 'validated-tool-argument',
+        toolName: 'validate_shot_plan',
+        argumentKey: 'shotPlan',
+      },
+    ],
+    [
+      'FABRICATE',
+      'shot-codegen',
+      {
+        kind: 'validated-tool-argument',
+        toolName: 'check_determinism',
+        argumentKey: 'source',
+      },
+    ],
+    ['ASSEMBLE', 'score', { kind: 'assistant-text' }],
+    ['FINALIZE', 'export', { kind: 'assistant-text' }],
+  ] as const)(
+    'passes the explicit %s output policy to every invocation',
+    async (stage, nodeType, output) => {
+      const harness = createHarness()
+      harness.repository.loadStageContext.mockReturnValue({
+        ...context,
+        stage,
+        nodeType,
+      })
+
+      await harness.runner('project-1', 'node-1', stage)
+
+      expect(harness.session.run).toHaveBeenCalledWith(
+        expect.objectContaining({ output })
+      )
+    }
+  )
 
   it('keeps the session pointer and records failures without leaving running state', async () => {
     const harness = createHarness(
@@ -238,9 +296,9 @@ describe('createStageRunner', () => {
       stage: 'FABRICATE',
     })
     harness.session.run
-      .mockResolvedValueOnce({ text: '<html>违规一</html>' })
-      .mockResolvedValueOnce({ text: '<html>违规二</html>' })
-      .mockResolvedValueOnce({ text: '<html>合格</html>' })
+      .mockResolvedValueOnce(directorResult('<html>违规一</html>'))
+      .mockResolvedValueOnce(directorResult('<html>违规二</html>'))
+      .mockResolvedValueOnce(directorResult('<html>合格</html>'))
     harness.writeArtifact
       .mockImplementationOnce(async () => {
         harness.calls.push('artifact')
@@ -262,11 +320,21 @@ describe('createStageRunner', () => {
     expect(harness.session.run.mock.calls[1]?.[0]).toEqual(
       expect.objectContaining({
         prompt: expect.stringContaining('set-interval@457'),
+        output: {
+          kind: 'validated-tool-argument',
+          toolName: 'check_determinism',
+          argumentKey: 'source',
+        },
       })
     )
     expect(harness.session.run.mock.calls[2]?.[0]).toEqual(
       expect.objectContaining({
         prompt: expect.stringContaining('date-now@99'),
+        output: {
+          kind: 'validated-tool-argument',
+          toolName: 'check_determinism',
+          argumentKey: 'source',
+        },
       })
     )
     expect(harness.calls.filter((call) => call === 'commit')).toHaveLength(1)
@@ -320,6 +388,11 @@ describe('createStageRunner', () => {
     expect(harness.session.run.mock.calls[1]?.[0]).toEqual(
       expect.objectContaining({
         prompt: expect.stringContaining('完整 JSON'),
+        output: {
+          kind: 'validated-tool-argument',
+          toolName: 'validate_shot_plan',
+          argumentKey: 'shotPlan',
+        },
       })
     )
   })
