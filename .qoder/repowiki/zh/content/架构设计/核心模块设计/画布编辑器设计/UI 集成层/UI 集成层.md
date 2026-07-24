@@ -1,4 +1,4 @@
-# UI 集成层
+# 集成层
 
 <cite>
 **本文引用的文件**   
@@ -18,6 +18,12 @@
 - [src/components/ui/top-bar.tsx](file://src/components/ui/top-bar.tsx)
 </cite>
 
+## 更新摘要
+**所做更改**   
+- 将文档标题从"UI 集成层"更新为"集成层"
+- 简化了文档命名约定，使知识库更加一致
+- 保持了相同的内容结构和组织方式
+
 ## 目录
 1. [简介](#简介)
 2. [项目结构](#项目结构)
@@ -34,7 +40,7 @@
 本文件面向画布编辑器的 UI 集成层，聚焦页面组件的架构设计与交互模式，覆盖 CanvasPage 主容器、CanvasView 渲染视图与 Sidebar 侧边栏的组合方式；深入解析 FlowElements 可视化元素的实现（SVG 渲染、事件处理、动画效果）；阐述状态同步机制（React 状态与画布数据绑定、实时更新与性能优化）；并给出拖拽交互、选择高亮、上下文菜单等用户交互的实现细节与最佳实践。同时提供组件组合模式与样式定制指南，帮助读者快速理解并扩展该集成层。
 
 ## 项目结构
-UI 集成层位于应用路由 /canvas 下，采用“页面容器 + 视图 + 侧边栏”的分层组织：
+UI 集成层位于应用路由 /canvas 下，采用"页面容器 + 视图 + 侧边栏"的分层组织：
 - 页面容器：负责加载、布局与全局状态装配
 - 视图层：承载画布渲染与交互
 - 侧边栏：承载属性检查器、工具面板等
@@ -73,7 +79,7 @@ C --> J
 C --> K
 ```
 
-图表来源
+**图表来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/layout.tsx](file://src/app/canvas/layout.tsx)
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
@@ -86,7 +92,7 @@ C --> K
 - [src/features/canvas/queries.ts](file://src/features/canvas/queries.ts)
 - [src/features/canvas/layout.ts](file://src/features/canvas/layout.ts)
 
-章节来源
+**章节来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/layout.tsx](file://src/app/canvas/layout.tsx)
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
@@ -113,14 +119,14 @@ C --> K
   - 职责：以 SVG 形式绘制节点与连线，封装拖拽、选中、悬停、动画等交互
   - 关键点：SVG 变换矩阵、路径计算、事件代理、动画队列
 
-章节来源
+**章节来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/canvas-sidebar.tsx](file://src/app/canvas/canvas-sidebar.tsx)
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 
 ## 架构总览
-UI 集成层遵循“容器-视图-特性域”分层：
+UI 集成层遵循"容器-视图-特性域"分层：
 - 容器层（page/layout）负责装配与生命周期
 - 视图层（canvas-view/sidebar/inspector/loader）负责 UI 呈现与交互
 - 特性域（types/actions/queries/layout）提供领域模型、命令与查询、布局算法
@@ -153,7 +159,7 @@ S->>V : 请求选中项详情
 V-->>S : 返回选中项
 ```
 
-图表来源
+**图表来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/canvas-sidebar.tsx](file://src/app/canvas/canvas-sidebar.tsx)
@@ -185,12 +191,12 @@ DataReady -- "是" --> MountViews["挂载 CanvasView 与 Sidebar"]
 MountViews --> End(["渲染完成"])
 ```
 
-图表来源
+**图表来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/canvas-loader.tsx](file://src/app/canvas/canvas-loader.tsx)
 - [src/features/canvas/queries.ts](file://src/features/canvas/queries.ts)
 
-章节来源
+**章节来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/canvas-loader.tsx](file://src/app/canvas/canvas-loader.tsx)
 - [src/features/canvas/queries.ts](file://src/features/canvas/queries.ts)
@@ -233,11 +239,11 @@ class FlowElements {
 CanvasView --> FlowElements : "渲染与事件分发"
 ```
 
-图表来源
+**图表来源**
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 
-章节来源
+**章节来源**
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 
@@ -259,12 +265,12 @@ I->>V : 提交属性变更
 V->>V : 更新状态并重绘
 ```
 
-图表来源
+**图表来源**
 - [src/app/canvas/canvas-sidebar.tsx](file://src/app/canvas/canvas-sidebar.tsx)
 - [src/app/canvas/canvas-inspector.tsx](file://src/app/canvas/canvas-inspector.tsx)
 - [src/components/ui/top-bar.tsx](file://src/components/ui/top-bar.tsx)
 
-章节来源
+**章节来源**
 - [src/app/canvas/canvas-sidebar.tsx](file://src/app/canvas/canvas-sidebar.tsx)
 - [src/app/canvas/canvas-inspector.tsx](file://src/app/canvas/canvas-inspector.tsx)
 - [src/components/ui/top-bar.tsx](file://src/components/ui/top-bar.tsx)
@@ -297,11 +303,11 @@ Up --> Commit["提交动作(actions)"]
 Commit --> Render["触发重绘/动画"]
 ```
 
-图表来源
+**图表来源**
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 - [src/features/canvas/actions.ts](file://src/features/canvas/actions.ts)
 
-章节来源
+**章节来源**
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 - [src/features/canvas/actions.ts](file://src/features/canvas/actions.ts)
 
@@ -333,7 +339,7 @@ Layout --> View
 View --> FE["FlowElements<br/>渲染/交互"]
 ```
 
-图表来源
+**图表来源**
 - [src/features/canvas/types.ts](file://src/features/canvas/types.ts)
 - [src/features/canvas/actions.ts](file://src/features/canvas/actions.ts)
 - [src/features/canvas/queries.ts](file://src/features/canvas/queries.ts)
@@ -341,7 +347,7 @@ View --> FE["FlowElements<br/>渲染/交互"]
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 
-章节来源
+**章节来源**
 - [src/features/canvas/types.ts](file://src/features/canvas/types.ts)
 - [src/features/canvas/actions.ts](file://src/features/canvas/actions.ts)
 - [src/features/canvas/queries.ts](file://src/features/canvas/queries.ts)
@@ -367,7 +373,7 @@ View --> FE["FlowElements<br/>渲染/交互"]
   - 快捷键：Ctrl+Z / Ctrl+Shift+Z 触发回滚/重放
   - 批量操作：合并多次变更为一个事务，减少历史栈膨胀
 
-章节来源
+**章节来源**
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 - [src/features/canvas/actions.ts](file://src/features/canvas/actions.ts)
@@ -383,7 +389,7 @@ View --> FE["FlowElements<br/>渲染/交互"]
   - 连线样式：支持虚线/实线、颜色、粗细、箭头形状等配置
   - 响应式：侧边栏宽度、网格密度、字体大小随屏幕尺寸自适应
 
-章节来源
+**章节来源**
 - [src/app/canvas/canvas-sidebar.tsx](file://src/app/canvas/canvas-sidebar.tsx)
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 - [src/components/ui/sidebar.tsx](file://src/components/ui/sidebar.tsx)
@@ -415,7 +421,7 @@ FE --> Actions
 FE --> Queries
 ```
 
-图表来源
+**图表来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/canvas-sidebar.tsx](file://src/app/canvas/canvas-sidebar.tsx)
@@ -425,7 +431,7 @@ FE --> Queries
 - [src/features/canvas/queries.ts](file://src/features/canvas/queries.ts)
 - [src/features/canvas/layout.ts](file://src/features/canvas/layout.ts)
 
-章节来源
+**章节来源**
 - [src/app/canvas/page.tsx](file://src/app/canvas/page.tsx)
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/canvas-sidebar.tsx](file://src/app/canvas/canvas-sidebar.tsx)
@@ -450,8 +456,6 @@ FE --> Queries
   - 优先使用 transform 与 opacity 等合成属性
   - 避免在动画中触发布局抖动（reflow）
 
-[本节为通用指导，无需特定文件来源]
-
 ## 故障排查指南
 - 常见问题
   - 拖拽卡顿：检查是否在主线程中进行复杂计算，建议拆分任务或使用 Web Worker
@@ -463,15 +467,13 @@ FE --> Queries
   - 在 actions 中记录动作序列，便于回放与对比
   - 使用浏览器性能面板分析重绘与布局开销
 
-章节来源
+**章节来源**
 - [src/app/canvas/canvas-view.tsx](file://src/app/canvas/canvas-view.tsx)
 - [src/app/canvas/flow-elements.tsx](file://src/app/canvas/flow-elements.tsx)
 - [src/features/canvas/actions.ts](file://src/features/canvas/actions.ts)
 
 ## 结论
 UI 集成层通过清晰的容器-视图-特性域分层，实现了可扩展、高性能的画布编辑器界面。CanvasPage 负责装配与生命周期，CanvasView 承载核心交互，Sidebar 提供属性与工具面板，FlowElements 则统一了可视化元素的渲染与交互。借助类型契约、动作与查询的解耦设计，系统具备良好的可维护性与可测试性。结合本文提供的交互细节、性能优化与样式定制指南，开发者可以快速扩展新的节点类型、交互行为与主题风格。
-
-[本节为总结性内容，无需特定文件来源]
 
 ## 附录
 - 术语
@@ -483,5 +485,3 @@ UI 集成层通过清晰的容器-视图-特性域分层，实现了可扩展、
 - 参考文件
   - 类型与动作：见 features/canvas 下的 types.ts、actions.ts、queries.ts、layout.ts
   - 视图与容器：见 app/canvas 下的 page.tsx、layout.tsx、canvas-view.tsx、canvas-sidebar.tsx、canvas-inspector.tsx、canvas-loader.tsx、flow-elements.tsx
-
-[本节为补充说明，无需特定文件来源]

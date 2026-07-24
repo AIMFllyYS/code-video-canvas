@@ -3,7 +3,7 @@ schema_version: 1
 locale: zh-CN
 branch: main
 nodes_managed: true
-exported_at: "2026-07-24T11:42:13Z"
+exported_at: "2026-07-24T12:07:56Z"
 modules:
     "":
         dir_name: CodeVideoCanvas 视频创作平台（Next.js 全栈应用）
