@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { StepfunAdapter } from './stepfun-adapter'
+import { StepfunAdapter, validateKey } from './stepfun-adapter'
 
 const { createMock, openAiConstructorMock } = vi.hoisted(() => ({
   createMock: vi.fn().mockResolvedValue({
@@ -11,8 +11,16 @@ const { createMock, openAiConstructorMock } = vi.hoisted(() => ({
 vi.mock('server-only', () => ({}))
 
 vi.mock('openai', () => {
+  class MockAPIError extends Error {
+    readonly status?: number
+    constructor(message: string, status?: number) {
+      super(message)
+      this.status = status
+    }
+  }
   return {
     default: class MockOpenAI {
+      static readonly APIError = MockAPIError
       readonly chat = { completions: { create: createMock } }
 
       constructor(options: unknown) {
@@ -89,6 +97,64 @@ describe('StepfunAdapter', () => {
       expect.objectContaining({
         model: 'step-3.5-flash',
       })
+    )
+  })
+})
+
+describe('validateKey', () => {
+  const originalEnv = { ...process.env }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    process.env = { ...originalEnv }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('should return true when the chat probe succeeds', async () => {
+    await expect(validateKey('sk-valid')).resolves.toBe(true)
+  })
+
+  it('should return false and log server-side without leaking the key when the probe fails', async () => {
+    createMock.mockRejectedValueOnce(new Error('boom'))
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await expect(validateKey('sk-super-secret')).resolves.toBe(false)
+
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    const logged = JSON.stringify(errorSpy.mock.calls[0])
+    expect(logged).not.toContain('sk-super-secret')
+
+    errorSpy.mockRestore()
+  })
+
+  it('should probe with a minimal chat completion using the default model', async () => {
+    delete process.env.STEPFUN_CHAT_MODEL
+
+    await validateKey('test-key')
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'step-3.5-flash',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'ping' }],
+      }),
+      expect.anything()
+    )
+  })
+
+  it('should respect STEPFUN_CHAT_MODEL when probing', async () => {
+    process.env.STEPFUN_CHAT_MODEL = 'env-model'
+
+    await validateKey('test-key')
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'env-model',
+      }),
+      expect.anything()
     )
   })
 })

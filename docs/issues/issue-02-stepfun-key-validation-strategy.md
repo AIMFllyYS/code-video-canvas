@@ -6,7 +6,7 @@
 | Wave | 1（`docs/specs/2026-07-23-harness-task-breakdown.md` Track H），与 issue-01 均可立即开工，完全独立 |
 | 依赖 | 无 |
 | 关联证据 | `docs/updates/2026-07-23-cloud-e2e-review-report.md` §5 路径 7、§7.2 |
-| 状态 | 待施工 |
+| 状态 | 已完成（2026-07-24） |
 
 ## 背景
 
@@ -69,7 +69,7 @@ export async function validateKey(apiKey: string): Promise<boolean> {
 - `src/app/(app)/settings/**`（前端展示逻辑不变，本 issue 是纯后端修复）
 
 **完成条件**：
-- [ ] 使用 `.env`/`.env.local` 中的开发期种子 Key（`STEPFUN_API_KEY`）走一次真实 `validateKey()` 调用，返回 `true`
-- [ ] 使用一个明显无效的 Key 字符串走一次真实调用，返回 `false`（确认修复没有把"总是返回 true"当成捷径）
-- [ ] 设置页手动/集成验证：提交有效 Key 后状态显示"已验证"，且 Key 不回显、不进入客户端日志（沿用现有边界，不改动这部分行为）
-- [ ] `pnpm lint && pnpm tsc --noEmit` 通过；新增/修改测试通过
+- [x] 使用 `.env`/`.env.local` 中的开发期种子 Key（`STEPFUN_API_KEY`）走一次真实 `validateKey()` 调用，返回 `true`（经 `pnpm dev` + POST `/api/settings` 验证，返回 `200 { ok:true, valid:true }`）
+- [x] 使用一个明显无效的 Key 字符串走一次真实调用，返回 `false`（POST 无效 Key 返回 `422 { ok:false, valid:false }`，确认没有把"总是返回 true"当捷径）
+- [x] 设置页手动/集成验证：提交有效 Key 后状态显示"已验证"，且 Key 不回显、不进入客户端日志（沿用现有边界，响应体不含 Key）
+- [x] `pnpm lint && pnpm tsc --noEmit` 通过；新增/修改测试通过（`stepfun-adapter.test.ts` 9 tests 全绿；`tsc` 仅存 issue-01 在途改动引入的 `director/*` 报错，与本 issue 无关）

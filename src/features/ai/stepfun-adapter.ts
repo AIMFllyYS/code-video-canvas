@@ -27,12 +27,23 @@ function createClient(apiKey: string): OpenAI {
   return new OpenAI({ apiKey, baseURL: baseUrl })
 }
 
-/** 校验 Key 是否可用（尝试拉取模型列表）。 */
+/** 校验 Key 是否可用（用与真实对话一致的最小 chat 探测）。 */
 export async function validateKey(apiKey: string): Promise<boolean> {
   try {
-    await createClient(apiKey).models.list()
+    await createClient(apiKey).chat.completions.create(
+      {
+        model: process.env.STEPFUN_CHAT_MODEL ?? 'step-3.5-flash',
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 1,
+      },
+      { timeout: 15_000, maxRetries: 0 },
+    )
     return true
-  } catch {
+  } catch (error) {
+    // 仅服务端日志用于排障：不回显给客户端、不写入会被提交的文件、绝不含 Key
+    const status = error instanceof OpenAI.APIError ? error.status : undefined
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('[stepfun] validateKey 失败', { status, message })
     return false
   }
 }
