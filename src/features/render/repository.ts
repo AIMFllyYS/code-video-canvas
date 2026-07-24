@@ -5,7 +5,8 @@ import { z } from 'zod'
 import { getDb } from '@/lib/db/client'
 import type { Db } from '@/lib/db/migrate'
 import { artifacts, canvasNodes, projects } from '@/lib/db/schema'
-import type { RenderJob } from './types'
+import { FRAME_THUMBNAIL_KIND, thumbnailOutputPath } from './types'
+import type { RenderJob, ThumbnailArtifactRecord, ThumbnailContext } from './types'
 
 const renderSpecSchema = z
   .object({
@@ -155,6 +156,73 @@ export class RenderRepository {
         id,
         projectId: input.projectId,
         kind: 'final-mp4',
+        path: input.outputKey,
+        contentHash: input.contentHash,
+      })
+      .run()
+    return id
+  }
+
+  /** 加载已成功渲染分镜的缩略图生成上下文（HTML key + 渲染规格）。 */
+  loadCompletedThumbnailContext(projectId: string, nodeId: string): ThumbnailContext {
+    const node = this.getRenderNode(projectId, nodeId)
+    if (node.status !== 'success') {
+      throw new Error(`该分镜尚未渲染成功，无法生成缩略图：${node.status}`)
+    }
+    const spec = this.parseRenderSpec(node.data)
+    return {
+      projectId,
+      nodeId,
+      htmlKey: this.requireFabricateArtifact(projectId, nodeId),
+      frames: {
+        fps: spec.fps,
+        durationInFrames: spec.durationInFrames,
+        width: spec.width,
+        height: spec.height,
+      },
+    }
+  }
+
+  /** 查找已登记的缩略图 artifact（sourceKey + frame 唯一寻址）；不存在返回 null。 */
+  findThumbnail(
+    projectId: string,
+    nodeId: string,
+    sourceKey: string,
+    frame: number
+  ): ThumbnailArtifactRecord | null {
+    const path = thumbnailOutputPath(projectId, nodeId, sourceKey, frame)
+    const row = this.db
+      .select({ id: artifacts.id, path: artifacts.path, contentHash: artifacts.contentHash })
+      .from(artifacts)
+      .where(
+        and(
+          eq(artifacts.projectId, projectId),
+          eq(artifacts.nodeId, nodeId),
+          eq(artifacts.kind, FRAME_THUMBNAIL_KIND),
+          eq(artifacts.path, path)
+        )
+      )
+      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
+      .get()
+    if (!row || !row.contentHash) return null
+    return { artifactId: row.id, path: row.path, contentHash: row.contentHash }
+  }
+
+  /** 登记已由可信调用方提交到 StorageAdapter 的内容寻址缩略图 PNG。 */
+  registerThumbnail(input: {
+    projectId: string
+    nodeId: string
+    outputKey: string
+    contentHash: string
+  }): string {
+    const id = randomUUID()
+    this.db
+      .insert(artifacts)
+      .values({
+        id,
+        projectId: input.projectId,
+        nodeId: input.nodeId,
+        kind: FRAME_THUMBNAIL_KIND,
         path: input.outputKey,
         contentHash: input.contentHash,
       })

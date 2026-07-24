@@ -63,6 +63,7 @@ export async function readArtifact(
 export function artifactContentType(kind: string): string {
   if (kind.endsWith('mp4')) return 'video/mp4'
   if (kind === 'director-fabricate') return 'text/html; charset=utf-8'
+  if (kind === 'frame-thumbnail') return 'image/png'
   if (kind.includes('json') || kind === 'director-shot-spec') {
     return 'application/json; charset=utf-8'
   }
