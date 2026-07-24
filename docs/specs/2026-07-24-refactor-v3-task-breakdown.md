@@ -232,7 +232,11 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   U+FFFD 与越界 staged path 扫描均为 0；最终只读审计 PASS；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n11)
 - [ ] **N1.2 Docker Postgres、Drizzle schema、约束与 tracked migration** —
-  `task_state=in_progress; status=ready; blocked_by=none; preflight=636fb9b`;
+  `task_state=in_progress; status=ready; blocked_by=none; preflight=636fb9b; scope_doc=ebe6fa0`;
+  environment=`degraded`：现有 pnpm store 的写入审批因平台用量限制被拒绝，
+  `package.json/pnpm-lock.yaml` 保持不变；Docker Desktop daemon 停止且启动需要
+  sandbox 外权限。继续执行无需外部写入的 RED/schema/compose 工作，PG live gate
+  到达时若仍不可用则保持明确 blocker，不伪造 GREEN；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n12)
 - [ ] **N1.3 repository async 化与逐域 Postgres cutover** —
   `task_state=todo; status=blocked; blocked_by=N1.2`;
