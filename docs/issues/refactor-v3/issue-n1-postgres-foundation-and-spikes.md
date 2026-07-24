@@ -765,6 +765,12 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 - Create: `scripts/migration/import-postgres.ts`
 - Create: `scripts/migration/reconcile-postgres.ts`
 - Create: `docs/evidence/refactor-v3/n1/import-reconciliation.md`
+- Create (generated): `src/lib/db/migrations/pg/0001_*.sql`
+- Create (generated): `src/lib/db/migrations/pg/meta/0001_snapshot.json`
+- Modify (generated): `src/lib/db/migrations/pg/meta/_journal.json`
+- Modify: `src/lib/db/schema/ai.ts`
+- Modify: `src/features/credentials/provider-credential-store.ts`
+- Modify: `src/features/credentials/provider-credential-store.pg.test.ts`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/export/manifest.json`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/export/*.jsonl`
 - Create (runtime output, local evidence only): `.data/legacy-sqlite-archives/baseline-before-postgres/reconciliation.json`
@@ -783,7 +789,7 @@ Legacy → v3 映射固定如下，importer 不得临场猜测：
 | node stage | 忽略 legacy nullable stage；按 `script-import→INGEST`、`shot-split→DIRECT`、`shot-script→SHOT_SPEC`、`shot-codegen→FABRICATE`、`shot-sfx/shot-subtitle/score→ASSEMBLE`、`shot-qa/export→FINALIZE` | shot lane 缺 lane key → `missing-lane-key` |
 | node identity/data | global logical key=`global:<type>`；shot logical key=`shot:<laneKey>:<type>`；坐标转数值列；data 包为 `{schemaVersion:1,payload,migration:{legacyStage}}`；`revision=0` | 非法坐标/JSON → `invalid-node-data` |
 | edge | project/source/target 均先 UUIDv5 映射，再验证同 workspace/project endpoint | `missing-source|missing-target|cross-project-endpoint` |
-| setting credential | `stepfun_api_key|gemini_api_key` 加密进入共享 `provider_credentials` | 空值/加密失败 → 整体 export/import fail closed |
+| setting credential | `stepfun_api_key|gemini_api_key` 加密进入共享 `provider_credentials`；legacy 没有 provider 验证证据，故 `verified_at=null`，API 显示 configured 但 unverified | 空值/加密失败 → 整体 export/import fail closed |
 | AI route settings | `project-plan←shot-split`、`shot-spec←shot-script`、`fabricate←shot-codegen`、`vision-qa←shot-qa`；provider/model 只取 export manifest 的 `resolvedRoutesV1` | 不能唯一贡献 route → `unused-route-setting` |
 | media route settings | `stepfun_tts_model→tts`、`stepfun_asr_model→asr`，provider 固定 `stepfun` | 非法/空值 → `invalid-setting-value` |
 | 其他 setting | 不重建通用 KV 表，不保存原值 | `unsupported-setting` |
@@ -836,6 +842,7 @@ export const LEGACY_ROUTE_DEFAULTS_V1 = {
 - 一个有 project 的 legacy job 和一个无 project 的 legacy job；
 - 一个真实 artifact 文件与一个缺失 artifact 指针；
 - 同 aggregate/kind 的两条历史 artifact；
+- 同一 node 上 artifact 之前有两个候选 job，以及一个没有候选 job 的 artifact；
 - 一个 nullable/mismatched stage node 与一个悬空 edge；
 - 一个 StepFun secret setting 与一个普通 setting；
 - 第二次 import；
@@ -846,14 +853,18 @@ export const LEGACY_ROUTE_DEFAULTS_V1 = {
 - 同一 legacy string ID 永远映射到同一 UUIDv5；
 - JSONL 固定表顺序、行按主键排序、UTF-8 无 BOM/U+FFFD；
 - secret 只以 AES-GCM envelope 进入 `provider_credentials`，export/log 无原文；
+- legacy credential 导入后 configured=true、`verifiedAt=null`，不伪造 provider
+  验证时间；
 - `resolvedRoutesV1` 完整冻结四个 AI 与两个 media route；export 后改变 env/default
   不改变 importer 结果；
 - 支持映射的 job 进入 deterministic `pipeline_runs/task_attempts`，不支持或无
-  project 的 job 进入 manifest 的 `archivedDispositions`，携带 row hash，不伪造
-  活动 run；
+  project 的 job 进入 manifest 的 `archivedDispositions`，携带 row hash；
+  pending/running historical job 终态为 cancelled，不产生可被 queue claim 的活动
+  run；
 - 存在且 hash 可算的 artifact 进入 PG，缺失文件进入 rejected disposition；
 - 历史 artifact 按 `created_at,id` 稳定赋 `version=1..N` 并串起
-  `supersedes_id`；
+  `supersedes_id`，且 attempt 选择按最近不晚于 artifact 的 job 固定；无候选写
+  `missing-attempt`；
 - project/node/edge/settings 严格按上述 default/mapping/disposition 对账；
 - 第二次 import 不新增行；失败 resume 从已提交 project 继续；
 - reconcile 对六张 legacy 表分别比较 count、PK set 与 canonical row hash，
@@ -888,8 +899,12 @@ settings.v1.jsonl
 实现，并用公布的 UUIDv5 test vector 锁定字节序，不新增 UUID dependency。原 ID
 仅保留在迁移 metadata，不成为 runtime 公共 ID。settings exporter 对
 credential 行在内存中加密后写 envelope，绝不写原文；master key 缺失时 export
-失败，不得生成半份 manifest。artifact manifest 只含相对 storage key、存在性、
-size、SHA-256；禁止绝对路径。
+失败，不得生成半份 manifest。真实 export、import 与后续 runtime 必须使用同一个
+持久 server-only master key；禁止仅为单次命令生成随后丢失的临时 key。
+`provider_credentials.verified_at` 由 N1.4 tracked migration 改为 nullable；实时设置
+API 仍只在 provider 校验成功后以非空时间调用 `ProviderCredentialStore.save()`，
+legacy importer 直接写 null，不把 setting 更新时间或迁移时间伪造成验证证据。
+artifact manifest 只含相对 storage key、存在性、size、SHA-256；禁止绝对路径。
 
 - [ ] **Step 3: 实现按 project transaction 的幂等 importer**
 
@@ -901,8 +916,12 @@ Importer 先核对 snapshot/export SHA，再创建固定 local workspace
 
 legacy job 映射规则固定：
 
-- 有 project 且 kind/status 可映射：创建 deterministic historical
-  `pipeline_runs` 与一个 `task_attempts`，保留 legacy payload hash，不触发任务；
+- 仅 `director-stage|render-shot` 为支持的 kind；有 project 时创建 deterministic
+  historical `pipeline_runs` 与一个 `task_attempts`，保留 legacy payload hash，
+  不保留原 payload、不触发任务；
+- status 固定为 `done→succeeded`、`failed→failed`、
+  `pending|running→cancelled`；导入结果绝不出现 queued/running historical attempt，
+  checkpoint 只记录 version、source status、kind 与 payload hash；
 - 无 project、未知 kind 或非法 status：不进入活动 run，写
   `archivedDispositions`，reason 只允许
   `missing-project|unsupported-kind|invalid-status`；
@@ -910,13 +929,18 @@ legacy job 映射规则固定：
 
 artifact 缺 project、node 指针悬空、缺实体或实体 hash 与 legacy hash 冲突时不
 创建活动 artifact，而写
-`missing-project|missing-node|missing-file|hash-mismatch` disposition。成功导入的
+`missing-project|missing-node|missing-file|hash-mismatch|missing-attempt`
+disposition。成功导入的
 artifact 保留相对 `storage_key`，`content_hash` 重新按实体字节计算，并按
 `(aggregate_type,aggregate_id,kind)` 分组，以 `created_at ASC,id ASC` 稳定排序后
 依次赋 `version=1..N`，`supersedes_id` 指向同组前一版本；lifecycle 固定为
 `draft`，schema version 固定为 `cvc.legacy-artifact/v1`。存在合法 node 时使用
 node aggregate，否则使用 project aggregate；没有 legacy 审核/发布证据时禁止映射
-为 `approved/released`。
+为 `approved/released`。node artifact 的 `attempt_id` 固定选择同 project/node 且
+`job.created_at <= artifact.created_at` 的 historical attempt，并按
+`job.created_at DESC,job.id DESC` 取第一项；无候选时写 `missing-attempt`
+disposition，禁止临时伪造 provenance attempt。project aggregate 使用该 project
+按相同排序可得的最近 historical attempt；无候选同样 disposition。
 
 - [ ] **Step 4: 跑 fixture GREEN，再对真实只读快照执行三段式迁移**
 
@@ -961,6 +985,7 @@ Run:
 pnpm eslint src/lib/migration scripts/migration
 pnpm typecheck
 git diff --check
+git add -- src/lib/db/schema/ai.ts src/lib/db/migrations/pg src/features/credentials/provider-credential-store.ts src/features/credentials/provider-credential-store.pg.test.ts
 git add -- src/lib/migration/legacy-export.ts src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-import.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.ts src/lib/migration/legacy-reconcile.pg.test.ts src/lib/migration/legacy-id.ts src/lib/migration/legacy-id.test.ts scripts/migration/export-sqlite.ts scripts/migration/import-postgres.ts scripts/migration/reconcile-postgres.ts docs/evidence/refactor-v3/n1/import-reconciliation.md
 git diff --cached --check
 git commit -m "feat(migration): reconcile SQLite data into Postgres"

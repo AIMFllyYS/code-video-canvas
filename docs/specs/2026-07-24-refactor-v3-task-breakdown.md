@@ -251,7 +251,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   负测；浏览器/视觉 E2E 按用户要求留到 N7；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n13)
 - [ ] **N1.4 SQLite export、Postgres import 与计数/hash 对账** —
-  `task_state=todo; status=ready; blocked_by=none; preflight=18a7fda`;
+  `task_state=in_progress; status=ready; blocked_by=none; preflight=53b4520`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n14)
 - [ ] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
   `task_state=todo; status=ready; blocked_by=none; preflight=513bb1d`;
