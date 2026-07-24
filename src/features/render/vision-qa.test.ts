@@ -5,7 +5,11 @@ import {
   storeVisionQaReport,
   type ShotVisionQaDependencies,
 } from './vision-qa'
-import type { ThumbnailContext, ThumbnailResult } from './types'
+import type {
+  ShotQaVisionData,
+  ThumbnailContext,
+  ThumbnailResult,
+} from './types'
 import type { StorageAdapter } from '@/lib/storage'
 
 vi.mock('server-only', () => ({}))
@@ -23,7 +27,6 @@ const thumbnails: ThumbnailResult[] = [
 ]
 
 function harness() {
-  const writeShotQaVision = vi.fn()
   const analyze = vi.fn(async () => ({
     model: 'step-3.7-flash',
     provider: 'stepfun' as const,
@@ -38,18 +41,26 @@ function harness() {
       findings: [],
     },
   }))
-  const storeReport = vi.fn(async () => ({
-    id: 'report-1',
-    storageKey: 'qa/project-1/qa-1/report.json',
-    contentHash: 'report-hash',
-  }))
+  const storeReport = vi.fn(async (input: {
+    buildProjection(stored: {
+      id: string
+      storageKey: string
+      contentHash: string
+    }): ShotQaVisionData
+  }) => {
+    const pointer = {
+      id: 'report-1',
+      storageKey: 'qa/project-1/qa-1/report.json',
+      contentHash: 'report-hash',
+    }
+    return { ...pointer, qaVision: input.buildProjection(pointer) }
+  })
   const deps: ShotVisionQaDependencies = {
     repository: {
-      getShotQaTargets: () => [
+      getShotQaTargets: async () => [
         { codegenNodeId: 'codegen-1', qaNodeId: 'qa-1', laneKey: 'S001' },
       ],
-      loadCompletedThumbnailContext: () => context,
-      writeShotQaVision,
+      loadCompletedThumbnailContext: async () => context,
     },
     capture: vi.fn(async () => thumbnails),
     readArtifactBytes: vi.fn(async (_projectId, artifactId) =>
@@ -59,7 +70,7 @@ function harness() {
     storeReport,
     now: () => 456,
   }
-  return { deps, analyze, storeReport, writeShotQaVision }
+  return { deps, analyze, storeReport }
 }
 
 describe('runShotVisionQa', () => {
@@ -104,16 +115,12 @@ describe('runShotVisionQa', () => {
         }),
       })
     )
-    expect(target.writeShotQaVision).toHaveBeenCalledWith(
-      'qa-1',
-      expect.objectContaining({
-        passed: true,
-        checkedAt: 456,
-        reportArtifactId: 'report-1',
-        reportKey: 'qa/project-1/qa-1/report.json',
-      })
-    )
-    expect(result.passed).toBe(true)
+    expect(result).toMatchObject({
+      passed: true,
+      checkedAt: 456,
+      reportArtifactId: 'report-1',
+      reportKey: 'qa/project-1/qa-1/report.json',
+    })
   })
 
   it('rejects model output that omits a mustShow contract item', async () => {
@@ -142,7 +149,6 @@ describe('runShotVisionQa', () => {
       )
     ).rejects.toThrow('mustShow 合同覆盖不完整')
     expect(target.storeReport).not.toHaveBeenCalled()
-    expect(target.writeShotQaVision).not.toHaveBeenCalled()
   })
 
   it('fails when the requested QA node has no rendered lane target', async () => {
@@ -250,11 +256,20 @@ describe('routed Vision client and report storage', () => {
             findings: [],
             thumbnailArtifactIds: ['thumb-1'],
           },
+          buildProjection: ({ id, storageKey }) => ({
+            passed: true,
+            checkedAt: 1,
+            thumbnailContentHash: 'thumb-hash',
+            provider: 'gemini',
+            model: 'vision-model',
+            summary: '通过',
+            reportArtifactId: id,
+            reportKey: storageKey,
+          }),
         },
         {
           storage: target,
-          createId: () => 'report-1',
-          insert: vi.fn(async () => {
+          commit: vi.fn(async () => {
             throw new Error('索引失败')
           }),
         }

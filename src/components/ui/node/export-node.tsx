@@ -11,6 +11,7 @@ const STATUS_MAP: Record<NodeStatus, 'pending' | 'generating' | 'rendered' | 'st
   running: 'generating',
   success: 'rendered',
   failed: 'failed',
+  cancelled: 'failed',
   stale: 'stale',
 }
 

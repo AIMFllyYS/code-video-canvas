@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
-import type { ShotLaneSeed } from '@/features/canvas/fan-out'
-import { MASTER_RESOLUTION_PRESET, resolutionForPreset } from '@/features/canvas/export-settings'
+import {
+  MASTER_RESOLUTION_PRESET,
+  resolutionForPreset,
+  type ShotLaneSeed,
+} from '@/features/canvas/contracts'
 import { fabricatePromptInputSchema } from './prompts/fabricate'
 import { buildDemoAudioAllocation, buildDemoAudioManifest } from './audio-demo'
 import { ingestStageResultSchema } from './schemas/ingest'

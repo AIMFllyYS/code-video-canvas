@@ -36,7 +36,7 @@ describe('HyperframesRenderer integration', () => {
     const renderer = new HyperframesRenderer({
       storage,
       lookupCache: async () => null,
-      writeCache: () => 'artifact-e2e',
+      writeCache: async () => 'artifact-e2e',
       tempRoot: path.join(root, 'temp'),
     })
 

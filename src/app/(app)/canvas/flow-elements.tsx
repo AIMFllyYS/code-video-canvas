@@ -139,6 +139,7 @@ const STATUS_VARIANT: Record<NodeStatus, StatusPillVariant> = {
   running: 'generating',
   success: 'rendered',
   failed: 'failed',
+  cancelled: 'failed',
   stale: 'cached',
 }
 
@@ -148,6 +149,7 @@ const STATUS_LABEL: Record<NodeStatus, string> = {
   running: '执行中',
   success: '已完成',
   failed: '失败',
+  cancelled: '已取消',
   stale: '需更新',
 }
 

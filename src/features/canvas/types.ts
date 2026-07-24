@@ -23,6 +23,7 @@ export type NodeStatus =
   | 'running'
   | 'success'
   | 'failed'
+  | 'cancelled'
   | 'stale'
 
 export interface CanvasNode {

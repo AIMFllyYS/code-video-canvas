@@ -1,8 +1,8 @@
 import 'server-only'
 import { and, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import type { Db } from '@/lib/db/migrate'
-import { artifacts, canvasNodes } from '@/lib/db/schema'
+import { LOCAL_WORKSPACE_ID, type Db } from '@/lib/db/client'
+import { artifacts, canvasNodes } from '@/lib/db/schema/index'
 import type { StorageAdapter } from '@/lib/storage'
 import type { Caption, SubtitleInput } from './types'
 
@@ -48,61 +48,70 @@ export class AudioRuntimeRepository {
     projectId: string,
     shotId: string
   ): Promise<LoadedVoiceover> {
-    const node = this.db
+    const [node] = await this.db
       .select({ id: canvasNodes.id })
       .from(canvasNodes)
       .where(
         and(
+          eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
           eq(canvasNodes.projectId, projectId),
           eq(canvasNodes.type, 'shot-sfx'),
-          eq(canvasNodes.laneKey, shotId)
+          eq(canvasNodes.logicalKey, `shot:${shotId}:shot-sfx`)
         )
       )
-      .get()
+      .limit(1)
     if (!node) throw new Error(`找不到 shot-sfx(${shotId}) 节点`)
 
-    const metadataArtifact = this.db
-      .select({ path: artifacts.path })
+    const [metadataArtifact] = await this.db
+      .select({ storageKey: artifacts.storageKey })
       .from(artifacts)
       .where(
         and(
+          eq(artifacts.workspaceId, LOCAL_WORKSPACE_ID),
           eq(artifacts.projectId, projectId),
-          eq(artifacts.nodeId, node.id),
+          eq(artifacts.aggregateType, 'node'),
+          eq(artifacts.aggregateId, node.id),
           eq(artifacts.kind, 'voiceover-metadata')
         )
       )
-      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
-      .get()
+      .orderBy(
+        desc(artifacts.version),
+        desc(artifacts.createdAt),
+        desc(artifacts.id)
+      )
+      .limit(1)
     if (!metadataArtifact) {
       throw new Error(`找不到 voiceover-metadata 产物：${shotId}`)
     }
 
-    const metadataBytes = await this.storage.get(metadataArtifact.path)
-    const metadata = parseMetadata(metadataBytes, metadataArtifact.path)
+    const metadataBytes = await this.storage.get(metadataArtifact.storageKey)
+    const metadata = parseMetadata(metadataBytes, metadataArtifact.storageKey)
     if (metadata.shotId !== shotId) {
       throw new Error(`配音元数据分镜不一致：${metadata.shotId} != ${shotId}`)
     }
 
-    const audioArtifact = this.db
-      .select({ path: artifacts.path })
+    const [audioArtifact] = await this.db
+      .select({ storageKey: artifacts.storageKey })
       .from(artifacts)
       .where(
         and(
+          eq(artifacts.workspaceId, LOCAL_WORKSPACE_ID),
           eq(artifacts.id, metadata.audioArtifactId),
           eq(artifacts.projectId, projectId),
-          eq(artifacts.nodeId, node.id),
+          eq(artifacts.aggregateType, 'node'),
+          eq(artifacts.aggregateId, node.id),
           eq(artifacts.kind, 'voiceover-audio')
         )
       )
-      .get()
-    if (!audioArtifact || audioArtifact.path !== metadata.audioKey) {
+      .limit(1)
+    if (!audioArtifact || audioArtifact.storageKey !== metadata.audioKey) {
       throw new Error(`配音元数据与 voiceover-audio 索引不一致：${shotId}`)
     }
 
     return {
       audioArtifactId: metadata.audioArtifactId,
-      audioKey: audioArtifact.path,
-      audioBytes: await this.storage.get(audioArtifact.path),
+      audioKey: audioArtifact.storageKey,
+      audioBytes: await this.storage.get(audioArtifact.storageKey),
       audioFormat: metadata.audioFormat,
       durationMs: metadata.durationMs,
       model: metadata.model,

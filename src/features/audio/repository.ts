@@ -1,8 +1,11 @@
 import 'server-only'
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { artifacts } from '@/lib/db/schema'
-import { getDb } from '@/lib/db/client'
+import { getDb, LOCAL_WORKSPACE_ID } from '@/lib/db/client'
+import {
+  commitArtifactRecord,
+  resolveCurrentAttemptId as resolveArtifactAttemptId,
+} from '@/features/artifacts'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
 
 const safeSegment = z
@@ -25,15 +28,22 @@ export type StoreAudioArtifactInput = z.input<typeof storeInputSchema>
 
 interface ArtifactIndexRecord {
   id: string
+  workspaceId: string
   projectId: string
-  nodeId: string
+  aggregateType: 'node'
+  aggregateId: string
   kind: string
-  path: string
+  lifecycle: 'draft'
+  schemaVersion: 'cvc.audio-artifact/v1'
+  storageKey: string
+  sizeBytes: number
   contentHash: string
+  attemptId: string
 }
 
 interface StoreDependencies {
   storage: StorageAdapter
+  resolveAttemptId: (projectId: string, nodeId: string) => Promise<string>
   insertArtifact: (record: ArtifactIndexRecord) => Promise<void>
   createId: () => string
 }
@@ -44,26 +54,36 @@ export interface StoredAudioArtifact {
   contentHash: string
 }
 
-/** 音频域可信写服务：内容寻址落盘，索引失败时补偿删除字节。 */
+/** 音频域可信写服务：先绑定合法 attempt，再落字节并原子登记不可变索引。 */
 export async function storeAudioArtifact(
   input: StoreAudioArtifactInput,
   dependencies: StoreDependencies = defaultDependencies()
 ): Promise<StoredAudioArtifact> {
   const parsed = storeInputSchema.parse(input)
+  const attemptId = await dependencies.resolveAttemptId(
+    parsed.projectId,
+    parsed.nodeId
+  )
   const contentHash = createHash('sha256').update(parsed.data).digest('hex')
+  const id = dependencies.createId()
   const storageKey =
     `audio/${parsed.projectId}/${parsed.shotId}/` +
-    `${parsed.kind}-${contentHash}.${parsed.extension}`
-  const id = dependencies.createId()
+    `${parsed.kind}-${contentHash}-${id}.${parsed.extension}`
   await dependencies.storage.put(storageKey, parsed.data)
   try {
     await dependencies.insertArtifact({
       id,
+      workspaceId: LOCAL_WORKSPACE_ID,
       projectId: parsed.projectId,
-      nodeId: parsed.nodeId,
+      aggregateType: 'node',
+      aggregateId: parsed.nodeId,
       kind: parsed.kind,
-      path: storageKey,
+      lifecycle: 'draft',
+      schemaVersion: 'cvc.audio-artifact/v1',
+      storageKey,
+      sizeBytes: contentSize(parsed.data),
       contentHash,
+      attemptId,
     })
   } catch (error) {
     await dependencies.storage.delete(storageKey)
@@ -72,12 +92,31 @@ export async function storeAudioArtifact(
   return { id, storageKey, contentHash }
 }
 
+function contentSize(data: string | Buffer | Uint8Array): number {
+  return typeof data === 'string' ? Buffer.byteLength(data) : data.byteLength
+}
+
 function defaultDependencies(): StoreDependencies {
   return {
     storage: defaultStorage,
     createId: randomUUID,
+    resolveAttemptId: resolveCurrentAttemptId,
     insertArtifact: async (record) => {
-      getDb().insert(artifacts).values(record).run()
+      const database = await getDb()
+      await commitArtifactRecord(database, record)
     },
   }
+}
+
+async function resolveCurrentAttemptId(
+  projectId: string,
+  nodeId: string
+): Promise<string> {
+  const database = await getDb()
+  return resolveArtifactAttemptId(database, {
+    workspaceId: LOCAL_WORKSPACE_ID,
+    projectId,
+    aggregateType: 'node',
+    aggregateId: nodeId,
+  })
 }

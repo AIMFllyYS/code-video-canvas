@@ -4,7 +4,7 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises'
 import ffmpegPath from 'ffmpeg-static'
-import { MASTER_HEIGHT, MASTER_WIDTH } from '@/features/canvas/export-settings'
+import { MASTER_HEIGHT, MASTER_WIDTH } from '@/features/canvas/contracts'
 
 /** 按序流拷贝分镜视频；配乐可选且不会触发视频重编码。 */
 export async function concatExport(

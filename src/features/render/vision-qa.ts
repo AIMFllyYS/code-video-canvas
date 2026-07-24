@@ -1,9 +1,7 @@
 import 'server-only'
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import OpenAI from 'openai'
 import { z } from 'zod'
-import { getDb } from '@/lib/db/client'
-import { artifacts } from '@/lib/db/schema'
 import { storage, type StorageAdapter } from '@/lib/storage'
 import { readArtifact } from '@/features/artifacts'
 import {
@@ -63,12 +61,13 @@ interface StoredVisionReport {
   id: string
   storageKey: string
   contentHash: string
+  qaVision: ShotQaVisionData
 }
 
 export interface ShotVisionQaDependencies {
   repository: Pick<
     RenderRepository,
-    'getShotQaTargets' | 'loadCompletedThumbnailContext' | 'writeShotQaVision'
+    'getShotQaTargets' | 'loadCompletedThumbnailContext'
   >
   capture: typeof captureThumbnails
   readArtifactBytes: (projectId: string, artifactId: string) => Promise<Buffer>
@@ -77,6 +76,7 @@ export interface ShotVisionQaDependencies {
     projectId: string
     nodeId: string
     report: VisionQaReport
+    buildProjection(stored: Omit<StoredVisionReport, 'qaVision'>): ShotQaVisionData
   }) => Promise<StoredVisionReport>
   now: () => number
 }
@@ -106,9 +106,9 @@ export async function runShotVisionQa(
 ): Promise<ShotQaVisionData> {
   const dependencies = { ...defaultDependencies(), ...deps }
   const shot = shotContractSchema.parse(input.shot)
-  const target = dependencies.repository
-    .getShotQaTargets(input.projectId)
-    .find((candidate) => candidate.qaNodeId === input.qaNodeId)
+  const target = (
+    await dependencies.repository.getShotQaTargets(input.projectId)
+  ).find((candidate) => candidate.qaNodeId === input.qaNodeId)
   if (!target) {
     throw new Error(`shot-qa 节点不具备 Vision QA 前置条件：${input.qaNodeId}`)
   }
@@ -116,7 +116,7 @@ export async function runShotVisionQa(
     throw new Error(`Vision QA 分镜合同与节点 lane 不一致：${shot.id}`)
   }
 
-  const context = dependencies.repository.loadCompletedThumbnailContext(
+  const context = await dependencies.repository.loadCompletedThumbnailContext(
     input.projectId,
     target.codegenNodeId
   )
@@ -151,29 +151,30 @@ export async function runShotVisionQa(
     ...normalized,
     thumbnailArtifactIds: thumbnails.map((thumbnail) => thumbnail.artifactId),
   }
+  const checkedAt = dependencies.now()
+  const thumbnailContentHash = aggregateThumbnailHash(thumbnails)
   const stored = await dependencies.storeReport({
     projectId: input.projectId,
     nodeId: input.qaNodeId,
     report,
+    buildProjection: (pointer) => ({
+      passed: report.passed,
+      checkedAt,
+      thumbnailContentHash,
+      provider: report.provider,
+      model: report.model,
+      summary: report.summary,
+      reportArtifactId: pointer.id,
+      reportKey: pointer.storageKey,
+    }),
   })
-  const qaVision: ShotQaVisionData = {
-    passed: report.passed,
-    checkedAt: dependencies.now(),
-    thumbnailContentHash: aggregateThumbnailHash(thumbnails),
-    provider: report.provider,
-    model: report.model,
-    summary: report.summary,
-    reportArtifactId: stored.id,
-    reportKey: stored.storageKey,
-  }
-  dependencies.repository.writeShotQaVision(input.qaNodeId, qaVision)
-  return qaVision
+  return stored.qaVision
 }
 
 export async function analyzeVision(
   input: VisionQaAnalysisInput,
   dependencies: {
-    resolveTarget: () => DirectorModelTarget
+    resolveTarget: () => Promise<DirectorModelTarget> | DirectorModelTarget
     complete: (
       target: DirectorModelTarget,
       messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]
@@ -193,7 +194,7 @@ export async function analyzeVision(
     },
   }
 ): Promise<VisionQaAnalysis> {
-  const target = dependencies.resolveTarget()
+  const target = await dependencies.resolveTarget()
   if (!target.apiKey) {
     const provider = target.provider === 'gemini' ? 'Gemini' : 'StepFun'
     throw new Error(`${provider} API Key 未配置，无法执行 Vision QA`)
@@ -233,47 +234,52 @@ export async function analyzeVision(
 
 interface StoreVisionDependencies {
   storage: StorageAdapter
-  insert: (record: {
-    id: string
+  commit: (record: {
     projectId: string
     nodeId: string
-    path: string
+    outputKey: string
     contentHash: string
-  }) => Promise<void>
-  createId: () => string
+    sizeBytes: number
+    buildProjection(artifactId: string): ShotQaVisionData
+  }) => Promise<{ artifactId: string; qaVision: ShotQaVisionData }>
 }
 
 export async function storeVisionQaReport(
-  input: { projectId: string; nodeId: string; report: VisionQaReport },
+  input: {
+    projectId: string
+    nodeId: string
+    report: VisionQaReport
+    buildProjection(stored: Omit<StoredVisionReport, 'qaVision'>): ShotQaVisionData
+  },
   deps: StoreVisionDependencies = {
     storage,
-    createId: randomUUID,
-    insert: async (record) => {
-      getDb()
-        .insert(artifacts)
-        .values({ ...record, kind: 'qa-vision-report' })
-        .run()
-    },
+    commit: (record) => new RenderRepository().registerVisionReport(record),
   }
 ): Promise<StoredVisionReport> {
-  const content = JSON.stringify(input.report)
+  const content = Buffer.from(JSON.stringify(input.report))
   const contentHash = createHash('sha256').update(content).digest('hex')
   const storageKey = `qa/${input.projectId}/${input.nodeId}/vision-${contentHash}.json`
-  const id = deps.createId()
   await deps.storage.put(storageKey, content)
   try {
-    await deps.insert({
-      id,
+    const committed = await deps.commit({
       projectId: input.projectId,
       nodeId: input.nodeId,
-      path: storageKey,
+      outputKey: storageKey,
       contentHash,
+      sizeBytes: content.byteLength,
+      buildProjection: (artifactId) =>
+        input.buildProjection({ id: artifactId, storageKey, contentHash }),
     })
+    return {
+      id: committed.artifactId,
+      storageKey,
+      contentHash,
+      qaVision: committed.qaVision,
+    }
   } catch (error) {
     await deps.storage.delete(storageKey)
     throw error
   }
-  return { id, storageKey, contentHash }
 }
 
 function normalizeReport(

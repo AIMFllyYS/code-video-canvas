@@ -8,7 +8,9 @@ export default async function SettingsPage({
 }) {
   const { projectId } = await searchParams
   const rendererNodeId = projectId
-    ? getCanvasGraph(projectId).nodes.find((node) => node.type === 'shot-codegen')?.id
+    ? (await getCanvasGraph(projectId)).nodes.find(
+        (node) => node.type === 'shot-codegen'
+      )?.id
     : undefined
   return <SettingsForm projectId={projectId} rendererNodeId={rendererNodeId} />
 }

@@ -72,7 +72,7 @@ const asrErrorSchema = z
 
 export interface StepfunAudioDependencies {
   fetcher: typeof fetch
-  getConfig: () => StepfunConfig
+  getConfig: () => Promise<StepfunConfig>
 }
 
 export interface SynthesizedSpeech {
@@ -96,7 +96,7 @@ export async function synthesizeSpeech(
   dependencies: StepfunAudioDependencies = defaultDependencies()
 ): Promise<SynthesizedSpeech> {
   const parsed = speechInputSchema.parse(input)
-  const config = requireKey(dependencies.getConfig())
+  const config = requireKey(await dependencies.getConfig())
   const response = await dependencies.fetcher(
     endpoint(config.baseUrl, 'audio/speech'),
     {
@@ -147,7 +147,7 @@ export async function transcribeSpeech(
   dependencies: StepfunAudioDependencies = defaultDependencies()
 ): Promise<TranscribedSpeech> {
   const parsed = transcriptionInputSchema.parse(input)
-  const config = requireKey(dependencies.getConfig())
+  const config = requireKey(await dependencies.getConfig())
   const response = await dependencies.fetcher(
     endpoint(config.baseUrl, 'audio/asr/sse'),
     {

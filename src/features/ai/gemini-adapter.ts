@@ -2,6 +2,7 @@ import 'server-only'
 import OpenAI from 'openai'
 import {
   getGeminiConfig,
+  resolveGeminiBaseUrl,
   type GeminiSettingsInput,
 } from './gemini-config'
 import type { ChatMessage, ChatOptions, LlmAdapter } from './types'
@@ -15,7 +16,7 @@ export async function validateGeminiKey(
   apiKey: string,
   overrides: GeminiSettingsInput = {}
 ): Promise<boolean> {
-  const current = getGeminiConfig()
+  const current = await getGeminiConfig()
   const baseUrl = nonEmpty(overrides.baseUrl) ?? current.baseUrl
   const model = nonEmpty(overrides.primaryModel) ?? current.primaryModel
   try {
@@ -30,8 +31,8 @@ export async function validateGeminiKey(
     return true
   } catch (error) {
     const status = error instanceof OpenAI.APIError ? error.status : undefined
-    const message = error instanceof Error ? error.message : String(error)
-    console.error('[gemini] validateGeminiKey 失败', { status, message })
+    const errorType = error instanceof Error ? error.name : 'UnknownError'
+    console.error('[gemini] validateGeminiKey 失败', { status, errorType })
     return false
   }
 }
@@ -41,14 +42,14 @@ export class GeminiAdapter implements LlmAdapter {
   private readonly client: OpenAI
 
   constructor(apiKey: string) {
-    this.client = createClient(apiKey, getGeminiConfig().baseUrl)
+    this.client = createClient(apiKey, resolveGeminiBaseUrl())
   }
 
   async chat(
     messages: ChatMessage[],
     options: ChatOptions = {}
   ): Promise<string> {
-    const config = getGeminiConfig()
+    const config = await getGeminiConfig()
     const response = await this.client.chat.completions.create({
       model: options.model ?? config.primaryModel,
       messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],

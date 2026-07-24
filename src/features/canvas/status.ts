@@ -1,21 +1,23 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
-import { eq, inArray } from 'drizzle-orm'
-import { getDb } from '@/lib/db/client'
-import type { Db } from '@/lib/db/migrate'
-import { canvasEdges, canvasNodes } from '@/lib/db/schema'
+import { and, eq, inArray } from 'drizzle-orm'
+import { getDb, LOCAL_WORKSPACE_ID } from '@/lib/db/client'
+import { canvasEdges, canvasNodes } from '@/lib/db/schema/index'
+import {
+  withTransaction,
+  type TransactionContext,
+} from '@/lib/db/transaction'
 import type { NodeStatus } from './types'
 
 export type { NodeStatus } from './types'
 
-type Transaction = Parameters<Parameters<Db['transaction']>[0]>[0]
-
 const ALLOWED_TRANSITIONS: Record<NodeStatus, readonly NodeStatus[]> = {
   idle: ['pending'],
-  pending: ['running'],
-  running: ['success', 'failed'],
+  pending: ['running', 'cancelled'],
+  running: ['success', 'failed', 'cancelled'],
   success: ['stale'],
   failed: ['pending', 'stale'],
+  cancelled: ['pending', 'stale'],
   stale: ['pending'],
 }
 
@@ -34,21 +36,43 @@ export function computeContentHash(input: unknown): string {
 }
 
 /** 原子校验并写入节点状态；stale 只允许由真实上游变化触发。 */
-export function transitionNodeStatus(nodeId: string, next: NodeStatus): void {
-  getDb().transaction((tx) => {
-    const node = tx
-      .select({ id: canvasNodes.id, status: canvasNodes.status, contentHash: canvasNodes.contentHash })
+export async function transitionNodeStatus(
+  nodeId: string,
+  next: NodeStatus
+): Promise<void> {
+  const database = await getDb()
+  await withTransaction(database, async (tx) => {
+    const [node] = await tx
+      .select({
+        id: canvasNodes.id,
+        status: canvasNodes.status,
+        data: canvasNodes.data,
+      })
       .from(canvasNodes)
-      .where(eq(canvasNodes.id, nodeId))
-      .get()
+      .where(
+        and(
+          eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(canvasNodes.id, nodeId)
+        )
+      )
+      .for('update')
     if (!node) throw new Error(`节点不存在：${nodeId}`)
-    if (!ALLOWED_TRANSITIONS[node.status].includes(next)) {
-      throw new Error(`非法节点状态转换：${node.status} -> ${next}`)
+    const current = fromPersistedStatus(node.status)
+    if (!ALLOWED_TRANSITIONS[current].includes(next)) {
+      throw new Error(`非法节点状态转换：${current} -> ${next}`)
     }
-    if (next === 'stale' && !isStaleInTransaction(tx, node)) {
+    if (next === 'stale' && !(await isStaleInTransaction(tx, node))) {
       throw new Error(`节点上游内容未变化，不能标记为 stale：${nodeId}`)
     }
-    tx.update(canvasNodes).set({ status: next }).where(eq(canvasNodes.id, nodeId)).run()
+    await tx
+      .update(canvasNodes)
+      .set({ status: toPersistedStatus(next), updatedAt: new Date() })
+      .where(
+        and(
+          eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(canvasNodes.id, nodeId)
+        )
+      )
   })
 }
 
@@ -56,44 +80,94 @@ export function transitionNodeStatus(nodeId: string, next: NodeStatus): void {
  * 比较节点保存的“上次消费依赖指纹”与当前全部上游节点哈希。
  * 无上游的根节点不由依赖变化触发 stale。
  */
-export function isStale(nodeId: string): boolean {
-  return getDb().transaction((tx) => {
-    const node = tx
-      .select({ id: canvasNodes.id, contentHash: canvasNodes.contentHash })
+export async function isStale(nodeId: string): Promise<boolean> {
+  const database = await getDb()
+  return withTransaction(database, async (tx) => {
+    const [node] = await tx
+      .select({ id: canvasNodes.id, data: canvasNodes.data })
       .from(canvasNodes)
-      .where(eq(canvasNodes.id, nodeId))
-      .get()
+      .where(
+        and(
+          eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(canvasNodes.id, nodeId)
+        )
+      )
     if (!node) throw new Error(`节点不存在：${nodeId}`)
     return isStaleInTransaction(tx, node)
   })
 }
 
-function isStaleInTransaction(
-  tx: Transaction,
-  node: { id: string; contentHash: string | null }
-): boolean {
-  const dependencies = dependencyHashes(tx, node.id)
+async function isStaleInTransaction(
+  tx: TransactionContext,
+  node: { id: string; data: unknown }
+): Promise<boolean> {
+  const dependencies = await dependencyHashes(tx, node.id)
   if (dependencies.length === 0) return false
-  return node.contentHash !== computeContentHash(dependencies)
+  return readContentHash(node.data) !== computeContentHash(dependencies)
 }
 
-function dependencyHashes(
-  tx: Transaction,
+async function dependencyHashes(
+  tx: TransactionContext,
   nodeId: string
-): Array<{ id: string; contentHash: string | null }> {
-  const incoming = tx
+): Promise<Array<{ id: string; contentHash: string | null }>> {
+  const incoming = await tx
     .select({ source: canvasEdges.source })
     .from(canvasEdges)
-    .where(eq(canvasEdges.target, nodeId))
-    .all()
+    .where(
+      and(
+        eq(canvasEdges.workspaceId, LOCAL_WORKSPACE_ID),
+        eq(canvasEdges.target, nodeId)
+      )
+    )
   if (incoming.length === 0) return []
 
-  return tx
-    .select({ id: canvasNodes.id, contentHash: canvasNodes.contentHash })
+  const nodes = await tx
+    .select({ id: canvasNodes.id, data: canvasNodes.data })
     .from(canvasNodes)
-    .where(inArray(canvasNodes.id, incoming.map(({ source }) => source)))
-    .all()
+    .where(
+      and(
+        eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
+        inArray(
+          canvasNodes.id,
+          incoming.map(({ source }) => source)
+        )
+      )
+    )
+  return nodes
+    .map((node) => ({
+      id: node.id,
+      contentHash: readContentHash(node.data),
+    }))
     .sort((left, right) => left.id.localeCompare(right.id))
+}
+
+function readContentHash(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const payload = (value as Record<string, unknown>).payload
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+  const contentHash = (payload as Record<string, unknown>).contentHash
+  return typeof contentHash === 'string' ? contentHash : null
+}
+
+function toPersistedStatus(status: NodeStatus): string {
+  if (status === 'pending') return 'queued'
+  if (status === 'success') return 'succeeded'
+  return status
+}
+
+function fromPersistedStatus(status: string): NodeStatus {
+  if (status === 'queued') return 'pending'
+  if (status === 'succeeded') return 'success'
+  if (
+    status === 'idle' ||
+    status === 'running' ||
+    status === 'failed' ||
+    status === 'cancelled' ||
+    status === 'stale'
+  ) {
+    return status
+  }
+  throw new Error(`未知节点状态：${status}`)
 }
 
 function sortJsonValue(value: unknown): unknown {

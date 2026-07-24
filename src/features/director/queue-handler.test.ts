@@ -11,7 +11,7 @@ vi.mock('server-only', () => ({}))
 function createQueue() {
   let handler: JobHandler | undefined
   const queue: QueueAdapter = {
-    enqueue: vi.fn(() => 'job-1'),
+    enqueue: vi.fn(async () => 'job-1'),
     register: vi.fn((_kind, nextHandler) => {
       handler = nextHandler
     }),
@@ -26,13 +26,13 @@ describe('director queue handler', () => {
     const harness = createQueue()
     const runStage = vi.fn(async () => {})
     registerDirectorStageHandler(harness.queue, runStage)
-    enqueueDirectorStage(
+    await enqueueDirectorStage(
       { projectId: 'project-1', nodeId: 'node-1', stage: 'INGEST' },
       {
         queue: harness.queue,
-        assertEnqueueable: vi.fn(),
-        transitionNodeStatus: vi.fn(),
-        recordStageError: vi.fn(),
+        assertEnqueueable: vi.fn(async () => {}),
+        transitionNodeStatus: vi.fn(async () => {}),
+        recordStageError: vi.fn(async () => {}),
       }
     )
     const payload = vi.mocked(harness.queue.enqueue).mock.calls[0]?.[1]
@@ -52,24 +52,26 @@ describe('director queue handler', () => {
     expect(runStage).toHaveBeenCalledWith('project-1', 'node-1', 'INGEST')
   })
 
-  it('moves the node to pending before enqueueing', () => {
+  it('moves the node to pending before enqueueing', async () => {
     const harness = createQueue()
     const order: string[] = []
-    const transitionNodeStatus = vi.fn((_nodeId: string, status: string) => {
+    const transitionNodeStatus = vi.fn(async (_nodeId: string, status: string) => {
       order.push(status)
     })
-    vi.mocked(harness.queue.enqueue).mockImplementation(() => {
+    vi.mocked(harness.queue.enqueue).mockImplementation(async () => {
       order.push('enqueue')
       return 'job-1'
     })
 
-    const jobId = enqueueDirectorStage(
+    const jobId = await enqueueDirectorStage(
       { projectId: 'project-1', nodeId: 'node-1', stage: 'INGEST' },
       {
         queue: harness.queue,
-        assertEnqueueable: vi.fn(() => order.push('validate')),
+        assertEnqueueable: vi.fn(async () => {
+          order.push('validate')
+        }),
         transitionNodeStatus,
-        recordStageError: vi.fn(),
+        recordStageError: vi.fn(async () => {}),
       }
     )
 
@@ -82,26 +84,29 @@ describe('director queue handler', () => {
     )
   })
 
-  it('compensates a failed enqueue instead of leaving pending state', () => {
+  it('compensates a failed enqueue instead of leaving pending state', async () => {
     const harness = createQueue()
     const failure = new Error('队列数据库不可用')
-    vi.mocked(harness.queue.enqueue).mockImplementation(() => {
-      throw failure
-    })
-    const transitionNodeStatus = vi.fn()
-    const recordStageError = vi.fn()
+    vi.mocked(harness.queue.enqueue).mockRejectedValue(failure)
+    const transitionNodeStatus = vi.fn(
+      async (nodeId: string, status: string) => {
+        void nodeId
+        void status
+      }
+    )
+    const recordStageError = vi.fn(async () => {})
 
-    expect(() =>
+    await expect(
       enqueueDirectorStage(
         { projectId: 'project-1', nodeId: 'node-1', stage: 'INGEST' },
         {
           queue: harness.queue,
-          assertEnqueueable: vi.fn(),
+          assertEnqueueable: vi.fn(async () => {}),
           transitionNodeStatus,
           recordStageError,
         }
       )
-    ).toThrow(failure)
+    ).rejects.toBe(failure)
 
     expect(transitionNodeStatus.mock.calls.map((call) => call[1])).toEqual([
       'pending',
@@ -122,24 +127,24 @@ describe('director queue handler', () => {
     ).toBeLessThan(vi.mocked(harness.queue.start).mock.invocationCallOrder[0]!)
   })
 
-  it('rejects a mismatched stage before changing state or writing a job', () => {
+  it('rejects a mismatched stage before changing state or writing a job', async () => {
     const harness = createQueue()
-    const transitionNodeStatus = vi.fn()
+    const transitionNodeStatus = vi.fn(async () => {})
     const mismatch = new Error('Director 节点阶段不匹配')
 
-    expect(() =>
+    await expect(
       enqueueDirectorStage(
         { projectId: 'project-1', nodeId: 'node-1', stage: 'DIRECT' },
         {
           queue: harness.queue,
-          assertEnqueueable: vi.fn(() => {
+          assertEnqueueable: vi.fn(async () => {
             throw mismatch
           }),
           transitionNodeStatus,
-          recordStageError: vi.fn(),
+          recordStageError: vi.fn(async () => {}),
         }
       )
-    ).toThrow(mismatch)
+    ).rejects.toBe(mismatch)
 
     expect(transitionNodeStatus).not.toHaveBeenCalled()
     expect(harness.queue.enqueue).not.toHaveBeenCalled()

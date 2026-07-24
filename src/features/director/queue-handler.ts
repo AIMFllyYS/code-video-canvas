@@ -1,6 +1,6 @@
 import 'server-only'
 import { z } from 'zod'
-import { transitionNodeStatus } from '@/features/canvas/status'
+import { transitionNodeStatus } from '@/features/canvas'
 import { getDb } from '@/lib/db/client'
 import { storage } from '@/lib/storage'
 import { queue as defaultQueue, type QueueAdapter } from '@/lib/queue'
@@ -26,9 +26,13 @@ type RunStage = (
 
 interface EnqueueDependencies {
   queue: QueueAdapter
-  assertEnqueueable(input: DirectorStageJobInput): void
+  assertEnqueueable(input: DirectorStageJobInput): Promise<void>
   transitionNodeStatus: typeof transitionNodeStatus
-  recordStageError(nodeId: string, stage: PipelineStage, error: unknown): void
+  recordStageError(
+    nodeId: string,
+    stage: PipelineStage,
+    error: unknown
+  ): Promise<void>
 }
 
 export function registerDirectorStageHandler(
@@ -49,27 +53,27 @@ export function startDirectorQueue(
   targetQueue.start()
 }
 
-export function enqueueDirectorStage(
+export async function enqueueDirectorStage(
   input: DirectorStageJobInput,
   dependencies?: EnqueueDependencies
-): string {
-  const resolved = dependencies ?? createDefaultEnqueueDependencies()
+): Promise<string> {
+  const resolved = dependencies ?? (await createDefaultEnqueueDependencies())
   const payload = directorStageJobSchema.parse(input)
-  resolved.assertEnqueueable(payload)
-  resolved.transitionNodeStatus(payload.nodeId, 'pending')
+  await resolved.assertEnqueueable(payload)
+  await resolved.transitionNodeStatus(payload.nodeId, 'pending')
   try {
-    return resolved.queue.enqueue('director-stage', payload, {
+    return await resolved.queue.enqueue('director-stage', payload, {
       projectId: payload.projectId,
       nodeId: payload.nodeId,
     })
   } catch (error) {
-    compensateEnqueueFailure(payload, error, resolved)
+    await compensateEnqueueFailure(payload, error, resolved)
     throw error
   }
 }
 
-function createDefaultEnqueueDependencies(): EnqueueDependencies {
-  const repository = new DirectorRuntimeRepository(getDb(), storage)
+async function createDefaultEnqueueDependencies(): Promise<EnqueueDependencies> {
+  const repository = new DirectorRuntimeRepository(await getDb(), storage)
   return {
     queue: defaultQueue,
     assertEnqueueable: (input) =>
@@ -80,21 +84,21 @@ function createDefaultEnqueueDependencies(): EnqueueDependencies {
   }
 }
 
-function compensateEnqueueFailure(
+async function compensateEnqueueFailure(
   payload: DirectorStageJobInput,
   error: unknown,
   dependencies: EnqueueDependencies
-): void {
+): Promise<void> {
   const cleanupErrors: unknown[] = []
   for (const status of ['running', 'failed'] as const) {
     try {
-      dependencies.transitionNodeStatus(payload.nodeId, status)
+      await dependencies.transitionNodeStatus(payload.nodeId, status)
     } catch (cleanupError) {
       cleanupErrors.push(cleanupError)
     }
   }
   try {
-    dependencies.recordStageError(payload.nodeId, payload.stage, error)
+    await dependencies.recordStageError(payload.nodeId, payload.stage, error)
   } catch (cleanupError) {
     cleanupErrors.push(cleanupError)
   }

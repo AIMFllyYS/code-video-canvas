@@ -19,7 +19,7 @@ export async function PATCH(
     return NextResponse.json({ ok: false, error: 'exportSettings 无效' }, { status: 400 })
   }
   try {
-    const exportSettings = updateExportSettings(id, parsed.data)
+    const exportSettings = await updateExportSettings(id, parsed.data)
     return NextResponse.json({ ok: true, exportSettings })
   } catch (error) {
     return NextResponse.json(

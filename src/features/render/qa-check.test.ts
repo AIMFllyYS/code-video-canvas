@@ -86,10 +86,12 @@ describe('runShotQaChecks', () => {
     }))
     const deps: ShotQaDependencies = {
       repository: {
-        getShotQaTargets: () => [{ codegenNodeId: 'c1', qaNodeId: 'q1', laneKey: 'S001' }],
-        loadCompletedThumbnailContext: () => context,
-        readShotQaCheck: () => stored,
-        writeShotQaCheck: (_nodeId, qaCheck) => {
+        getShotQaTargets: async () => [
+          { codegenNodeId: 'c1', qaNodeId: 'q1', laneKey: 'S001' },
+        ],
+        loadCompletedThumbnailContext: async () => context,
+        readShotQaCheck: async () => stored,
+        writeShotQaCheck: async (_nodeId, qaCheck) => {
           written.push(qaCheck)
           stored = qaCheck
         },

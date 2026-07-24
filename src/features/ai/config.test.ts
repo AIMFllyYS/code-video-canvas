@@ -1,45 +1,112 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createDb, type Db } from '@/lib/db/migrate'
-import { settings } from '@/lib/db/schema'
 import {
+  type AiConfigDependencies,
   describeStepfunConfig,
-  getSettingValue,
   getStepfunConfig,
   saveStepfunModelSettings,
-  setSettingValue,
-  STEPFUN_SETTINGS_KEYS,
 } from './config'
 
-const { getDbMock } = vi.hoisted(() => ({ getDbMock: vi.fn<() => Db>() }))
-
 vi.mock('server-only', () => ({}))
-vi.mock('@/lib/db/client', () => ({ getDb: getDbMock }))
 
 const originalEnv = { ...process.env }
+type ModelKind = Parameters<AiConfigDependencies['modelRoutes']['find']>[1]
+type MediaKind = Parameters<AiConfigDependencies['mediaRoutes']['find']>[1]
+type ModelRoute = Awaited<
+  ReturnType<AiConfigDependencies['modelRoutes']['find']>
+>
+type MediaRoute = Awaited<
+  ReturnType<AiConfigDependencies['mediaRoutes']['find']>
+>
 
-describe('getStepfunConfig priority matrix (settings > env > default)', () => {
-  let database: ReturnType<typeof createDb>
+function createDependencies() {
+  const models = new Map<ModelKind, NonNullable<ModelRoute>>()
+  const media = new Map<MediaKind, NonNullable<MediaRoute>>()
+  const secrets = new Map<string, string>()
+  const credentials: AiConfigDependencies['credentials'] = {
+    save: vi.fn(async ({ provider, secret }) => {
+      secrets.set(provider, secret)
+    }),
+    loadSecret: vi.fn(async (_workspaceId, provider) => secrets.get(provider) ?? null),
+    describe: vi.fn(async (_workspaceId, provider) => ({
+      configured: secrets.has(provider),
+      verifiedAt: null,
+      updatedAt: null,
+    })),
+  }
+  const modelRoutes: AiConfigDependencies['modelRoutes'] = {
+    find: vi.fn(async (_workspaceId, kind) => models.get(kind) ?? null),
+    save: vi.fn(async (input) => {
+      const previous = models.get(input.aiTaskKind)
+      const route = {
+        ...input,
+        revision: previous ? previous.revision + 1 : 0,
+      }
+      models.set(input.aiTaskKind, route)
+      return route
+    }),
+    remove: vi.fn(async (_workspaceId, kind) => models.delete(kind)),
+    resolve: vi.fn(async (workspaceId, kind) => {
+      const route = models.get(kind)
+      return route
+        ? {
+            ...route,
+            secret: await credentials.loadSecret(workspaceId, route.provider),
+          }
+        : null
+    }),
+  }
+  const mediaRoutes: AiConfigDependencies['mediaRoutes'] = {
+    find: vi.fn(async (_workspaceId, kind) => media.get(kind) ?? null),
+    save: vi.fn(async (input) => {
+      const previous = media.get(input.mediaTaskKind)
+      const route = {
+        ...input,
+        revision: previous ? previous.revision + 1 : 0,
+      }
+      media.set(input.mediaTaskKind, route)
+      return route
+    }),
+    remove: vi.fn(async (_workspaceId, kind) => media.delete(kind)),
+    resolve: vi.fn(async (workspaceId, kind) => {
+      const route = media.get(kind)
+      return route
+        ? {
+            ...route,
+            secret: await credentials.loadSecret(workspaceId, route.provider),
+          }
+        : null
+    }),
+  }
+  return {
+    dependencies: { credentials, modelRoutes, mediaRoutes },
+    media,
+    models,
+    secrets,
+  }
+}
 
-  beforeEach(() => {
-    process.env = { ...originalEnv }
-    delete process.env.STEPFUN_API_KEY
-    delete process.env.STEPFUN_BASE_URL
-    delete process.env.STEPFUN_CHAT_MODEL
-    delete process.env.STEPFUN_TTS_MODEL
-    delete process.env.STEPFUN_ASR_MODEL
-    delete process.env.STEPFUN_VISION_MODEL
-    database = createDb(':memory:')
-    getDbMock.mockReturnValue(database.db)
-  })
+beforeEach(() => {
+  process.env = { ...originalEnv }
+  for (const key of [
+    'STEPFUN_API_KEY',
+    'STEPFUN_BASE_URL',
+    'STEPFUN_CHAT_MODEL',
+    'STEPFUN_TTS_MODEL',
+    'STEPFUN_ASR_MODEL',
+    'STEPFUN_VISION_MODEL',
+  ]) {
+    delete process.env[key]
+  }
+})
+afterEach(() => {
+  process.env = originalEnv
+})
 
-  afterEach(() => {
-    process.env = originalEnv
-    database.sqlite.close()
-  })
+describe('getStepfunConfig', () => {
+  it('falls back to canonical defaults without opening storage at import time', async () => {
+    const { dependencies } = createDependencies()
 
-  it('falls back to built-in defaults when neither settings nor env is set', () => {
-    const config = getStepfunConfig()
-    expect(config).toEqual({
+    await expect(getStepfunConfig(dependencies)).resolves.toEqual({
       apiKey: null,
       baseUrl: 'https://api.stepfun.com/v1',
       chatModel: 'step-3.5-flash',
@@ -49,125 +116,108 @@ describe('getStepfunConfig priority matrix (settings > env > default)', () => {
     })
   })
 
-  it('reads from env when settings table has no row', () => {
+  it('uses model env values but never falls back to a plaintext credential env', async () => {
+    const { dependencies } = createDependencies()
     process.env.STEPFUN_API_KEY = 'env-key'
-    process.env.STEPFUN_BASE_URL = 'https://env.example.com/v1'
     process.env.STEPFUN_CHAT_MODEL = 'env-chat'
     process.env.STEPFUN_TTS_MODEL = 'env-tts'
-    process.env.STEPFUN_ASR_MODEL = 'env-asr'
-    process.env.STEPFUN_VISION_MODEL = 'env-vision'
 
-    expect(getStepfunConfig()).toEqual({
-      apiKey: 'env-key',
-      baseUrl: 'https://env.example.com/v1',
+    await expect(getStepfunConfig(dependencies)).resolves.toMatchObject({
+      apiKey: null,
       chatModel: 'env-chat',
       ttsModel: 'env-tts',
-      asrModel: 'env-asr',
-      visionModel: 'env-vision',
     })
   })
 
-  it('prefers settings table over env for every field', () => {
+  it('prefers encrypted credentials and provider-matched routes over env', async () => {
+    const { dependencies, media, models, secrets } = createDependencies()
     process.env.STEPFUN_API_KEY = 'env-key'
-    process.env.STEPFUN_BASE_URL = 'https://env.example.com/v1'
     process.env.STEPFUN_CHAT_MODEL = 'env-chat'
-    process.env.STEPFUN_TTS_MODEL = 'env-tts'
-    process.env.STEPFUN_ASR_MODEL = 'env-asr'
-    process.env.STEPFUN_VISION_MODEL = 'env-vision'
-
-    setSettingValue(STEPFUN_SETTINGS_KEYS.apiKey, 'settings-key')
-    setSettingValue(STEPFUN_SETTINGS_KEYS.baseUrl, 'https://settings.example.com/v1')
-    setSettingValue(STEPFUN_SETTINGS_KEYS.chatModel, 'settings-chat')
-    setSettingValue(STEPFUN_SETTINGS_KEYS.ttsModel, 'settings-tts')
-    setSettingValue(STEPFUN_SETTINGS_KEYS.asrModel, 'settings-asr')
-    setSettingValue(STEPFUN_SETTINGS_KEYS.visionModel, 'settings-vision')
-
-    expect(getStepfunConfig()).toEqual({
-      apiKey: 'settings-key',
-      baseUrl: 'https://settings.example.com/v1',
-      chatModel: 'settings-chat',
-      ttsModel: 'settings-tts',
-      asrModel: 'settings-asr',
-      visionModel: 'settings-vision',
+    secrets.set('stepfun', 'stored-key')
+    models.set('fabricate', {
+      workspaceId: 'workspace',
+      aiTaskKind: 'fabricate',
+      provider: 'stepfun',
+      model: 'stored-chat',
+      revision: 0,
     })
-  })
+    models.set('vision-qa', {
+      workspaceId: 'workspace',
+      aiTaskKind: 'vision-qa',
+      provider: 'stepfun',
+      model: 'stored-vision',
+      revision: 0,
+    })
+    media.set('tts', {
+      workspaceId: 'workspace',
+      mediaTaskKind: 'tts',
+      provider: 'stepfun',
+      model: 'stored-tts',
+      revision: 0,
+    })
 
-  it('treats an empty-string settings value as unset and falls back to env', () => {
-    process.env.STEPFUN_CHAT_MODEL = 'env-chat'
-    setSettingValue(STEPFUN_SETTINGS_KEYS.chatModel, 'settings-chat')
-    // 清空 = 显式回退
-    setSettingValue(STEPFUN_SETTINGS_KEYS.chatModel, '')
-
-    expect(getStepfunConfig().chatModel).toBe('env-chat')
-    expect(getSettingValue(STEPFUN_SETTINGS_KEYS.chatModel)).toBeNull()
-  })
-
-  it('resolves apiKey independently per-field without touching model defaults', () => {
-    setSettingValue(STEPFUN_SETTINGS_KEYS.apiKey, 'only-key-set')
-    const config = getStepfunConfig()
-    expect(config.apiKey).toBe('only-key-set')
-    expect(config.chatModel).toBe('step-3.5-flash')
+    await expect(getStepfunConfig(dependencies)).resolves.toMatchObject({
+      apiKey: 'stored-key',
+      chatModel: 'stored-chat',
+      ttsModel: 'stored-tts',
+      visionModel: 'stored-vision',
+    })
   })
 })
 
 describe('describeStepfunConfig', () => {
-  let database: ReturnType<typeof createDb>
-
-  beforeEach(() => {
-    process.env = { ...originalEnv }
-    delete process.env.STEPFUN_CHAT_MODEL
-    database = createDb(':memory:')
-    getDbMock.mockReturnValue(database.db)
-  })
-
-  afterEach(() => {
-    process.env = originalEnv
-    database.sqlite.close()
-  })
-
-  it('labels each field with its resolution source and never includes apiKey', () => {
-    setSettingValue(STEPFUN_SETTINGS_KEYS.chatModel, 'custom-chat')
+  it('returns only model/endpoint views and never credential material', async () => {
+    const { dependencies, models, secrets } = createDependencies()
+    secrets.set('stepfun', 'never-exposed')
+    models.set('fabricate', {
+      workspaceId: 'workspace',
+      aiTaskKind: 'fabricate',
+      provider: 'stepfun',
+      model: 'custom-chat',
+      revision: 0,
+    })
     process.env.STEPFUN_ASR_MODEL = 'env-asr'
 
-    const view = describeStepfunConfig()
+    const view = await describeStepfunConfig(dependencies)
 
     expect(view.chatModel).toEqual({ value: 'custom-chat', source: 'settings' })
     expect(view.asrModel).toEqual({ value: 'env-asr', source: 'env' })
-    expect(view.visionModel).toEqual({ value: 'step-3.7-flash', source: 'default' })
     expect(view).not.toHaveProperty('apiKey')
+    expect(JSON.stringify(view)).not.toContain('never-exposed')
   })
 })
 
 describe('saveStepfunModelSettings', () => {
-  let database: ReturnType<typeof createDb>
+  it('writes only submitted model groups and clears empty overrides', async () => {
+    const { dependencies, media, models } = createDependencies()
+    media.set('tts', {
+      workspaceId: 'workspace',
+      mediaTaskKind: 'tts',
+      provider: 'stepfun',
+      model: 'existing-tts',
+      revision: 0,
+    })
 
-  beforeEach(() => {
-    process.env = { ...originalEnv }
-    database = createDb(':memory:')
-    getDbMock.mockReturnValue(database.db)
+    await saveStepfunModelSettings({ chatModel: 'new-chat' }, dependencies)
+    expect([...models.keys()].sort()).toEqual(
+      ['fabricate', 'project-plan', 'shot-spec'].sort(),
+    )
+    expect(media.get('tts')?.model).toBe('existing-tts')
+
+    await saveStepfunModelSettings({ chatModel: '' }, dependencies)
+    expect(models.size).toBe(0)
   })
 
-  afterEach(() => {
-    process.env = originalEnv
-    database.sqlite.close()
-  })
-
-  it('writes only the provided fields and leaves others untouched', () => {
-    setSettingValue(STEPFUN_SETTINGS_KEYS.ttsModel, 'existing-tts')
-
-    saveStepfunModelSettings({ chatModel: 'new-chat' })
-
-    expect(getSettingValue(STEPFUN_SETTINGS_KEYS.chatModel)).toBe('new-chat')
-    expect(getSettingValue(STEPFUN_SETTINGS_KEYS.ttsModel)).toBe('existing-tts')
-  })
-
-  it('clears a field (deletes the settings row) when an empty string is submitted', () => {
-    setSettingValue(STEPFUN_SETTINGS_KEYS.baseUrl, 'https://custom.example.com/v1')
-
-    saveStepfunModelSettings({ baseUrl: '' })
-
-    expect(getSettingValue(STEPFUN_SETTINGS_KEYS.baseUrl)).toBeNull()
-    const row = database.db.select().from(settings).all()
-    expect(row.find((r) => r.key === STEPFUN_SETTINGS_KEYS.baseUrl)).toBeUndefined()
+  it('accepts empty/canonical base URLs but rejects unsupported persistence', async () => {
+    const { dependencies } = createDependencies()
+    await expect(saveStepfunModelSettings({
+      baseUrl: 'https://api.stepfun.com/v1',
+    }, dependencies)).resolves.toBeUndefined()
+    await expect(saveStepfunModelSettings({
+      baseUrl: '',
+    }, dependencies)).resolves.toBeUndefined()
+    await expect(saveStepfunModelSettings({
+      baseUrl: 'https://custom.example/v1',
+    }, dependencies)).rejects.toThrow('custom StepFun baseUrl')
   })
 })

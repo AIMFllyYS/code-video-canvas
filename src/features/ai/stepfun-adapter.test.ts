@@ -1,18 +1,33 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createDb, type Db } from '@/lib/db/migrate'
-import { StepfunAdapter, validateKey } from './stepfun-adapter'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  getStoredApiKey,
+  saveApiKey,
+  StepfunAdapter,
+  validateKey,
+} from './stepfun-adapter'
 
-const { createMock, openAiConstructorMock, getDbMock } = vi.hoisted(() => ({
-  createMock: vi.fn().mockResolvedValue({
+const mocks = vi.hoisted(() => ({
+  create: vi.fn().mockResolvedValue({
     choices: [{ message: { content: 'mocked content' } }],
   }),
-  openAiConstructorMock: vi.fn(),
-  getDbMock: vi.fn<() => Db>(),
+  getConfig: vi.fn(),
+  loadSecret: vi.fn(),
+  openAiConstructor: vi.fn(),
+  resolveBaseUrl: vi.fn(),
+  saveSecret: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
-vi.mock('@/lib/db/client', () => ({ getDb: getDbMock }))
-
+vi.mock('./config', () => ({
+  getAiConfigDependencies: () => ({
+    credentials: {
+      loadSecret: mocks.loadSecret,
+      save: mocks.saveSecret,
+    },
+  }),
+  getStepfunConfig: mocks.getConfig,
+  resolveStepfunBaseUrl: mocks.resolveBaseUrl,
+}))
 vi.mock('openai', () => {
   class MockAPIError extends Error {
     readonly status?: number
@@ -24,148 +39,93 @@ vi.mock('openai', () => {
   return {
     default: class MockOpenAI {
       static readonly APIError = MockAPIError
-      readonly chat = { completions: { create: createMock } }
-
+      readonly chat = { completions: { create: mocks.create } }
       constructor(options: unknown) {
-        openAiConstructorMock(options)
+        mocks.openAiConstructor(options)
       }
     },
   }
 })
 
+beforeEach(() => {
+  vi.clearAllMocks()
+  mocks.resolveBaseUrl.mockReturnValue('https://api.stepfun.com/v1')
+  mocks.getConfig.mockResolvedValue({
+    apiKey: null,
+    baseUrl: 'https://api.stepfun.com/v1',
+    chatModel: 'step-3.5-flash',
+    ttsModel: 'stepaudio-2.5-tts',
+    asrModel: 'stepaudio-2.5-asr',
+    visionModel: 'step-3.7-flash',
+  })
+})
+
 describe('StepfunAdapter', () => {
-  const originalEnv = { ...process.env }
-  let database: ReturnType<typeof createDb>
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    process.env = { ...originalEnv }
-    database = createDb(':memory:')
-    getDbMock.mockReturnValue(database.db)
-  })
-
-  afterEach(() => {
-    process.env = originalEnv
-    database.sqlite.close()
-  })
-
-  it('should initialize OpenAI client with correct baseURL from environment', () => {
-    process.env.STEPFUN_BASE_URL = 'https://custom.api.com/v1'
+  it('initializes the compatible client with the server-only endpoint', () => {
     new StepfunAdapter('test-key')
 
-    expect(openAiConstructorMock).toHaveBeenCalledWith({
-      apiKey: 'test-key',
-      baseURL: 'https://custom.api.com/v1',
-    })
-  })
-
-  it('should fallback to default baseURL if environment variable is not defined', () => {
-    delete process.env.STEPFUN_BASE_URL
-    new StepfunAdapter('test-key')
-
-    expect(openAiConstructorMock).toHaveBeenCalledWith({
+    expect(mocks.openAiConstructor).toHaveBeenCalledWith({
       apiKey: 'test-key',
       baseURL: 'https://api.stepfun.com/v1',
     })
   })
 
-  it('should use model from chat options when specified', async () => {
+  it('uses an explicit model or the asynchronously resolved model', async () => {
     const adapter = new StepfunAdapter('test-key')
+    await adapter.chat(
+      [{ role: 'user', content: 'hello' }],
+      { model: 'explicit-model' },
+    )
+    expect(mocks.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ model: 'explicit-model' }),
+    )
 
-    await adapter.chat([{ role: 'user', content: 'hello' }], { model: 'step-3.5-flash-test' })
-
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: 'step-3.5-flash-test',
-      })
+    await adapter.chat([{ role: 'user', content: 'hello' }])
+    expect(mocks.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ model: 'step-3.5-flash' }),
     )
   })
 
-  it('should use model from environment when options are empty', async () => {
-    process.env.STEPFUN_CHAT_MODEL = 'env-model'
-    const adapter = new StepfunAdapter('test-key')
+  it('reads and writes credentials only through the encrypted store', async () => {
+    mocks.loadSecret.mockResolvedValue('stored-key')
+    await expect(getStoredApiKey()).resolves.toBe('stored-key')
+    const verifiedAt = new Date('2026-07-25T00:00:00.000Z')
+    await saveApiKey('new-key', verifiedAt)
 
-    await adapter.chat([{ role: 'user', content: 'hello' }])
-
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: 'env-model',
-      })
+    expect(mocks.loadSecret).toHaveBeenCalledWith(
+      '00000000-0000-4000-8000-000000000001',
+      'stepfun',
     )
-  })
-
-  it('should fallback to default model if neither options nor environment defines it', async () => {
-    delete process.env.STEPFUN_CHAT_MODEL
-    const adapter = new StepfunAdapter('test-key')
-
-    await adapter.chat([{ role: 'user', content: 'hello' }])
-
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: 'step-3.5-flash',
-      })
-    )
+    expect(mocks.saveSecret).toHaveBeenCalledWith({
+      workspaceId: '00000000-0000-4000-8000-000000000001',
+      provider: 'stepfun',
+      secret: 'new-key',
+      verifiedAt,
+    })
   })
 })
 
 describe('validateKey', () => {
-  const originalEnv = { ...process.env }
-  let database: ReturnType<typeof createDb>
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    process.env = { ...originalEnv }
-    database = createDb(':memory:')
-    getDbMock.mockReturnValue(database.db)
-  })
-
-  afterEach(() => {
-    process.env = originalEnv
-    database.sqlite.close()
-  })
-
-  it('should return true when the chat probe succeeds', async () => {
+  it('probes with a minimal completion using the resolved model', async () => {
     await expect(validateKey('sk-valid')).resolves.toBe(true)
-  })
-
-  it('should return false and log server-side without leaking the key when the probe fails', async () => {
-    createMock.mockRejectedValueOnce(new Error('boom'))
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-    await expect(validateKey('sk-super-secret')).resolves.toBe(false)
-
-    expect(errorSpy).toHaveBeenCalledTimes(1)
-    const logged = JSON.stringify(errorSpy.mock.calls[0])
-    expect(logged).not.toContain('sk-super-secret')
-
-    errorSpy.mockRestore()
-  })
-
-  it('should probe with a minimal chat completion using the default model', async () => {
-    delete process.env.STEPFUN_CHAT_MODEL
-
-    await validateKey('test-key')
-
-    expect(createMock).toHaveBeenCalledWith(
+    expect(mocks.create).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'step-3.5-flash',
         max_tokens: 1,
         messages: [{ role: 'user', content: 'ping' }],
       }),
-      expect.anything()
+      expect.anything(),
     )
   })
 
-  it('should respect STEPFUN_CHAT_MODEL when probing', async () => {
-    process.env.STEPFUN_CHAT_MODEL = 'env-model'
+  it('returns false and logs server-side without leaking the key', async () => {
+    mocks.create.mockRejectedValueOnce(new Error('boom'))
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    await validateKey('test-key')
+    await expect(validateKey('sk-super-secret')).resolves.toBe(false)
 
-    expect(createMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: 'env-model',
-      }),
-      expect.anything()
-    )
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(JSON.stringify(errorSpy.mock.calls[0])).not.toContain('sk-super-secret')
+    errorSpy.mockRestore()
   })
 })

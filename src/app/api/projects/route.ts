@@ -3,15 +3,15 @@ import { createProject, getCanvasGraph, listProjects } from '@/features/canvas'
 
 export const dynamic = 'force-dynamic'
 
-export function GET() {
-  return NextResponse.json({ projects: listProjects() })
+export async function GET() {
+  return NextResponse.json({ projects: await listProjects() })
 }
 
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => null)
   try {
-    const project = createProject(body)
-    const ingestNodeId = getCanvasGraph(project.id).nodes.find(
+    const project = await createProject(body)
+    const ingestNodeId = (await getCanvasGraph(project.id)).nodes.find(
       ({ type }) => type === 'script-import'
     )?.id
     if (!ingestNodeId) throw new Error('项目初始 INGEST 节点创建失败')

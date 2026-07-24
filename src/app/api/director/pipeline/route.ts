@@ -34,7 +34,7 @@ export async function DELETE(request: Request) {
   try {
     return NextResponse.json({
       ok: true,
-      ...stopProjectPipeline(parsed.projectId),
+      ...(await stopProjectPipeline(parsed.projectId)),
     })
   } catch (error) {
     return NextResponse.json(

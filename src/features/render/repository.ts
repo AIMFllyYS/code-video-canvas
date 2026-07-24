@@ -1,19 +1,27 @@
 import 'server-only'
-import { randomUUID } from 'node:crypto'
-import { and, desc, eq, isNotNull } from 'drizzle-orm'
-import { artifacts, canvasNodes, projects } from '@/lib/db/schema'
+import { and, desc, eq } from 'drizzle-orm'
 import {
   resolutionForPreset,
   resolveExportSettings,
   type ResolutionPreset,
-} from '@/features/canvas/export-settings'
-import { RenderShotRepository } from './render-shot-repository'
-import { FRAME_THUMBNAIL_KIND, thumbnailOutputPath } from './types'
-import type {
-  ShotQaCheckData,
-  ShotQaVisionData,
-  ThumbnailArtifactRecord,
-} from './types'
+} from '@/features/canvas'
+import { LOCAL_WORKSPACE_ID } from '@/lib/db/client'
+import { artifacts, canvasNodes, projects } from '@/lib/db/schema/index'
+import { withTransaction } from '@/lib/db/transaction'
+import {
+  laneKeyOf,
+  legacyNodeStatus,
+  readPayload,
+  writeNodeProjection,
+} from './persistence'
+import {
+  RenderArtifactRepository,
+  type FinalArtifactInput,
+  type FinalArtifactRecord,
+} from './render-artifact-repository'
+import type { ShotQaCheckData, ShotQaVisionData } from './types'
+
+export type { FinalArtifactInput, FinalArtifactRecord }
 
 export interface ExportShot {
   nodeId: string
@@ -25,79 +33,83 @@ export interface RenderExportPlan {
   incompleteNodeIds: string[]
   shots: ExportShot[]
   musicKey: string | null
-  /** 导出目标分辨率（由项目 exportSettings 解析），仅用于 concat 阶段。 */
   targetResolution: { width: number; height: number }
   resolutionPreset: ResolutionPreset
-  /** laneKey → QA 是否通过；null 表示尚未检测（不得默认 true）。 */
   shotQa: Record<string, boolean | null>
 }
 
-/** shot-qa 检测编排所需的一个目标：已成功渲染的 shot-codegen + 同 laneKey 的 shot-qa 节点。 */
 export interface ShotQaTarget {
   codegenNodeId: string
   qaNodeId: string
   laneKey: string
 }
 
-export interface FinalArtifactInput {
-  projectId: string
-  outputKey: string
-  contentHash: string
-}
-
-export interface FinalArtifactRecord {
-  artifactId: string
-  path: string
-  contentHash: string
-}
-
-/** Render 持久化端口；集中处理画布顺序与 artifact 指针。 */
-export class RenderRepository extends RenderShotRepository {
-
-  getExportPlan(projectId: string): RenderExportPlan {
-    const project = this.db
-      .select({ id: projects.id, exportSettings: projects.exportSettings })
+/** Render 持久化端口；集中处理画布顺序、QA 投影与 artifact 指针。 */
+export class RenderRepository extends RenderArtifactRepository {
+  async getExportPlan(projectId: string): Promise<RenderExportPlan> {
+    const database = await this.database()
+    const [project] = await database
+      .select({ exportSettings: projects.exportSettings })
       .from(projects)
-      .where(eq(projects.id, projectId))
-      .get()
+      .where(
+        and(
+          eq(projects.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(projects.id, projectId)
+        )
+      )
+      .limit(1)
     if (!project) throw new Error(`项目不存在：${projectId}`)
-    const settings = resolveExportSettings(project.exportSettings)
-
-    const nodes = this.db
+    const settings = resolveExportSettings(
+      readObject(project.exportSettings).settings
+    )
+    const rows = await database
       .select({
         id: canvasNodes.id,
         type: canvasNodes.type,
         status: canvasNodes.status,
-        laneKey: canvasNodes.laneKey,
         data: canvasNodes.data,
       })
       .from(canvasNodes)
-      .where(and(eq(canvasNodes.projectId, projectId), isNotNull(canvasNodes.laneKey)))
-      .all()
-    const renderArtifacts = this.db
+      .where(
+        and(
+          eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(canvasNodes.projectId, projectId)
+        )
+      )
+    const nodes = rows.flatMap((row) => {
+      const laneKey = laneKeyOf(row.data)
+      return laneKey
+        ? [{ ...row, laneKey, payload: readPayload(row.data) }]
+        : []
+    })
+    const renderArtifacts = await database
       .select({
-        nodeId: artifacts.nodeId,
-        path: artifacts.path,
+        nodeId: artifacts.aggregateId,
+        storageKey: artifacts.storageKey,
       })
       .from(artifacts)
-      .where(and(eq(artifacts.projectId, projectId), eq(artifacts.kind, 'render-mp4')))
-      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
-      .all()
+      .where(
+        and(
+          eq(artifacts.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(artifacts.projectId, projectId),
+          eq(artifacts.aggregateType, 'node'),
+          eq(artifacts.kind, 'render-mp4')
+        )
+      )
+      .orderBy(desc(artifacts.version), desc(artifacts.createdAt))
     const latestByNode = new Map<string, string>()
     for (const artifact of renderArtifacts) {
-      if (artifact.nodeId && !latestByNode.has(artifact.nodeId)) {
-        latestByNode.set(artifact.nodeId, artifact.path)
+      if (!latestByNode.has(artifact.nodeId)) {
+        latestByNode.set(artifact.nodeId, artifact.storageKey)
       }
     }
-
     const incomplete = new Set(
-      nodes.filter((node) => node.status !== 'success').map((node) => node.id)
+      nodes
+        .filter((node) => legacyNodeStatus(node.status) !== 'success')
+        .map((node) => node.id)
     )
     const shots = nodes
-      .filter(
-        (node): node is typeof node & { laneKey: string } =>
-          node.type === 'shot-codegen' && node.laneKey !== null
-      )
+      .filter((node) => node.type === 'shot-codegen')
       .flatMap((node) => {
         const outputKey = latestByNode.get(node.id)
         if (!outputKey) {
@@ -107,195 +119,113 @@ export class RenderRepository extends RenderShotRepository {
         return [{ nodeId: node.id, laneKey: node.laneKey, outputKey }]
       })
       .sort((left, right) => left.laneKey.localeCompare(right.laneKey))
-
     const shotQa: Record<string, boolean | null> = {}
     for (const node of nodes) {
-      if (node.type === 'shot-qa' && node.laneKey) {
-        shotQa[node.laneKey] = qaPassedOf(node.data)
+      if (node.type === 'shot-qa') {
+        shotQa[node.laneKey] = qaPassedOf(node.payload)
       }
     }
-
     return {
       incompleteNodeIds: [...incomplete].sort(),
       shots,
-      musicKey: this.latestMusicKey(projectId),
+      musicKey: await this.latestMusicKey(projectId),
       targetResolution: resolutionForPreset(settings.resolutionPreset),
       resolutionPreset: settings.resolutionPreset,
       shotQa,
     }
   }
 
-  registerFinalArtifact(input: FinalArtifactInput): string {
-    const id = randomUUID()
-    this.db
-      .insert(artifacts)
-      .values({
-        id,
-        projectId: input.projectId,
-        kind: 'final-mp4',
-        path: input.outputKey,
-        contentHash: input.contentHash,
-      })
-      .run()
-    return id
-  }
-
-  findLatestFinalArtifact(projectId: string): FinalArtifactRecord | null {
-    const row = this.db
-      .select({ id: artifacts.id, path: artifacts.path, contentHash: artifacts.contentHash })
-      .from(artifacts)
-      .where(and(eq(artifacts.projectId, projectId), eq(artifacts.kind, 'final-mp4')))
-      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
-      .get()
-    if (!row?.contentHash) return null
-    return { artifactId: row.id, path: row.path, contentHash: row.contentHash }
-  }
-
-  /** 查找已登记的缩略图 artifact（sourceKey + frame 唯一寻址）；不存在返回 null。 */
-  findThumbnail(
-    projectId: string,
-    nodeId: string,
-    sourceKey: string,
-    frame: number
-  ): ThumbnailArtifactRecord | null {
-    const path = thumbnailOutputPath(projectId, nodeId, sourceKey, frame)
-    const row = this.db
-      .select({ id: artifacts.id, path: artifacts.path, contentHash: artifacts.contentHash })
-      .from(artifacts)
-      .where(
-        and(
-          eq(artifacts.projectId, projectId),
-          eq(artifacts.nodeId, nodeId),
-          eq(artifacts.kind, FRAME_THUMBNAIL_KIND),
-          eq(artifacts.path, path)
-        )
-      )
-      .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
-      .get()
-    if (!row || !row.contentHash) return null
-    return { artifactId: row.id, path: row.path, contentHash: row.contentHash }
-  }
-
-  /** 登记已由可信调用方提交到 StorageAdapter 的内容寻址缩略图 PNG。 */
-  registerThumbnail(input: {
-    projectId: string
-    nodeId: string
-    outputKey: string
-    contentHash: string
-  }): string {
-    const id = randomUUID()
-    this.db
-      .insert(artifacts)
-      .values({
-        id,
-        projectId: input.projectId,
-        nodeId: input.nodeId,
-        kind: FRAME_THUMBNAIL_KIND,
-        path: input.outputKey,
-        contentHash: input.contentHash,
-      })
-      .run()
-    return id
-  }
-
-  /**
-   * 列出可跑 QA 的目标：已成功渲染的 shot-codegen 节点与同 laneKey 的 shot-qa 节点配对。
-   * 单次查询 + 内存 join，不产生 N+1。
-   */
-  getShotQaTargets(projectId: string): ShotQaTarget[] {
-    const nodes = this.db
+  async getShotQaTargets(projectId: string): Promise<ShotQaTarget[]> {
+    const database = await this.database()
+    const rows = await database
       .select({
         id: canvasNodes.id,
         type: canvasNodes.type,
         status: canvasNodes.status,
-        laneKey: canvasNodes.laneKey,
+        data: canvasNodes.data,
       })
       .from(canvasNodes)
-      .where(and(eq(canvasNodes.projectId, projectId), isNotNull(canvasNodes.laneKey)))
-      .all()
+      .where(
+        and(
+          eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(canvasNodes.projectId, projectId)
+        )
+      )
+    const nodes = rows.flatMap((row) => {
+      const laneKey = laneKeyOf(row.data)
+      return laneKey ? [{ ...row, laneKey }] : []
+    })
     const qaNodeByLane = new Map<string, string>()
     for (const node of nodes) {
-      if (node.type === 'shot-qa' && node.laneKey) qaNodeByLane.set(node.laneKey, node.id)
+      if (node.type === 'shot-qa') qaNodeByLane.set(node.laneKey, node.id)
     }
-    const targets: ShotQaTarget[] = []
-    for (const node of nodes) {
-      if (node.type !== 'shot-codegen' || node.status !== 'success' || !node.laneKey) continue
-      const qaNodeId = qaNodeByLane.get(node.laneKey)
-      if (qaNodeId) targets.push({ codegenNodeId: node.id, qaNodeId, laneKey: node.laneKey })
-    }
-    return targets.sort((left, right) => left.laneKey.localeCompare(right.laneKey))
+    return nodes
+      .filter(
+        (node) =>
+          node.type === 'shot-codegen' &&
+          legacyNodeStatus(node.status) === 'success'
+      )
+      .flatMap((node) => {
+        const qaNodeId = qaNodeByLane.get(node.laneKey)
+        return qaNodeId
+          ? [{ codegenNodeId: node.id, qaNodeId, laneKey: node.laneKey }]
+          : []
+      })
+      .sort((left, right) => left.laneKey.localeCompare(right.laneKey))
   }
 
-  /** 读取 shot-qa 节点已持久化的 qaCheck（供 contentHash 跳过判断）；不存在/非法返回 null。 */
-  readShotQaCheck(nodeId: string): ShotQaCheckData | null {
-    const node = this.db
+  async readShotQaCheck(nodeId: string): Promise<ShotQaCheckData | null> {
+    const database = await this.database()
+    const [node] = await database
       .select({ data: canvasNodes.data })
       .from(canvasNodes)
-      .where(eq(canvasNodes.id, nodeId))
-      .get()
-    return node ? asShotQaCheckData(node.data.qaCheck) : null
+      .where(
+        and(
+          eq(canvasNodes.workspaceId, LOCAL_WORKSPACE_ID),
+          eq(canvasNodes.id, nodeId)
+        )
+      )
+      .limit(1)
+    return node
+      ? asShotQaCheckData(readPayload(node.data).qaCheck)
+      : null
   }
 
-  /** 将 QA 结果写回 shot-qa 节点 data.qaCheck（保留其他 data 字段）。 */
-  writeShotQaCheck(nodeId: string, qaCheck: ShotQaCheckData): void {
-    const node = this.db
-      .select({ data: canvasNodes.data })
-      .from(canvasNodes)
-      .where(eq(canvasNodes.id, nodeId))
-      .get()
-    if (!node) throw new Error(`节点不存在：${nodeId}`)
-    this.db
-      .update(canvasNodes)
-      .set({ data: { ...node.data, qaCheck } })
-      .where(eq(canvasNodes.id, nodeId))
-      .run()
+  async writeShotQaCheck(
+    nodeId: string,
+    qaCheck: ShotQaCheckData
+  ): Promise<void> {
+    const database = await this.database()
+    await withTransaction(database, (transaction) =>
+      writeNodeProjection(transaction, nodeId, 'qaCheck', qaCheck)
+    )
   }
 
-  /** 将 Vision QA 摘要写回节点；完整报告保存在 qa-vision-report artifact。 */
-  writeShotQaVision(nodeId: string, qaVision: ShotQaVisionData): void {
-    const node = this.db
-      .select({ data: canvasNodes.data })
-      .from(canvasNodes)
-      .where(eq(canvasNodes.id, nodeId))
-      .get()
-    if (!node) throw new Error(`节点不存在：${nodeId}`)
-    this.db
-      .update(canvasNodes)
-      .set({ data: { ...node.data, qaVision } })
-      .where(eq(canvasNodes.id, nodeId))
-      .run()
-  }
-
-  private latestMusicKey(projectId: string): string | null {
-    return (
-      this.db
-        .select({ path: artifacts.path })
-        .from(artifacts)
-        .where(and(eq(artifacts.projectId, projectId), eq(artifacts.kind, 'score-audio')))
-        .orderBy(desc(artifacts.createdAt), desc(artifacts.id))
-        .get()?.path ?? null
+  async writeShotQaVision(
+    nodeId: string,
+    qaVision: ShotQaVisionData
+  ): Promise<void> {
+    const database = await this.database()
+    await withTransaction(database, (transaction) =>
+      writeNodeProjection(transaction, nodeId, 'qaVision', qaVision)
     )
   }
 }
 
-/** 从节点 data 中安全提取 qaCheck.passed；缺失/非法返回 null（不得默认 true）。 */
-function qaPassedOf(data: Record<string, unknown>): boolean | null {
-  const qaCheck = data.qaCheck
-  if (qaCheck && typeof qaCheck === 'object' && 'passed' in qaCheck) {
-    const passed = (qaCheck as { passed: unknown }).passed
-    if (typeof passed === 'boolean') {
-      const qaVision = data.qaVision
-      if (qaVision && typeof qaVision === 'object' && 'passed' in qaVision) {
-        const visionPassed = (qaVision as { passed: unknown }).passed
-        if (typeof visionPassed === 'boolean') return passed && visionPassed
-      }
-      return passed
-    }
-  }
-  return null
+function readObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
 }
 
-/** 将未知 data.qaCheck 归一为 ShotQaCheckData；形状不符返回 null。 */
+function qaPassedOf(data: Record<string, unknown>): boolean | null {
+  const qaCheck = readObject(data.qaCheck)
+  if (typeof qaCheck.passed !== 'boolean') return null
+  const qaVision = readObject(data.qaVision)
+  return typeof qaVision.passed === 'boolean'
+    ? qaCheck.passed && qaVision.passed
+    : qaCheck.passed
+}
+
 function asShotQaCheckData(value: unknown): ShotQaCheckData | null {
   if (
     value &&

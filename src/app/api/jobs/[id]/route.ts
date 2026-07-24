@@ -12,13 +12,13 @@ export async function GET(
   if (!projectId) {
     return NextResponse.json({ ok: false, error: '缺少 projectId' }, { status: 400 })
   }
-  const job = getJobSnapshot(projectId, (await params).id)
+  const job = await getJobSnapshot(projectId, (await params).id)
   if (!job) {
     return NextResponse.json({ ok: false, error: '作业不存在或不属于该项目' }, { status: 404 })
   }
   const artifact =
     job.status === 'done' && job.kind === 'render-shot' && job.nodeId
-      ? getLatestArtifact(projectId, job.nodeId, 'render-mp4')
+      ? await getLatestArtifact(projectId, job.nodeId, 'render-mp4')
       : null
   return NextResponse.json({
     ok: true,

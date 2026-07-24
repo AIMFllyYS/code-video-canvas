@@ -21,15 +21,16 @@ function createStorage(): StorageAdapter {
 }
 
 describe('writeValidatedArtifact', () => {
-  it('validates before storing and indexing an artifact', async () => {
+  it('validates and resolves a legal attempt before staging bytes', async () => {
     const order: string[] = []
     const storage = createStorage()
     vi.mocked(storage.put).mockImplementation(async (key) => {
       order.push('store')
       return key
     })
-    const insertArtifact = vi.fn(async () => {
-      order.push('index')
+    const resolveAttempt = vi.fn(async () => {
+      order.push('attempt')
+      return 'attempt-1'
     })
     const result = await writeValidatedArtifact(
       {
@@ -42,7 +43,8 @@ describe('writeValidatedArtifact', () => {
       },
       {
         storage,
-        insertArtifact,
+        resolveAttempt,
+        createId: () => 'artifact-1',
         validate: () => {
           order.push('validate')
           return { ok: true }
@@ -50,15 +52,20 @@ describe('writeValidatedArtifact', () => {
       }
     )
 
-    expect(order).toEqual(['validate', 'store', 'index'])
+    expect(order).toEqual(['validate', 'attempt', 'store'])
     expect(result).toMatchObject({
+      id: 'artifact-1',
+      aggregateType: 'node',
+      aggregateId: 'node-1',
+      attemptId: 'attempt-1',
       storageKey: 'project-1/node-1/output.json',
+      sizeBytes: Buffer.byteLength('{"ok":true}'),
     })
   })
 
   it('does not write when pre-validation fails', async () => {
     const storage = createStorage()
-    const insertArtifact = vi.fn()
+    const resolveAttempt = vi.fn()
     const writing = writeValidatedArtifact(
       {
         projectId: 'project-1',
@@ -69,19 +76,19 @@ describe('writeValidatedArtifact', () => {
       },
       {
         storage,
-        insertArtifact,
+        resolveAttempt,
         validate: () => ({ ok: false, errors: ['内容无效'] }),
       }
     )
 
     await expect(writing).rejects.toBeInstanceOf(ArtifactValidationError)
     expect(storage.put).not.toHaveBeenCalled()
-    expect(insertArtifact).not.toHaveBeenCalled()
+    expect(resolveAttempt).not.toHaveBeenCalled()
   })
 
-  it('compensates the file when artifact indexing fails', async () => {
+  it('does not write bytes when no legal attempt exists', async () => {
     const storage = createStorage()
-    const failure = new Error('索引不可用')
+    const failure = new Error('找不到可归属的 task attempt')
 
     await expect(
       writeValidatedArtifact(
@@ -94,13 +101,13 @@ describe('writeValidatedArtifact', () => {
         },
         {
           storage,
-          insertArtifact: vi.fn(async () => {
+          resolveAttempt: vi.fn(async () => {
             throw failure
           }),
         }
       )
     ).rejects.toBe(failure)
 
-    expect(storage.delete).toHaveBeenCalledWith('project-1/output.json')
+    expect(storage.put).not.toHaveBeenCalled()
   })
 })

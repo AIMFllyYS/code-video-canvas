@@ -45,7 +45,11 @@ export async function resolveCompositionMode(
     (node) => node.type === 'shot-script' && node.laneKey === laneKey
   )
   if (!scriptNode) return undefined
-  const artifact = getLatestArtifact(projectId, scriptNode.id, 'director-shot-spec')
+  const artifact = await getLatestArtifact(
+    projectId,
+    scriptNode.id,
+    'director-shot-spec'
+  )
   if (!artifact) return undefined
   try {
     const { bytes } = await readArtifact(projectId, artifact.id)

@@ -22,7 +22,7 @@ describe('exportProject', () => {
     const concat = vi.fn()
     const result = await exportProject('project-1', {
       repository: {
-        getExportPlan: vi.fn(() => ({
+        getExportPlan: vi.fn(async () => ({
           incompleteNodeIds: ['node-2', 'node-1'],
           shots: [],
           musicKey: null,
@@ -30,7 +30,7 @@ describe('exportProject', () => {
           resolutionPreset: '1080x1920' as const,
           shotQa: {},
         })),
-        registerFinalArtifact: vi.fn(() => 'unused'),
+        registerFinalArtifact: vi.fn(async () => 'unused'),
       },
       storage: createStorage(),
       concat,
@@ -58,7 +58,7 @@ describe('exportProject', () => {
     vi.mocked(storage.removeTempDir).mockImplementation((absolutePath) =>
       rm(absolutePath, { recursive: true, force: true })
     )
-    const registerFinalArtifact = vi.fn(() => 'artifact-final')
+    const registerFinalArtifact = vi.fn(async () => 'artifact-final')
     const concat = vi.fn<
       (
         shots: string[],
@@ -73,7 +73,7 @@ describe('exportProject', () => {
 
     const result = await exportProject('project-1', {
       repository: {
-        getExportPlan: vi.fn(() => ({
+        getExportPlan: vi.fn(async () => ({
           incompleteNodeIds: [],
           shots: [
             { nodeId: 'node-2', laneKey: 'S002', outputKey: 'render/S002.mp4' },
@@ -119,7 +119,7 @@ describe('exportProject', () => {
     await expect(
       exportProject('project-1', {
         repository: {
-          getExportPlan: vi.fn(() => ({
+          getExportPlan: vi.fn(async () => ({
             incompleteNodeIds: [],
             shots: [{ nodeId: 'node-1', laneKey: 'S001', outputKey: 'render/S001.mp4' }],
             musicKey: null,
@@ -127,7 +127,7 @@ describe('exportProject', () => {
             resolutionPreset: '1080x1920' as const,
             shotQa: {},
           })),
-          registerFinalArtifact: vi.fn(() => 'unused'),
+          registerFinalArtifact: vi.fn(async () => 'unused'),
         },
         storage,
         concat,
@@ -139,9 +139,9 @@ describe('exportProject', () => {
 })
 
 describe('getExportReadiness', () => {
-  it('returns the latest trusted final artifact for refresh-safe preview', () => {
-    const result = getExportReadiness('project-1', {
-      getExportPlan: vi.fn(() => ({
+  it('returns the latest trusted final artifact for refresh-safe preview', async () => {
+    const result = await getExportReadiness('project-1', {
+      getExportPlan: vi.fn(async () => ({
         incompleteNodeIds: [],
         shots: [{ nodeId: 'node-1', laneKey: 'S001', outputKey: 'render/S001.mp4' }],
         musicKey: null,
@@ -149,7 +149,7 @@ describe('getExportReadiness', () => {
         resolutionPreset: '1080x1920' as const,
         shotQa: { S001: true },
       })),
-      findLatestFinalArtifact: vi.fn(() => ({
+      findLatestFinalArtifact: vi.fn(async () => ({
         artifactId: 'artifact-final',
         path: 'exports/project-1/final.mp4',
         contentHash: 'hash-final',

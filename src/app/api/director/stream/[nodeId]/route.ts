@@ -8,7 +8,11 @@ const KEEPALIVE_MS = 15_000
 
 /** 读取某节点已持久化的流式日志（无则空串）。 */
 async function readPersistedLog(projectId: string, nodeId: string): Promise<string> {
-  const artifact = getLatestArtifact(projectId, nodeId, 'director-stream-log')
+  const artifact = await getLatestArtifact(
+    projectId,
+    nodeId,
+    'director-stream-log'
+  )
   if (!artifact) return ''
   try {
     const { bytes } = await readArtifact(projectId, artifact.id)
@@ -32,7 +36,7 @@ export async function GET(
     return Response.json({ ok: false, error: '缺少 projectId' }, { status: 400 })
   }
   const { nodeId } = await params
-  const context = getNodeStreamContext(projectId, nodeId)
+  const context = await getNodeStreamContext(projectId, nodeId)
   if (!context) {
     return Response.json({ ok: false, error: '节点不存在或不属于该项目' }, { status: 404 })
   }

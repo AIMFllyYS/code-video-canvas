@@ -1,5 +1,5 @@
 import 'server-only'
-import { materializeShotLanes } from '@/features/canvas/fan-out'
+import { materializeShotLanes } from '@/features/canvas'
 import type { ArtifactCommitResult } from './tools/write-artifact'
 import type { DirectorStageContext } from './runtime-repository'
 import type { PreparedStageResult } from './stage-result'
@@ -8,8 +8,8 @@ export interface StageResultRepository {
   recordStageOutput(
     nodeId: string,
     result: PreparedStageResult,
-    artifactId: string
-  ): void
+    artifact: ArtifactCommitResult
+  ): Promise<void>
 }
 
 /**
@@ -17,14 +17,14 @@ export interface StageResultRepository {
  *
  * 模型只提供候选内容；DAG 物化和 renderSpec 都由可信应用层执行。
  */
-export function commitStageResult(
+export async function commitStageResult(
   repository: StageResultRepository,
   context: DirectorStageContext,
   result: PreparedStageResult,
   artifact: ArtifactCommitResult
-): void {
+): Promise<void> {
+  await repository.recordStageOutput(context.nodeId, result, artifact)
   if (result.ingestShots) {
-    materializeShotLanes(context.projectId, result.ingestShots)
+    await materializeShotLanes(context.projectId, result.ingestShots)
   }
-  repository.recordStageOutput(context.nodeId, result, artifact.id)
 }

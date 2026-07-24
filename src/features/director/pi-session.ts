@@ -7,12 +7,11 @@ import {
 import {
   createModels,
   createProvider,
-  envApiKeyAuth,
   type Model,
 } from '@earendil-works/pi-ai'
 import { googleGenerativeAIApi } from '@earendil-works/pi-ai/api/google-generative-ai.lazy'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
-import type { CanvasNodeType } from '@/features/canvas/types'
+import type { CanvasNodeType } from '@/features/canvas'
 import {
   DIRECTOR_NODE_TYPES,
   resolveDirectorModelTarget,
@@ -67,7 +66,7 @@ export async function createDirectorSession(
   try {
     const stored = await store.open(input)
     const context = await stored.session.buildContext()
-    const runtime = createDirectorRuntime(input)
+    const runtime = await createDirectorRuntime(input)
     const agent = new Agent({
       initialState: {
         model: runtime.model,
@@ -155,9 +154,9 @@ function adaptDirectorTool(tool: DirectorTool): AgentTool {
   }
 }
 
-function createDirectorRuntime(input: SessionStoreInput) {
+async function createDirectorRuntime(input: SessionStoreInput) {
   const nodeType = resolveNodeType(input)
-  const target = resolveDirectorModelTarget(nodeType, 'text')
+  const target = await resolveDirectorModelTarget(nodeType, 'text')
   if (!target.apiKey) {
     throw new Error(`${providerName(target.provider)} API Key 未配置`)
   }
@@ -185,7 +184,7 @@ function createGeminiRuntime(target: DirectorModelTarget, apiKey: string) {
     name: 'Gemini',
     baseUrl,
     auth: {
-      apiKey: envApiKeyAuth('Gemini API key', ['GEMINI_API_KEY']),
+      apiKey: workspaceApiKeyAuth('Gemini API key', apiKey),
     },
     models: [model],
     api: googleGenerativeAIApi(),
@@ -213,7 +212,7 @@ function createStepfunRuntime(target: DirectorModelTarget, apiKey: string) {
     name: 'StepFun',
     baseUrl: target.baseUrl,
     auth: {
-      apiKey: envApiKeyAuth('StepFun API key', ['STEPFUN_API_KEY']),
+      apiKey: workspaceApiKeyAuth('StepFun API key', apiKey),
     },
     models: [model],
     api: openAICompletionsApi(),
@@ -264,6 +263,16 @@ function messageText(message: AgentMessage): string {
     .filter((item) => item.type === 'text')
     .map((item) => item.text)
     .join('')
+}
+
+function workspaceApiKeyAuth(name: string, apiKey: string) {
+  return {
+    name,
+    resolve: async () => ({
+      auth: { apiKey },
+      source: 'workspace credential',
+    }),
+  }
 }
 
 function withoutHiddenThinking(message: AgentMessage): AgentMessage {

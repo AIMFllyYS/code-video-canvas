@@ -2,12 +2,11 @@ import os from 'node:os'
 import { NextResponse } from 'next/server'
 import {
   describeStepfunConfig,
-  getStepfunConfig,
+  getAiConfigDependencies,
   saveStepfunModelSettings,
 } from '@/features/ai/config'
 import {
   describeGeminiConfig,
-  getGeminiConfig,
   saveGeminiApiKey,
   saveGeminiSettings,
 } from '@/features/ai/gemini-config'
@@ -17,24 +16,35 @@ import {
   saveDirectorRoutes,
 } from '@/features/ai/model-routing'
 import { stepfunSettingsSchema } from '@/features/ai/schemas'
-import { getStoredApiKey, saveApiKey, validateKey } from '@/features/ai/stepfun-adapter'
-import { DATA_DIR } from '@/lib/config/paths'
+import { saveApiKey, validateKey } from '@/features/ai/stepfun-adapter'
+import { LOCAL_WORKSPACE_ID } from '@/lib/db/client'
 
 export const dynamic = 'force-dynamic'
 
-export function GET() {
-  const key = getStoredApiKey()
+export async function GET() {
+  const credentials = getAiConfigDependencies().credentials
+  const [
+    stepfunCredential,
+    geminiCredential,
+    models,
+    gemini,
+    routes,
+  ] = await Promise.all([
+    credentials.describe(LOCAL_WORKSPACE_ID, 'stepfun'),
+    credentials.describe(LOCAL_WORKSPACE_ID, 'gemini'),
+    describeStepfunConfig(),
+    describeGeminiConfig(),
+    describeDirectorRoutes(),
+  ])
   return NextResponse.json({
-    configured: Boolean(getStepfunConfig().apiKey),
-    masked: key ? `${key.slice(0, 3)}***${key.slice(-2)}` : null,
-    models: describeStepfunConfig(),
-    geminiConfigured: Boolean(getGeminiConfig().apiKey),
-    gemini: describeGeminiConfig(),
-    routes: describeDirectorRoutes(),
+    ...stepfunCredential,
+    models,
+    geminiConfigured: geminiCredential.configured,
+    geminiCredential,
+    gemini,
+    routes,
     // 渲染队列默认并发数 = CPU 核数（`in-process-queue.ts` 的 `start()` 默认值），当前不可配置。
     renderConcurrency: Math.max(1, os.cpus().length),
-    // 二进制产物/数据库根目录（`DATA_DIR`，可用环境变量覆盖），当前设置页不可改。
-    storageDir: DATA_DIR,
   })
 }
 
@@ -65,18 +75,30 @@ export async function POST(request: Request) {
     return keyValidationError('Gemini')
   }
 
-  if (apiKey !== undefined) saveApiKey(apiKey)
-  if (geminiApiKey !== undefined) saveGeminiApiKey(geminiApiKey)
-  saveStepfunModelSettings(modelSettings)
-  saveGeminiSettings(geminiSettings)
-  if (routes) saveDirectorRoutes(routes)
+  await saveStepfunModelSettings(modelSettings)
+  await saveGeminiSettings(geminiSettings)
+  if (routes) await saveDirectorRoutes(routes)
+  if (apiKey !== undefined) await saveApiKey(apiKey)
+  if (geminiApiKey !== undefined) await saveGeminiApiKey(geminiApiKey)
+
+  const credentials = getAiConfigDependencies().credentials
+  const [stepfunCredential, geminiCredential, models, geminiView, routeView] =
+    await Promise.all([
+      credentials.describe(LOCAL_WORKSPACE_ID, 'stepfun'),
+      credentials.describe(LOCAL_WORKSPACE_ID, 'gemini'),
+      describeStepfunConfig(),
+      describeGeminiConfig(),
+      describeDirectorRoutes(),
+    ])
   return NextResponse.json({
     ok: true,
     valid: true,
-    models: describeStepfunConfig(),
-    geminiConfigured: Boolean(getGeminiConfig().apiKey),
-    gemini: describeGeminiConfig(),
-    routes: describeDirectorRoutes(),
+    ...stepfunCredential,
+    models,
+    geminiConfigured: geminiCredential.configured,
+    geminiCredential,
+    gemini: geminiView,
+    routes: routeView,
   })
 }
 

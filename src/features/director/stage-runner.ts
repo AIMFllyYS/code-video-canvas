@@ -1,7 +1,7 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
 import { getDb } from '@/lib/db/client'
-import { transitionNodeStatus } from '@/features/canvas/status'
+import { transitionNodeStatus } from '@/features/canvas'
 import { createDirectorSession, type DirectorSession, type DirectorTool } from './pi-session'
 import type { DirectorOutputPolicy } from './pi-output'
 import { DirectorRuntimeRepository, type DirectorStageContext } from './runtime-repository'
@@ -31,19 +31,23 @@ interface StageRepository {
     projectId: string,
     nodeId: string,
     stage: PipelineStage
-  ): DirectorStageContext | Promise<DirectorStageContext>
+  ): Promise<DirectorStageContext>
   registerArtifactPointer(input: {
     projectId: string
     nodeId: string
     kind: string
     storageKey: string
-  }): string | void
-  recordStageError(nodeId: string, stage: PipelineStage, error: unknown): void
+  }): Promise<string>
+  recordStageError(
+    nodeId: string,
+    stage: PipelineStage,
+    error: unknown
+  ): Promise<void>
   recordStageOutput(
     nodeId: string,
     result: PreparedStageResult,
-    artifactId: string
-  ): void
+    artifact: ArtifactCommitResult
+  ): Promise<void>
   persistStreamLog(
     projectId: string,
     nodeId: string,
@@ -63,7 +67,7 @@ interface StageRunnerDependencies {
     context: DirectorStageContext,
     result: PreparedStageResult,
     artifact: ArtifactCommitResult
-  ) => void
+  ) => Promise<void>
   runStageEffect: (
     context: DirectorStageContext,
     result: PreparedStageResult,
@@ -100,16 +104,16 @@ const STAGE_OUTPUT: Record<PipelineStage, DirectorOutputPolicy> = {
   FINALIZE: { kind: 'assistant-text' },
 }
 
-let defaultRunner: StageRunner | undefined
+let defaultRunner: Promise<StageRunner> | undefined
 
-/** 首次真正执行作业时才打开 SQLite，模块导入保持无副作用。 */
-export const runStage: StageRunner = (projectId, nodeId, stage) => {
+/** 首次真正执行作业时才打开 Postgres，模块导入保持无副作用。 */
+export const runStage: StageRunner = async (projectId, nodeId, stage) => {
   defaultRunner ??= createDefaultRunner()
-  return defaultRunner(projectId, nodeId, stage)
+  return (await defaultRunner)(projectId, nodeId, stage)
 }
 
-function createDefaultRunner(): StageRunner {
-  const repository = new DirectorRuntimeRepository(getDb(), storage)
+async function createDefaultRunner(): Promise<StageRunner> {
+  const repository = new DirectorRuntimeRepository(await getDb(), storage)
   return createStageRunner({
     repository,
     transitionNodeStatus,
@@ -117,7 +121,7 @@ function createDefaultRunner(): StageRunner {
     buildPrompt: buildStagePrompt,
     writeArtifact: writeValidatedArtifact,
     prepareResult: prepareStageResult,
-    commitResult: (context, result, artifact) =>
+    commitResult: async (context, result, artifact) =>
       commitStageResult(repository, context, result, artifact),
     runStageEffect: async (context) => {
       if (
@@ -140,7 +144,7 @@ export function createStageRunner(
   return async (projectId, nodeId, stage) => {
     const context = await dependencies.repository.loadStageContext(projectId, nodeId, stage)
     const streamKey = `${projectId}:${nodeId}`
-    dependencies.transitionNodeStatus(nodeId, 'running')
+    await dependencies.transitionNodeStatus(nodeId, 'running')
     let session: DirectorSession | undefined
     let closed = false
     try {
@@ -152,7 +156,7 @@ export function createStageRunner(
         stage,
         resumeSessionKey: context.resumeSessionKey,
       })
-      dependencies.repository.registerArtifactPointer({
+      await dependencies.repository.registerArtifactPointer({
         projectId,
         nodeId,
         kind: 'pi-session',
@@ -165,7 +169,7 @@ export function createStageRunner(
         initialPrompt: prompt,
         dependencies,
       })
-      dependencies.commitResult(context, prepared, artifact)
+      await dependencies.commitResult(context, prepared, artifact)
       await dependencies.runStageEffect(context, prepared, artifact)
       await dependencies.repository.persistStreamLog(
         projectId,
@@ -176,7 +180,7 @@ export function createStageRunner(
       streamBus.markDone(streamKey)
       await session.close()
       closed = true
-      dependencies.transitionNodeStatus(nodeId, 'success')
+      await dependencies.transitionNodeStatus(nodeId, 'success')
       await advanceWithoutMasking(
         dependencies.advancePipeline,
         projectId,
@@ -186,12 +190,12 @@ export function createStageRunner(
       if (session && !closed) await closeWithoutMasking(session)
       const cleanupErrors: unknown[] = []
       try {
-        dependencies.transitionNodeStatus(nodeId, 'failed')
+        await dependencies.transitionNodeStatus(nodeId, 'failed')
       } catch (cleanupError) {
         cleanupErrors.push(cleanupError)
       }
       try {
-        dependencies.repository.recordStageError(nodeId, stage, error)
+        await dependencies.repository.recordStageError(nodeId, stage, error)
       } catch (cleanupError) {
         cleanupErrors.push(cleanupError)
       }

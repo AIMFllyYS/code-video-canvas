@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: '请求体无效' }, { status: 400 })
   }
   const { projectId, nodeId } = parsed.data
-  const graph = getCanvasGraph(projectId)
+  const graph = await getCanvasGraph(projectId)
   if (!graph.nodes.some((node) => node.id === nodeId)) {
     return NextResponse.json(
       { ok: false, error: '节点不存在或不属于该项目' },

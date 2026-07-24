@@ -64,8 +64,8 @@ describe('captureThumbnails', () => {
     }
     const storage = createStorage({ exists: async () => true })
     const repository = {
-      findThumbnail: vi.fn(() => record),
-      registerThumbnail: vi.fn(),
+      findThumbnail: vi.fn(async () => record),
+      registerThumbnail: vi.fn(async () => 'unused'),
     }
 
     const results = await captureThumbnails(context, [{ fraction: 0.25 }], {
@@ -90,8 +90,8 @@ describe('captureThumbnails', () => {
     const openCapture = vi.fn(async () => session)
     const storage = createStorage({ exists: async () => false })
     const repository = {
-      findThumbnail: vi.fn(() => record),
-      registerThumbnail: vi.fn(() => 'artifact-new'),
+      findThumbnail: vi.fn(async () => record),
+      registerThumbnail: vi.fn(async () => 'artifact-new'),
     }
 
     const results = await captureThumbnails(context, [{ fraction: 0.25 }], {
@@ -117,8 +117,8 @@ describe('captureThumbnails', () => {
     const storage = createStorage({ exists: async () => false })
     let nextId = 0
     const repository = {
-      findThumbnail: vi.fn(() => null),
-      registerThumbnail: vi.fn(() => `artifact-${nextId++}`),
+      findThumbnail: vi.fn(async () => null),
+      registerThumbnail: vi.fn(async () => `artifact-${nextId++}`),
     }
 
     const results = await captureThumbnails(
@@ -138,8 +138,8 @@ describe('captureThumbnails', () => {
     const openCapture = vi.fn(async () => session)
     const storage = createStorage({ exists: async () => false })
     const repository = {
-      findThumbnail: vi.fn(() => null),
-      registerThumbnail: vi.fn(() => 'artifact-1'),
+      findThumbnail: vi.fn(async () => null),
+      registerThumbnail: vi.fn(async () => 'artifact-1'),
     }
 
     await captureThumbnails(context, [{ fraction: 0.25 }, { fraction: 0.25 }], {
@@ -161,8 +161,8 @@ describe('captureThumbnails', () => {
     const openCapture = vi.fn(async () => session)
     const storage = createStorage({ exists: async () => false })
     const repository = {
-      findThumbnail: vi.fn(() => null),
-      registerThumbnail: vi.fn(() => 'artifact-1'),
+      findThumbnail: vi.fn(async () => null),
+      registerThumbnail: vi.fn(async () => 'artifact-1'),
     }
 
     const results = await captureThumbnails(context, [{ fraction: 0.25 }], {
@@ -191,8 +191,8 @@ describe('captureThumbnails', () => {
     const openCapture = vi.fn(async () => session)
     const storage = createStorage({ exists: async () => false })
     const repository = {
-      findThumbnail: vi.fn(() => null),
-      registerThumbnail: vi.fn(() => {
+      findThumbnail: vi.fn(async () => null),
+      registerThumbnail: vi.fn(async () => {
         throw new Error('登记失败')
       }),
     }
@@ -215,8 +215,8 @@ describe('captureThumbnails', () => {
     const openCapture = vi.fn(async () => session)
     const storage = createStorage({ exists: async () => false })
     const repository = {
-      findThumbnail: vi.fn(() => null),
-      registerThumbnail: vi.fn(),
+      findThumbnail: vi.fn(async () => null),
+      registerThumbnail: vi.fn(async () => 'unused'),
     }
 
     await expect(

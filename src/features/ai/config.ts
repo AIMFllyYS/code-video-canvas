@@ -1,20 +1,21 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
-import { getDb } from '@/lib/db/client'
-import { settings } from '@/lib/db/schema'
+import {
+  PostgresProviderCredentialStore,
+  type ProviderCredentialStore,
+} from '@/features/credentials'
+import {
+  type AiTaskKind,
+  PostgresMediaRouteRepository,
+  PostgresModelRouteRepository,
+} from '@/features/routing'
+import { getDb, LOCAL_WORKSPACE_ID } from '@/lib/db/client'
 
-/** StepFun 统一配置的 6 个字段（Key + 端点 + 4 类模型）。 */
-export type StepfunConfigKey =
-  | 'apiKey'
+export type StepfunModelField =
   | 'baseUrl'
   | 'chatModel'
   | 'ttsModel'
   | 'asrModel'
   | 'visionModel'
-
-/** 可展示"生效值 + 来源"的字段（不含 Key，Key 只回掩码）。 */
-export type StepfunModelField = Exclude<StepfunConfigKey, 'apiKey'>
-
 export type StepfunConfigSource = 'settings' | 'env' | 'default'
 
 export interface StepfunConfigFieldView {
@@ -25,7 +26,6 @@ export interface StepfunConfigFieldView {
 export type StepfunConfigView = Record<StepfunModelField, StepfunConfigFieldView>
 
 export interface StepfunConfig {
-  /** settings 表 > STEPFUN_API_KEY；均未配置为 null。 */
   apiKey: string | null
   baseUrl: string
   chatModel: string
@@ -34,14 +34,31 @@ export interface StepfunConfig {
   visionModel: string
 }
 
-/** settings 表键名（唯一事实源，供 stepfun-adapter.ts 等内部复用）。 */
-export const STEPFUN_SETTINGS_KEYS: Record<StepfunConfigKey, string> = {
-  apiKey: 'stepfun_api_key',
-  baseUrl: 'stepfun_base_url',
-  chatModel: 'stepfun_chat_model',
-  ttsModel: 'stepfun_tts_model',
-  asrModel: 'stepfun_asr_model',
-  visionModel: 'stepfun_vision_model',
+export interface AiConfigDependencies {
+  credentials: ProviderCredentialStore
+  modelRoutes: Pick<
+    PostgresModelRouteRepository,
+    'find' | 'remove' | 'resolve' | 'save'
+  >
+  mediaRoutes: Pick<
+    PostgresMediaRouteRepository,
+    'find' | 'remove' | 'resolve' | 'save'
+  >
+}
+
+const credentials = new PostgresProviderCredentialStore(getDb)
+const dependencies: AiConfigDependencies = {
+  credentials,
+  modelRoutes: new PostgresModelRouteRepository(getDb, credentials),
+  mediaRoutes: new PostgresMediaRouteRepository(getDb, credentials),
+}
+
+const DEFAULTS: Record<StepfunModelField, string> = {
+  baseUrl: 'https://api.stepfun.com/v1',
+  chatModel: 'step-3.5-flash',
+  ttsModel: 'stepaudio-2.5-tts',
+  asrModel: 'stepaudio-2.5-asr',
+  visionModel: 'step-3.7-flash',
 }
 
 const ENV_KEYS: Record<StepfunModelField, string> = {
@@ -52,76 +69,80 @@ const ENV_KEYS: Record<StepfunModelField, string> = {
   visionModel: 'STEPFUN_VISION_MODEL',
 }
 
-/** 内置默认值：唯一定义处，与 `.env.example` 保持一致。 */
-const DEFAULTS: Record<StepfunModelField, string> = {
-  baseUrl: 'https://api.stepfun.com/v1',
-  chatModel: 'step-3.5-flash',
-  ttsModel: 'stepaudio-2.5-tts',
-  asrModel: 'stepaudio-2.5-asr',
-  visionModel: 'step-3.7-flash',
-}
-
-const MODEL_FIELDS: readonly StepfunModelField[] = [
-  'baseUrl',
-  'chatModel',
-  'ttsModel',
-  'asrModel',
-  'visionModel',
-]
-
 function nonEmpty(value: string | null | undefined): string | null {
-  const trimmed = value?.trim()
-  return trimmed ? trimmed : null
+  const normalized = value?.trim()
+  return normalized ? normalized : null
 }
 
-/** 读取 settings 表中某键的值；空串/不存在均视为未设置（null）。 */
-export function getSettingValue(key: string): string | null {
-  const row = getDb().select().from(settings).where(eq(settings.key, key)).get()
-  return nonEmpty(row?.value)
+function envOrDefault(field: StepfunModelField): StepfunConfigFieldView {
+  const value = nonEmpty(process.env[ENV_KEYS[field]])
+  return value
+    ? { value, source: 'env' }
+    : { value: DEFAULTS[field], source: 'default' }
 }
 
-/** 写入 settings 表；空值/未定义等同删除该行（回退 env/默认）。 */
-export function setSettingValue(key: string, value: string | null | undefined): void {
-  const trimmed = nonEmpty(value)
-  const db = getDb()
-  if (!trimmed) {
-    db.delete(settings).where(eq(settings.key, key)).run()
-    return
-  }
-  db.insert(settings)
-    .values({ key, value: trimmed })
-    .onConflictDoUpdate({ target: settings.key, set: { value: trimmed } })
-    .run()
+function configuredModel(
+  provider: string | undefined,
+  model: string | undefined,
+  field: StepfunModelField,
+): StepfunConfigFieldView {
+  return provider === 'stepfun' && model
+    ? { value: model, source: 'settings' }
+    : envOrDefault(field)
 }
 
-/** 单个模型/端点字段的三层解析：settings 表 > env > 内置默认。 */
-function resolveField(field: StepfunModelField): StepfunConfigFieldView {
-  const settingsValue = getSettingValue(STEPFUN_SETTINGS_KEYS[field])
-  if (settingsValue) return { value: settingsValue, source: 'settings' }
-  const envValue = nonEmpty(process.env[ENV_KEYS[field]])
-  if (envValue) return { value: envValue, source: 'env' }
-  return { value: DEFAULTS[field], source: 'default' }
+export function getAiConfigDependencies(): AiConfigDependencies {
+  return dependencies
 }
 
-/** 统一 resolver：每项独立按 settings > env > 默认值 解析。 */
-export function getStepfunConfig(): StepfunConfig {
-  const apiKey =
-    getSettingValue(STEPFUN_SETTINGS_KEYS.apiKey) ?? nonEmpty(process.env.STEPFUN_API_KEY)
+export function resolveStepfunBaseUrl(): string {
+  return envOrDefault('baseUrl').value
+}
+
+export async function getStepfunConfig(
+  deps: AiConfigDependencies = dependencies,
+): Promise<StepfunConfig> {
+  const [storedKey, chat, vision, tts, asr] = await Promise.all([
+    deps.credentials.loadSecret(LOCAL_WORKSPACE_ID, 'stepfun'),
+    deps.modelRoutes.find(LOCAL_WORKSPACE_ID, 'fabricate'),
+    deps.modelRoutes.find(LOCAL_WORKSPACE_ID, 'vision-qa'),
+    deps.mediaRoutes.find(LOCAL_WORKSPACE_ID, 'tts'),
+    deps.mediaRoutes.find(LOCAL_WORKSPACE_ID, 'asr'),
+  ])
   return {
-    apiKey,
-    baseUrl: resolveField('baseUrl').value,
-    chatModel: resolveField('chatModel').value,
-    ttsModel: resolveField('ttsModel').value,
-    asrModel: resolveField('asrModel').value,
-    visionModel: resolveField('visionModel').value,
+    apiKey: storedKey,
+    baseUrl: resolveStepfunBaseUrl(),
+    chatModel: configuredModel(chat?.provider, chat?.model, 'chatModel').value,
+    ttsModel: configuredModel(tts?.provider, tts?.model, 'ttsModel').value,
+    asrModel: configuredModel(asr?.provider, asr?.model, 'asrModel').value,
+    visionModel: configuredModel(
+      vision?.provider,
+      vision?.model,
+      'visionModel',
+    ).value,
   }
 }
 
-/** 供设置页展示"生效值 + 来源"（settings / env / default），不含 Key 原文。 */
-export function describeStepfunConfig(): StepfunConfigView {
-  return Object.fromEntries(
-    MODEL_FIELDS.map((field) => [field, resolveField(field)])
-  ) as StepfunConfigView
+export async function describeStepfunConfig(
+  deps: AiConfigDependencies = dependencies,
+): Promise<StepfunConfigView> {
+  const [chat, vision, tts, asr] = await Promise.all([
+    deps.modelRoutes.find(LOCAL_WORKSPACE_ID, 'fabricate'),
+    deps.modelRoutes.find(LOCAL_WORKSPACE_ID, 'vision-qa'),
+    deps.mediaRoutes.find(LOCAL_WORKSPACE_ID, 'tts'),
+    deps.mediaRoutes.find(LOCAL_WORKSPACE_ID, 'asr'),
+  ])
+  return {
+    baseUrl: envOrDefault('baseUrl'),
+    chatModel: configuredModel(chat?.provider, chat?.model, 'chatModel'),
+    ttsModel: configuredModel(tts?.provider, tts?.model, 'ttsModel'),
+    asrModel: configuredModel(asr?.provider, asr?.model, 'asrModel'),
+    visionModel: configuredModel(
+      vision?.provider,
+      vision?.model,
+      'visionModel',
+    ),
+  }
 }
 
 export interface StepfunModelSettingsInput {
@@ -132,11 +153,57 @@ export interface StepfunModelSettingsInput {
   visionModel?: string
 }
 
-/** 保存模型/端点设置；字段为空串 = 清空该项（回退 env/默认）；未定义 = 不改动。 */
-export function saveStepfunModelSettings(input: StepfunModelSettingsInput): void {
-  for (const field of MODEL_FIELDS) {
-    const value = input[field]
-    if (value === undefined) continue
-    setSettingValue(STEPFUN_SETTINGS_KEYS[field], value)
+async function saveAiModel(
+  deps: AiConfigDependencies,
+  kinds: readonly AiTaskKind[],
+  value: string,
+): Promise<void> {
+  const model = nonEmpty(value)
+  await Promise.all(kinds.map((aiTaskKind) => model
+    ? deps.modelRoutes.save({
+        workspaceId: LOCAL_WORKSPACE_ID,
+        aiTaskKind,
+        provider: 'stepfun',
+        model,
+      })
+    : deps.modelRoutes.remove(LOCAL_WORKSPACE_ID, aiTaskKind)))
+}
+
+export async function saveStepfunModelSettings(
+  input: StepfunModelSettingsInput,
+  deps: AiConfigDependencies = dependencies,
+): Promise<void> {
+  const requestedBaseUrl = nonEmpty(input.baseUrl)
+  if (requestedBaseUrl && requestedBaseUrl !== DEFAULTS.baseUrl) {
+    throw new Error(
+      'Persisting a custom StepFun baseUrl is unsupported; use STEPFUN_BASE_URL',
+    )
   }
+  const writes: Promise<unknown>[] = []
+  if (input.chatModel !== undefined) {
+    writes.push(saveAiModel(
+      deps,
+      ['project-plan', 'shot-spec', 'fabricate'],
+      input.chatModel,
+    ))
+  }
+  if (input.visionModel !== undefined) {
+    writes.push(saveAiModel(deps, ['vision-qa'], input.visionModel))
+  }
+  for (const [mediaTaskKind, value] of [
+    ['tts', input.ttsModel],
+    ['asr', input.asrModel],
+  ] as const) {
+    if (value === undefined) continue
+    const model = nonEmpty(value)
+    writes.push(model
+      ? deps.mediaRoutes.save({
+          workspaceId: LOCAL_WORKSPACE_ID,
+          mediaTaskKind,
+          provider: 'stepfun',
+          model,
+        })
+      : deps.mediaRoutes.remove(LOCAL_WORKSPACE_ID, mediaTaskKind))
+  }
+  await Promise.all(writes)
 }

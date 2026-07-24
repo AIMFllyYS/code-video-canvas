@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       { status: 400 }
     )
   }
-  const graph = getCanvasGraph(projectId)
+  const graph = await getCanvasGraph(projectId)
   if (!graph.nodes.some((node) => node.id === nodeId)) {
     return NextResponse.json(
       { ok: false, error: '节点不存在或不属于该项目' },
@@ -31,7 +31,10 @@ export async function GET(request: Request) {
   }
   try {
     const repository = new RenderRepository()
-    const context = repository.loadCompletedThumbnailContext(projectId, nodeId)
+    const context = await repository.loadCompletedThumbnailContext(
+      projectId,
+      nodeId
+    )
     const results = await captureThumbnails(
       context,
       THUMBNAIL_FRACTIONS.map((fraction) => ({ fraction }))

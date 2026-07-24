@@ -20,7 +20,7 @@ const config: StepfunConfig = {
 function dependencies(fetcher: typeof fetch): StepfunAudioDependencies {
   return {
     fetcher,
-    getConfig: () => config,
+    getConfig: async () => config,
   }
 }
 
@@ -98,7 +98,7 @@ describe('synthesizeSpeech', () => {
         { text: '你好' },
         {
           fetcher,
-          getConfig: () => ({ ...config, apiKey: null }),
+          getConfig: async () => ({ ...config, apiKey: null }),
         }
       )
     ).rejects.toThrow('StepFun API Key')

@@ -18,6 +18,7 @@ const STATUS_DOT: Record<NodeStatus, string> = {
   running: 'bg-accent',
   success: 'bg-success',
   failed: 'bg-danger',
+  cancelled: 'bg-label-tertiary',
   stale: 'bg-warning',
 }
 

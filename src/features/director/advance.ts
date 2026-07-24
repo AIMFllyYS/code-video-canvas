@@ -1,12 +1,8 @@
 import 'server-only'
-import { and, eq, inArray } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
-import type { Db } from '@/lib/db/migrate'
-import { canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
-import type { CanvasNodeType, NodeStatus } from '@/features/canvas/types'
-import { DirectorRuntimeRepository } from './runtime-repository'
+import type { CanvasNodeType, NodeStatus } from '@/features/canvas'
+import { AdvanceRepositoryImpl } from './advance-repository'
 import { PIPELINE_STAGES, type PipelineStage } from './types'
-import { storage } from '@/lib/storage'
 
 export interface AdvanceCandidate {
   id: string
@@ -15,27 +11,31 @@ export interface AdvanceCandidate {
   status: NodeStatus
 }
 
-interface AdvanceRepository {
-  isAutopilotEnabled(projectId: string): boolean
+export interface AdvanceRepository {
+  isAutopilotEnabled(projectId: string): Promise<boolean>
   listDownstreamCandidates(
     projectId: string,
     completedNodeId: string
-  ): AdvanceCandidate[]
-  areAllUpstreamsSuccessful(projectId: string, nodeId: string): boolean
-  recordStageError(nodeId: string, stage: PipelineStage, error: unknown): void
+  ): Promise<AdvanceCandidate[]>
+  areAllUpstreamsSuccessful(projectId: string, nodeId: string): Promise<boolean>
+  recordStageError(
+    nodeId: string,
+    stage: PipelineStage,
+    error: unknown
+  ): Promise<void>
 }
 
-interface PipelineRepository extends AdvanceRepository {
-  setAutopilot(projectId: string, enabled: boolean): boolean
-  getEntryNode(projectId: string): AdvanceCandidate
-  listSuccessfulNodeIds(projectId: string): string[]
+export interface PipelineRepository extends AdvanceRepository {
+  setAutopilot(projectId: string, enabled: boolean): Promise<boolean>
+  getEntryNode(projectId: string): Promise<AdvanceCandidate>
+  listSuccessfulNodeIds(projectId: string): Promise<string[]>
 }
 
 type EnqueueDirectorStage = (input: {
   projectId: string
   nodeId: string
   stage: PipelineStage
-}) => string
+}) => Promise<string>
 
 type EnqueueRenderShot = (input: {
   projectId: string
@@ -79,9 +79,9 @@ export async function advancePipeline(
 ): Promise<AdvanceResult> {
   const resolved = dependencies ?? (await createDefaultDependencies())
   const result: AdvanceResult = { enqueuedNodeIds: [], failedNodeIds: [] }
-  if (!resolved.repository.isAutopilotEnabled(projectId)) return result
+  if (!(await resolved.repository.isAutopilotEnabled(projectId))) return result
 
-  const candidates = resolved.repository.listDownstreamCandidates(
+  const candidates = await resolved.repository.listDownstreamCandidates(
     projectId,
     completedNodeId
   )
@@ -89,7 +89,10 @@ export async function advancePipeline(
     if (
       candidate.status !== 'idle' ||
       !isPipelineStage(candidate.stage) ||
-      !resolved.repository.areAllUpstreamsSuccessful(projectId, candidate.id)
+      !(await resolved.repository.areAllUpstreamsSuccessful(
+        projectId,
+        candidate.id
+      ))
     ) {
       continue
     }
@@ -100,7 +103,7 @@ export async function advancePipeline(
         if (candidate.type === 'export') {
           await resolved.prepareFinalExport(projectId)
         }
-        resolved.enqueueDirectorStage({
+        await resolved.enqueueDirectorStage({
           projectId,
           nodeId: candidate.id,
           stage: candidate.stage,
@@ -109,7 +112,11 @@ export async function advancePipeline(
       result.enqueuedNodeIds.push(candidate.id)
     } catch (error) {
       result.failedNodeIds.push(candidate.id)
-      resolved.repository.recordStageError(candidate.id, candidate.stage, error)
+      await resolved.repository.recordStageError(
+        candidate.id,
+        candidate.stage,
+        error
+      )
     }
   }
   return result
@@ -121,13 +128,15 @@ export async function startProjectPipeline(
   dependencies?: PipelineControlDependencies
 ): Promise<PipelineStartResult> {
   const resolved = dependencies ?? (await createDefaultControlDependencies())
-  resolved.repository.setAutopilot(projectId, true)
-  const entry = resolved.repository.getEntryNode(projectId)
+  await resolved.repository.setAutopilot(projectId, true)
+  const entry = await resolved.repository.getEntryNode(projectId)
   const enqueued = new Set<string>()
   const failed = new Set<string>()
 
   if (entry.status === 'success') {
-    for (const completedNodeId of resolved.repository.listSuccessfulNodeIds(projectId)) {
+    for (const completedNodeId of await resolved.repository.listSuccessfulNodeIds(
+      projectId
+    )) {
       const result = await resolved.advance(projectId, completedNodeId)
       result.enqueuedNodeIds.forEach((nodeId) => enqueued.add(nodeId))
       result.failedNodeIds.forEach((nodeId) => failed.add(nodeId))
@@ -136,7 +145,7 @@ export async function startProjectPipeline(
     if (entry.stage !== 'INGEST') {
       throw new Error(`项目入口节点阶段无效：${entry.stage ?? 'null'}`)
     }
-    resolved.enqueueDirectorStage({
+    await resolved.enqueueDirectorStage({
       projectId,
       nodeId: entry.id,
       stage: 'INGEST',
@@ -152,142 +161,12 @@ export async function startProjectPipeline(
 }
 
 /** 关闭后续自动推进；已经入队的作业不会被伪装为已取消。 */
-export function stopProjectPipeline(projectId: string): { autopilot: false } {
-  new AdvanceRepositoryImpl(getDb()).setAutopilot(projectId, false)
+export async function stopProjectPipeline(
+  projectId: string
+): Promise<{ autopilot: false }> {
+  const database = await getDb()
+  await new AdvanceRepositoryImpl(database).setAutopilot(projectId, false)
   return { autopilot: false }
-}
-
-class AdvanceRepositoryImpl implements AdvanceRepository {
-  private readonly directorRepository: DirectorRuntimeRepository
-
-  constructor(private readonly db: Db) {
-    this.directorRepository = new DirectorRuntimeRepository(db, storage)
-  }
-
-  isAutopilotEnabled(projectId: string): boolean {
-    return (
-      this.db
-        .select({ autopilot: projects.autopilot })
-        .from(projects)
-        .where(eq(projects.id, projectId))
-        .get()?.autopilot ?? false
-    )
-  }
-
-  setAutopilot(projectId: string, enabled: boolean): boolean {
-    const updated = this.db
-      .update(projects)
-      .set({ autopilot: enabled, updatedAt: new Date() })
-      .where(eq(projects.id, projectId))
-      .returning({ autopilot: projects.autopilot })
-      .get()
-    if (!updated) throw new Error(`项目不存在：${projectId}`)
-    return updated.autopilot
-  }
-
-  getEntryNode(projectId: string): AdvanceCandidate {
-    const node = this.db
-      .select({
-        id: canvasNodes.id,
-        type: canvasNodes.type,
-        stage: canvasNodes.stage,
-        status: canvasNodes.status,
-      })
-      .from(canvasNodes)
-      .where(
-        and(
-          eq(canvasNodes.projectId, projectId),
-          eq(canvasNodes.type, 'script-import')
-        )
-      )
-      .get()
-    if (!node) throw new Error(`项目缺少 script-import 入口节点：${projectId}`)
-    return node as AdvanceCandidate
-  }
-
-  listSuccessfulNodeIds(projectId: string): string[] {
-    return this.db
-      .select({ id: canvasNodes.id })
-      .from(canvasNodes)
-      .where(
-        and(
-          eq(canvasNodes.projectId, projectId),
-          eq(canvasNodes.status, 'success')
-        )
-      )
-      .all()
-      .map(({ id }) => id)
-  }
-
-  listDownstreamCandidates(
-    projectId: string,
-    completedNodeId: string
-  ): AdvanceCandidate[] {
-    const edges = this.db
-      .select({ target: canvasEdges.target })
-      .from(canvasEdges)
-      .where(
-        and(
-          eq(canvasEdges.projectId, projectId),
-          eq(canvasEdges.source, completedNodeId)
-        )
-      )
-      .all()
-    const targetIds = [...new Set(edges.map(({ target }) => target))]
-    if (targetIds.length === 0) return []
-    return this.db
-      .select({
-        id: canvasNodes.id,
-        type: canvasNodes.type,
-        stage: canvasNodes.stage,
-        status: canvasNodes.status,
-      })
-      .from(canvasNodes)
-      .where(
-        and(
-          eq(canvasNodes.projectId, projectId),
-          inArray(canvasNodes.id, targetIds)
-        )
-      )
-      .all() as AdvanceCandidate[]
-  }
-
-  areAllUpstreamsSuccessful(projectId: string, nodeId: string): boolean {
-    const upstreamEdges = this.db
-      .select({ source: canvasEdges.source })
-      .from(canvasEdges)
-      .where(
-        and(
-          eq(canvasEdges.projectId, projectId),
-          eq(canvasEdges.target, nodeId)
-        )
-      )
-      .all()
-    if (upstreamEdges.length === 0) return false
-    const sourceIds = [...new Set(upstreamEdges.map(({ source }) => source))]
-    const upstreams = this.db
-      .select({ id: canvasNodes.id, status: canvasNodes.status })
-      .from(canvasNodes)
-      .where(
-        and(
-          eq(canvasNodes.projectId, projectId),
-          inArray(canvasNodes.id, sourceIds)
-        )
-      )
-      .all()
-    return (
-      upstreams.length === sourceIds.length &&
-      upstreams.every(({ status }) => status === 'success')
-    )
-  }
-
-  recordStageError(
-    nodeId: string,
-    stage: PipelineStage,
-    error: unknown
-  ): void {
-    this.directorRepository.recordStageError(nodeId, stage, error)
-  }
 }
 
 async function createDefaultDependencies(): Promise<AdvanceDependencies> {
@@ -296,7 +175,7 @@ async function createDefaultDependencies(): Promise<AdvanceDependencies> {
     import('@/features/render/queue-handler'),
   ])
   return {
-    repository: new AdvanceRepositoryImpl(getDb()),
+    repository: new AdvanceRepositoryImpl(await getDb()),
     enqueueDirectorStage,
     enqueueRenderShot,
     prepareFinalExport: async (projectId) => {

@@ -43,3 +43,6 @@ export {
   setProjectAutopilot,
   updateExportSettings,
 } from './actions'
+export { materializeShotLanes } from './fan-out'
+export type { ShotLaneSeed } from './contracts'
+export { transitionNodeStatus } from './status'

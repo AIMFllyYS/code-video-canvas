@@ -9,9 +9,11 @@ export default async function ExportPage({
 }) {
   const { projectId } = await searchParams
   if (!projectId) notFound()
-  const project = listProjects().find((candidate) => candidate.id === projectId)
+  const project = (await listProjects()).find(
+    (candidate) => candidate.id === projectId
+  )
   if (!project) notFound()
-  const renderNodes = getCanvasGraph(projectId).nodes
+  const renderNodes = (await getCanvasGraph(projectId)).nodes
     .filter((node) => node.type === 'shot-codegen' && node.laneKey)
     .sort((left, right) => left.laneKey!.localeCompare(right.laneKey!))
   return (

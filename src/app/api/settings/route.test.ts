@@ -2,13 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GET, POST } from './route'
 
 const mocks = vi.hoisted(() => ({
-  getStoredApiKey: vi.fn(),
+  describeCredential: vi.fn(),
   saveApiKey: vi.fn(),
   validateKey: vi.fn(),
   describeStepfunConfig: vi.fn(),
   saveStepfunModelSettings: vi.fn(),
-  getStepfunConfig: vi.fn(),
-  getGeminiConfig: vi.fn(),
   describeGeminiConfig: vi.fn(),
   saveGeminiSettings: vi.fn(),
   saveGeminiApiKey: vi.fn(),
@@ -19,17 +17,17 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/features/ai/stepfun-adapter', () => ({
-  getStoredApiKey: mocks.getStoredApiKey,
   saveApiKey: mocks.saveApiKey,
   validateKey: mocks.validateKey,
 }))
 vi.mock('@/features/ai/config', () => ({
   describeStepfunConfig: mocks.describeStepfunConfig,
-  getStepfunConfig: mocks.getStepfunConfig,
+  getAiConfigDependencies: () => ({
+    credentials: { describe: mocks.describeCredential },
+  }),
   saveStepfunModelSettings: mocks.saveStepfunModelSettings,
 }))
 vi.mock('@/features/ai/gemini-config', () => ({
-  getGeminiConfig: mocks.getGeminiConfig,
   describeGeminiConfig: mocks.describeGeminiConfig,
   saveGeminiSettings: mocks.saveGeminiSettings,
   saveGeminiApiKey: mocks.saveGeminiApiKey,
@@ -45,23 +43,31 @@ vi.mock('@/features/ai/model-routing', () => ({
 describe('GET /api/settings', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('returns masked key status plus the real effective model config (no key material)', async () => {
-    mocks.getStoredApiKey.mockReturnValue('sk-abcdefgh')
-    mocks.getStepfunConfig.mockReturnValue({ apiKey: 'sk-abcdefgh' })
-    mocks.describeStepfunConfig.mockReturnValue({
+  it('returns secret-free credential descriptions and effective routes', async () => {
+    mocks.describeCredential.mockImplementation(
+      async (_workspaceId: string, provider: string) => ({
+        configured: provider === 'stepfun',
+        verifiedAt: provider === 'stepfun'
+          ? '2026-07-25T01:02:03.000Z'
+          : null,
+        updatedAt: provider === 'stepfun'
+          ? '2026-07-25T01:02:04.000Z'
+          : null,
+      }),
+    )
+    mocks.describeStepfunConfig.mockResolvedValue({
       baseUrl: { value: 'https://api.stepfun.com/v1', source: 'default' },
       chatModel: { value: 'step-3.5-flash', source: 'env' },
       ttsModel: { value: 'stepaudio-2.5-tts', source: 'default' },
       asrModel: { value: 'stepaudio-2.5-asr', source: 'default' },
       visionModel: { value: 'step-3.7-flash', source: 'default' },
     })
-    mocks.getGeminiConfig.mockReturnValue({ apiKey: 'gemini-env-key' })
-    mocks.describeGeminiConfig.mockReturnValue({
+    mocks.describeGeminiConfig.mockResolvedValue({
       baseUrl: { value: 'https://google.test/openai/', source: 'default' },
       primaryModel: { value: 'gemini-3.6-flash', source: 'default' },
       fastModel: { value: 'gemini-3.1-flash-lite', source: 'default' },
     })
-    mocks.describeDirectorRoutes.mockReturnValue({
+    mocks.describeDirectorRoutes.mockResolvedValue({
       'shot-codegen': {
         provider: 'gemini',
         model: 'gemini-3.6-flash',
@@ -69,28 +75,42 @@ describe('GET /api/settings', () => {
       },
     })
 
-    const response = GET()
+    const response = await GET()
     const body = await response.json()
 
     expect(body.configured).toBe(true)
-    expect(body.masked).toBe('sk-***gh')
+    expect(body.verifiedAt).toBe('2026-07-25T01:02:03.000Z')
+    expect(body.updatedAt).toBe('2026-07-25T01:02:04.000Z')
+    expect(body).not.toHaveProperty('masked')
     expect(body.models.chatModel).toEqual({ value: 'step-3.5-flash', source: 'env' })
-    expect(body.geminiConfigured).toBe(true)
+    expect(body.geminiConfigured).toBe(false)
+    expect(body.geminiCredential).toEqual({
+      configured: false,
+      verifiedAt: null,
+      updatedAt: null,
+    })
     expect(body.gemini.primaryModel.value).toBe('gemini-3.6-flash')
     expect(body.routes['shot-codegen'].provider).toBe('gemini')
-    expect(JSON.stringify(body)).not.toContain('sk-abcdefgh')
-    expect(JSON.stringify(body)).not.toContain('gemini-env-key')
+    expect(mocks.describeCredential).toHaveBeenCalledTimes(2)
   })
 })
 
 describe('POST /api/settings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.describeStepfunConfig.mockReturnValue({})
-    mocks.describeGeminiConfig.mockReturnValue({})
-    mocks.describeDirectorRoutes.mockReturnValue({})
-    mocks.getGeminiConfig.mockReturnValue({ apiKey: null })
-    mocks.getStepfunConfig.mockReturnValue({ apiKey: null })
+    mocks.describeCredential.mockResolvedValue({
+      configured: false,
+      verifiedAt: null,
+      updatedAt: null,
+    })
+    mocks.describeStepfunConfig.mockResolvedValue({})
+    mocks.describeGeminiConfig.mockResolvedValue({})
+    mocks.describeDirectorRoutes.mockResolvedValue({})
+    mocks.saveStepfunModelSettings.mockResolvedValue(undefined)
+    mocks.saveGeminiSettings.mockResolvedValue(undefined)
+    mocks.saveDirectorRoutes.mockResolvedValue(undefined)
+    mocks.saveApiKey.mockResolvedValue(undefined)
+    mocks.saveGeminiApiKey.mockResolvedValue(undefined)
   })
 
   it('validates before saving a StepFun Key', async () => {
@@ -133,11 +153,29 @@ describe('POST /api/settings', () => {
 
   it('applies apiKey and model settings together only after validation succeeds', async () => {
     mocks.validateKey.mockResolvedValue(true)
-    const response = await POST(request({ apiKey: 'sk-valid-value', baseUrl: 'https://x.com/v1' }))
+    const response = await POST(request({
+      apiKey: 'sk-valid-value',
+      baseUrl: 'https://api.stepfun.com/v1',
+    }))
 
     expect(response.status).toBe(200)
     expect(mocks.saveApiKey).toHaveBeenCalledWith('sk-valid-value')
-    expect(mocks.saveStepfunModelSettings).toHaveBeenCalledWith({ baseUrl: 'https://x.com/v1' })
+    expect(mocks.saveStepfunModelSettings).toHaveBeenCalledWith({
+      baseUrl: 'https://api.stepfun.com/v1',
+    })
+  })
+
+  it('does not save a validated key when a custom base URL is rejected', async () => {
+    mocks.validateKey.mockResolvedValue(true)
+    mocks.saveStepfunModelSettings.mockRejectedValueOnce(
+      new Error('Persisting a custom StepFun baseUrl is unsupported'),
+    )
+
+    await expect(POST(request({
+      apiKey: 'sk-valid-value',
+      baseUrl: 'https://custom.example/v1',
+    }))).rejects.toThrow('custom StepFun baseUrl')
+    expect(mocks.saveApiKey).not.toHaveBeenCalled()
   })
 
   it('validates and saves Gemini candidate config without replacing StepFun', async () => {

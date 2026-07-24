@@ -1,12 +1,15 @@
 import { fileURLToPath } from 'node:url'
-import { drizzle } from 'drizzle-orm/postgres-js'
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
+import * as schema from '@/lib/db/schema/index'
 
 type SqlClient = ReturnType<typeof postgres>
 type ReservedSql = Awaited<ReturnType<SqlClient['reserve']>>
+type TestDb = PostgresJsDatabase<typeof schema>
 
 export interface PgTestDatabase {
+  db: TestDb
   sql: ReservedSql
   reset(): Promise<void>
   close(): Promise<void>
@@ -14,6 +17,7 @@ export interface PgTestDatabase {
 
 interface DatabaseState {
   client: SqlClient
+  db: TestDb
   session: ReservedSql
   locked: boolean
   closed: boolean
@@ -40,12 +44,12 @@ function ensureOpen(state: DatabaseState): void {
 
 async function resetSession(
   session: ReservedSql,
-  client: SqlClient,
+  db: TestDb,
 ): Promise<void> {
   await session`DROP SCHEMA IF EXISTS public CASCADE`
   await session`DROP SCHEMA IF EXISTS drizzle CASCADE`
   await session`CREATE SCHEMA public`
-  await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER })
+  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
 }
 
 async function closeState(state: DatabaseState): Promise<void> {
@@ -94,11 +98,12 @@ async function cleanAfterFailure(
 
 function databaseHandle(state: DatabaseState): PgTestDatabase {
   return {
+    db: state.db,
     sql: state.session,
     async reset(): Promise<void> {
       ensureOpen(state)
       try {
-        await resetSession(state.session, state.client)
+        await resetSession(state.session, state.db)
       } catch (error) {
         await cleanAfterFailure(state, error)
       }
@@ -111,6 +116,7 @@ function databaseHandle(state: DatabaseState): PgTestDatabase {
 
 export async function createPgTestDatabase(): Promise<PgTestDatabase> {
   const client = postgres(requiredTestDatabaseUrl(), { max: 2 })
+  const db = drizzle(client, { schema })
   let session: ReservedSql
   try {
     session = await client.reserve()
@@ -120,6 +126,7 @@ export async function createPgTestDatabase(): Promise<PgTestDatabase> {
   }
   const state: DatabaseState = {
     client,
+    db,
     session,
     locked: false,
     closed: false,
@@ -127,7 +134,7 @@ export async function createPgTestDatabase(): Promise<PgTestDatabase> {
   try {
     await session`SELECT pg_advisory_lock(${ADVISORY_LOCK_KEY})`
     state.locked = true
-    await resetSession(session, client)
+    await resetSession(session, db)
     return databaseHandle(state)
   } catch (error) {
     return cleanAfterFailure(state, error)

@@ -25,7 +25,7 @@ function createQueue() {
     attempts: number
   }) => Promise<void>) | undefined
   const queue: QueueAdapter = {
-    enqueue: vi.fn(() => 'job-1'),
+    enqueue: vi.fn(async () => 'job-1'),
     register: vi.fn((_kind, nextHandler) => {
       handler = nextHandler
     }),
@@ -48,10 +48,12 @@ describe('render queue handler', () => {
     }
     registerRenderShotHandler(harness.queue, {
       repository: {
-        loadRenderContext: vi.fn(() => renderJob),
-        recordRenderError: vi.fn(),
+        loadRenderContext: vi.fn(async () => renderJob),
+        recordRenderError: vi.fn(async () => {}),
       },
-      transitionNodeStatus: vi.fn((_nodeId, status) => statuses.push(status)),
+      transitionNodeStatus: vi.fn(async (_nodeId, status) => {
+        statuses.push(status)
+      }),
       renderer,
       advancePipeline: vi.fn(async () => statuses.push('advance')),
     })
@@ -71,11 +73,13 @@ describe('render queue handler', () => {
   it('moves render failures to failed and records the error', async () => {
     const harness = createQueue()
     const failure = new Error('编码失败')
-    const transitionNodeStatus = vi.fn()
-    const recordRenderError = vi.fn()
+    const transitionNodeStatus = vi.fn(
+      async (...args: [string, string]) => void args
+    )
+    const recordRenderError = vi.fn(async () => {})
     registerRenderShotHandler(harness.queue, {
       repository: {
-        loadRenderContext: vi.fn(() => renderJob),
+        loadRenderContext: vi.fn(async () => renderJob),
         recordRenderError,
       },
       transitionNodeStatus,
@@ -102,12 +106,14 @@ describe('render queue handler', () => {
   it('fails directly when the committed source is missing', async () => {
     const harness = createQueue()
     const missingSource = new Error('节点缺少 director-fabricate 产物：node-1')
-    const loadRenderContext = vi.fn(() => {
+    const loadRenderContext = vi.fn(async () => {
       throw missingSource
     })
     const renderer = { render: vi.fn() }
-    const transitionNodeStatus = vi.fn()
-    const recordRenderError = vi.fn()
+    const transitionNodeStatus = vi.fn(
+      async (...args: [string, string]) => void args
+    )
+    const recordRenderError = vi.fn(async () => {})
     const advancePipeline = vi.fn()
     registerRenderShotHandler(harness.queue, {
       repository: {
@@ -141,7 +147,7 @@ describe('render queue handler', () => {
   it('loads admission, validates, marks pending, and enqueues a render job', async () => {
     const harness = createQueue()
     const order: string[] = []
-    vi.mocked(harness.queue.enqueue).mockImplementation(() => {
+    vi.mocked(harness.queue.enqueue).mockImplementation(async () => {
       order.push('enqueue')
       return 'job-1'
     })
@@ -149,15 +155,17 @@ describe('render queue handler', () => {
       { projectId: 'project-1', nodeId: 'node-1' },
       {
         queue: harness.queue,
-        loadAdmissionContext: vi.fn(() => {
+        loadAdmissionContext: vi.fn(async () => {
           order.push('load')
           return renderJob
         }),
         assertAdmission: vi.fn(async () => {
           order.push('admission')
         }),
-        transitionNodeStatus: vi.fn((_nodeId, status) => order.push(status)),
-        recordRenderError: vi.fn(),
+        transitionNodeStatus: vi.fn(async (_nodeId, status) => {
+          order.push(status)
+        }),
+        recordRenderError: vi.fn(async () => {}),
       }
     )
 
@@ -172,15 +180,17 @@ describe('render queue handler', () => {
 
   it('rejects runtime admission before pending or queue side effects', async () => {
     const harness = createQueue()
-    const transitionNodeStatus = vi.fn()
-    const recordRenderError = vi.fn()
+    const transitionNodeStatus = vi.fn(
+      async (...args: [string, string]) => void args
+    )
+    const recordRenderError = vi.fn(async () => {})
 
     await expect(
       enqueueRenderShot(
         { projectId: 'project-1', nodeId: 'node-1' },
         {
           queue: harness.queue,
-          loadAdmissionContext: vi.fn(() => renderJob),
+          loadAdmissionContext: vi.fn(async () => renderJob),
           assertAdmission: vi.fn(async () => {
             throw new Error('shot 缺少 window.__CVC_RENDER__ runtime')
           }),
@@ -197,15 +207,17 @@ describe('render queue handler', () => {
   it('rejects a missing committed source before admission or status changes', async () => {
     const harness = createQueue()
     const assertAdmission = vi.fn()
-    const transitionNodeStatus = vi.fn()
-    const recordRenderError = vi.fn()
+    const transitionNodeStatus = vi.fn(
+      async (...args: [string, string]) => void args
+    )
+    const recordRenderError = vi.fn(async () => {})
 
     await expect(
       enqueueRenderShot(
         { projectId: 'project-1', nodeId: 'node-1' },
         {
           queue: harness.queue,
-          loadAdmissionContext: vi.fn(() => {
+          loadAdmissionContext: vi.fn(async () => {
             throw new Error('节点缺少 director-fabricate 产物：node-1')
           }),
           assertAdmission,
@@ -222,20 +234,22 @@ describe('render queue handler', () => {
 
   it('compensates a failed enqueue without leaving pending state', async () => {
     const harness = createQueue()
-    vi.mocked(harness.queue.enqueue).mockImplementation(() => {
+    vi.mocked(harness.queue.enqueue).mockImplementation(async () => {
       throw new Error('队列写入失败')
     })
     const statuses: string[] = []
-    const recordRenderError = vi.fn()
+    const recordRenderError = vi.fn(async () => {})
 
     await expect(
       enqueueRenderShot(
         { projectId: 'project-1', nodeId: 'node-1' },
         {
           queue: harness.queue,
-          loadAdmissionContext: vi.fn(() => renderJob),
+          loadAdmissionContext: vi.fn(async () => renderJob),
           assertAdmission: vi.fn(async () => {}),
-          transitionNodeStatus: vi.fn((_nodeId, status) => statuses.push(status)),
+          transitionNodeStatus: vi.fn(async (_nodeId, status) => {
+            statuses.push(status)
+          }),
           recordRenderError,
         }
       )

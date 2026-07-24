@@ -1,6 +1,6 @@
 import 'server-only'
 import { z } from 'zod'
-import { transitionNodeStatus } from '@/features/canvas/status'
+import { transitionNodeStatus } from '@/features/canvas'
 import { queue as defaultQueue, type QueueAdapter } from '@/lib/queue'
 import { storage } from '@/lib/storage'
 import { assertRenderAdmission } from './admission'
@@ -20,8 +20,8 @@ const renderJobPayloadSchema = z
 export type RenderShotInput = z.infer<typeof renderJobPayloadSchema>
 
 interface HandlerRepository {
-  loadRenderContext(projectId: string, nodeId: string): RenderJob
-  recordRenderError(nodeId: string, error: unknown): void
+  loadRenderContext(projectId: string, nodeId: string): Promise<RenderJob>
+  recordRenderError(nodeId: string, error: unknown): Promise<void>
 }
 
 interface HandlerDependencies {
@@ -42,7 +42,7 @@ interface EnqueueDependencies {
   ): RenderJob | Promise<RenderJob>
   assertAdmission(job: RenderJob): Promise<void>
   transitionNodeStatus: typeof transitionNodeStatus
-  recordRenderError(nodeId: string, error: unknown): void
+  recordRenderError(nodeId: string, error: unknown): Promise<void>
 }
 
 export function registerRenderShotHandler(
@@ -52,21 +52,21 @@ export function registerRenderShotHandler(
   targetQueue.register('render-shot', async (job) => {
     const resolved = dependencies ?? createHandlerDependencies()
     const payload = renderJobPayloadSchema.parse(job.payload)
-    resolved.transitionNodeStatus(payload.nodeId, 'running')
+    await resolved.transitionNodeStatus(payload.nodeId, 'running')
     try {
-      const context = resolved.repository.loadRenderContext(
+      const context = await resolved.repository.loadRenderContext(
         payload.projectId,
         payload.nodeId
       )
       await resolved.renderer.render(context)
-      resolved.transitionNodeStatus(payload.nodeId, 'success')
+      await resolved.transitionNodeStatus(payload.nodeId, 'success')
       await advanceWithoutMasking(
         resolved.advancePipeline,
         payload.projectId,
         payload.nodeId
       )
     } catch (error) {
-      failRender(payload.nodeId, error, resolved)
+      await failRender(payload.nodeId, error, resolved)
       throw error
     }
   })
@@ -83,14 +83,14 @@ export async function enqueueRenderShot(
     payload.nodeId
   )
   await resolved.assertAdmission(job)
-  resolved.transitionNodeStatus(payload.nodeId, 'pending')
+  await resolved.transitionNodeStatus(payload.nodeId, 'pending')
   try {
-    return resolved.queue.enqueue('render-shot', payload, {
+    return await resolved.queue.enqueue('render-shot', payload, {
       projectId: payload.projectId,
       nodeId: payload.nodeId,
     })
   } catch (error) {
-    compensateEnqueueFailure(payload.nodeId, error, resolved)
+    await compensateEnqueueFailure(payload.nodeId, error, resolved)
     throw error
   }
 }
@@ -138,15 +138,23 @@ function failRender(
   nodeId: string,
   error: unknown,
   dependencies: Pick<HandlerDependencies, 'transitionNodeStatus' | 'repository'>
-): void {
+): Promise<void> {
+  return compensateFailure(nodeId, error, dependencies)
+}
+
+async function compensateFailure(
+  nodeId: string,
+  error: unknown,
+  dependencies: Pick<HandlerDependencies, 'transitionNodeStatus' | 'repository'>
+): Promise<void> {
   const cleanupErrors: unknown[] = []
   try {
-    dependencies.transitionNodeStatus(nodeId, 'failed')
+    await dependencies.transitionNodeStatus(nodeId, 'failed')
   } catch (cleanupError) {
     cleanupErrors.push(cleanupError)
   }
   try {
-    dependencies.repository.recordRenderError(nodeId, error)
+    await dependencies.repository.recordRenderError(nodeId, error)
   } catch (cleanupError) {
     cleanupErrors.push(cleanupError)
   }
@@ -159,17 +167,25 @@ function compensateEnqueueFailure(
   nodeId: string,
   error: unknown,
   dependencies: EnqueueDependencies
-): void {
+): Promise<void> {
+  return compensateEnqueueFailureAsync(nodeId, error, dependencies)
+}
+
+async function compensateEnqueueFailureAsync(
+  nodeId: string,
+  error: unknown,
+  dependencies: EnqueueDependencies
+): Promise<void> {
   const cleanupErrors: unknown[] = []
   for (const status of ['running', 'failed'] as const) {
     try {
-      dependencies.transitionNodeStatus(nodeId, status)
+      await dependencies.transitionNodeStatus(nodeId, status)
     } catch (cleanupError) {
       cleanupErrors.push(cleanupError)
     }
   }
   try {
-    dependencies.recordRenderError(nodeId, error)
+    await dependencies.recordRenderError(nodeId, error)
   } catch (cleanupError) {
     cleanupErrors.push(cleanupError)
   }

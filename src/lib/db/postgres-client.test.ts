@@ -1,29 +1,21 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  createDb: vi.fn(),
   drizzle: vi.fn(),
-  ensureDataDirs: vi.fn(),
   postgres: vi.fn(),
 }))
 
 vi.mock('server-only', () => ({}))
 vi.mock('postgres', () => ({ default: mocks.postgres }))
 vi.mock('drizzle-orm/postgres-js', () => ({ drizzle: mocks.drizzle }))
-vi.mock('@/lib/config/paths', () => ({
-  DB_PATH: 'unused-by-postgres-tests',
-  ensureDataDirs: mocks.ensureDataDirs,
-}))
 vi.mock('@/lib/db/schema/index', () => ({}))
-vi.mock('./migrate', () => ({ createDb: mocks.createDb }))
 
 const globalStore = globalThis as Record<string, unknown>
 const originalDatabaseUrl = process.env.DATABASE_URL
 
 function clearDatabaseAnchors(): void {
-  delete globalStore.__cvcDb
   delete globalStore.__cvcPostgresClient
-  delete globalStore.__cvcPostgresDbPromise
+  delete globalStore.__cvcDbPromise
 }
 
 function restoreDatabaseUrl(): void {
@@ -72,18 +64,15 @@ describe('Postgres client lifecycle', () => {
 
     expect(mocks.postgres).not.toHaveBeenCalled()
     expect(mocks.drizzle).not.toHaveBeenCalled()
-    expect(mocks.createDb).not.toHaveBeenCalled()
-    expect(mocks.ensureDataDirs).not.toHaveBeenCalled()
   })
 
   it('fails closed before creating a client when DATABASE_URL is absent', async () => {
-    const { getPostgresDb } = await import('./client')
+    const { getDb } = await import('./client')
 
-    await expect(getPostgresDb()).rejects.toThrow('DATABASE_URL is required')
+    await expect(getDb()).rejects.toThrow('DATABASE_URL is required')
 
     expect(mocks.postgres).not.toHaveBeenCalled()
     expect(mocks.drizzle).not.toHaveBeenCalled()
-    expect(mocks.createDb).not.toHaveBeenCalled()
   })
 
   it('reuses one pending promise and client for concurrent callers', async () => {
@@ -93,10 +82,10 @@ describe('Postgres client lifecycle', () => {
     const database = { kind: 'postgres' }
     mocks.postgres.mockReturnValue(client)
     mocks.drizzle.mockReturnValue(database)
-    const { getPostgresDb } = await import('./client')
+    const { getDb } = await import('./client')
 
-    const first = getPostgresDb()
-    const second = getPostgresDb()
+    const first = getDb()
+    const second = getDb()
 
     expect(second).toBe(first)
     expect(mocks.postgres).toHaveBeenCalledTimes(1)
@@ -118,15 +107,15 @@ describe('Postgres client lifecycle', () => {
       .mockReturnValueOnce(failedClient)
       .mockReturnValueOnce(recoveredClient)
     mocks.drizzle.mockReturnValue(database)
-    const { getPostgresDb } = await import('./client')
+    const { getDb } = await import('./client')
 
-    const failed = getPostgresDb()
+    const failed = getDb()
     await expect(failed).rejects.toThrow('connect failed')
     await Promise.resolve()
     expect(failedClient.end).toHaveBeenCalledTimes(1)
 
     process.env.DATABASE_URL = 'configured-after-repair'
-    const retry = getPostgresDb()
+    const retry = getDb()
     expect(retry).not.toBe(failed)
     await expect(retry).resolves.toBe(database)
     expect(mocks.postgres).toHaveBeenCalledTimes(2)

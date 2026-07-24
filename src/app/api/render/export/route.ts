@@ -26,7 +26,7 @@ export async function GET(request: Request) {
         }`
       )
     }
-    const { finalArtifactId, ...readiness } = getExportReadiness(projectId)
+    const { finalArtifactId, ...readiness } = await getExportReadiness(projectId)
     return NextResponse.json({
       ok: true,
       ...readiness,

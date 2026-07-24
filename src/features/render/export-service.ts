@@ -2,7 +2,7 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
-import type { ResolutionPreset } from '@/features/canvas/export-settings'
+import type { ResolutionPreset } from '@/features/canvas/contracts'
 import { concatExport } from './concat'
 import { runShotQaChecks } from './qa-check'
 import {
@@ -17,8 +17,8 @@ export type ExportProjectResult =
   | { ok: true; artifactId: string; outputKey: string; contentHash: string }
 
 interface ExportRepository {
-  getExportPlan(projectId: string): RenderExportPlan
-  registerFinalArtifact(input: FinalArtifactInput): string
+  getExportPlan(projectId: string): Promise<RenderExportPlan>
+  registerFinalArtifact(input: FinalArtifactInput): Promise<string>
 }
 
 interface ExportDependencies {
@@ -28,8 +28,8 @@ interface ExportDependencies {
 }
 
 interface ExportReadinessRepository {
-  getExportPlan(projectId: string): RenderExportPlan
-  findLatestFinalArtifact(projectId: string): FinalArtifactRecord | null
+  getExportPlan(projectId: string): Promise<RenderExportPlan>
+  findLatestFinalArtifact(projectId: string): Promise<FinalArtifactRecord | null>
 }
 
 export async function exportProject(
@@ -39,7 +39,7 @@ export async function exportProject(
   const repository = dependencies.repository ?? new RenderRepository()
   const storage = dependencies.storage ?? defaultStorage
   const concat = dependencies.concat ?? concatExport
-  const plan = repository.getExportPlan(projectId)
+  const plan = await repository.getExportPlan(projectId)
   if (plan.incompleteNodeIds.length > 0) {
     return incomplete(plan.incompleteNodeIds)
   }
@@ -67,26 +67,36 @@ export async function exportProject(
       `exports/${projectId}/final-${contentHash}.mp4`,
       bytes
     )
-    const artifactId = repository.registerFinalArtifact({ projectId, outputKey, contentHash })
-    return { ok: true, artifactId, outputKey, contentHash }
+    try {
+      const artifactId = await repository.registerFinalArtifact({
+        projectId,
+        outputKey,
+        contentHash,
+        sizeBytes: bytes.byteLength,
+      })
+      return { ok: true, artifactId, outputKey, contentHash }
+    } catch (error) {
+      await storage.delete(outputKey)
+      throw error
+    }
   } finally {
     await storage.removeTempDir(workDirectory)
   }
 }
 
-export function getExportReadiness(
+export async function getExportReadiness(
   projectId: string,
   repository: ExportReadinessRepository = new RenderRepository()
-): {
+): Promise<{
   ready: boolean
   incompleteNodeIds: string[]
   shotCount: number
   shotQa: Record<string, boolean | null>
   resolutionPreset: ResolutionPreset
   finalArtifactId: string | null
-} {
-  const plan = repository.getExportPlan(projectId)
-  const finalArtifact = repository.findLatestFinalArtifact(projectId)
+}> {
+  const plan = await repository.getExportPlan(projectId)
+  const finalArtifact = await repository.findLatestFinalArtifact(projectId)
   return {
     ready: plan.incompleteNodeIds.length === 0,
     incompleteNodeIds: plan.incompleteNodeIds,

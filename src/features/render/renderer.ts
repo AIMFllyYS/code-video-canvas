@@ -28,7 +28,7 @@ interface RendererDependencies {
     nodeId: string
     outputKey: string
     contentHash: string
-  }): string
+  }): Promise<string>
   captureSequence(
     htmlPath: string,
     totalFrames: number,
@@ -90,7 +90,7 @@ export class HyperframesRenderer implements Renderer {
       const contentHash = createHash('sha256').update(encoded).digest('hex')
       await this.dependencies.storage.put(outputKey, encoded)
       try {
-        this.dependencies.writeCache({
+        await this.dependencies.writeCache({
           projectId: job.projectId,
           nodeId: job.nodeId,
           outputKey,

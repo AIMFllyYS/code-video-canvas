@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { createStageRunner } from './stage-runner'
 import type { DirectorRunResult } from './pi-session'
 import type { DirectorStageContext } from './runtime-repository'
-import { ArtifactValidationError } from './tools/write-artifact'
+import {
+  ArtifactValidationError,
+  type ArtifactCommitResult,
+} from './tools/write-artifact'
 
 vi.mock('server-only', () => ({}))
 
@@ -29,6 +32,23 @@ function directorResult(
   }
 }
 
+function artifactResult(): ArtifactCommitResult {
+  return {
+    id: 'artifact-1',
+    workspaceId: '00000000-0000-4000-8000-000000000001',
+    projectId: 'project-1',
+    aggregateType: 'node',
+    aggregateId: 'node-1',
+    kind: 'director-ingest',
+    schemaVersion: 'cvc.director-artifact/v1',
+    storageKey: 'director/output.txt',
+    sizeBytes: 6,
+    contentHash: 'a'.repeat(64),
+    attemptId: 'attempt-1',
+    storageKeyAlreadyExisted: false,
+  }
+}
+
 function createHarness(
   run: (input: unknown) => Promise<DirectorRunResult> = vi.fn(
     async (input: unknown) => {
@@ -50,25 +70,26 @@ function createHarness(
     }),
   }
   const repository = {
-    loadStageContext: vi.fn(() => context),
-    registerArtifactPointer: vi.fn(() => {
+    loadStageContext: vi.fn(async () => context),
+    registerArtifactPointer: vi.fn(async () => {
       calls.push('pointer')
+      return 'session-artifact-1'
     }),
-    recordStageError: vi.fn(() => {
+    recordStageError: vi.fn(async () => {
       calls.push('error')
     }),
-    recordStageOutput: vi.fn(),
+    recordStageOutput: vi.fn(async () => {}),
     persistStreamLog: vi.fn(async () => {}),
   }
-  const transitionNodeStatus = vi.fn((_nodeId: string, status: string) => {
+  const transitionNodeStatus = vi.fn(async (_nodeId: string, status: string) => {
     calls.push(status)
   })
   const writeArtifact = vi.fn(async () => {
     calls.push('artifact')
-    return { id: 'artifact-1', storageKey: 'director/output.txt', contentHash: 'hash' }
+    return artifactResult()
   })
   const prepareResult = vi.fn((_context, content: string) => ({ content }))
-  const commitResult = vi.fn(() => {
+  const commitResult = vi.fn(async () => {
     calls.push('commit')
   })
   const runStageEffect = vi.fn(async () => {
@@ -136,7 +157,7 @@ describe('createStageRunner', () => {
     expect(harness.runStageEffect).toHaveBeenCalledWith(
       context,
       { content: '业务产物' },
-      { id: 'artifact-1', storageKey: 'director/output.txt', contentHash: 'hash' }
+      artifactResult()
     )
     expect(harness.repository.persistStreamLog).toHaveBeenCalledWith(
       'project-1',
@@ -174,7 +195,7 @@ describe('createStageRunner', () => {
     'passes the explicit %s output policy to every invocation',
     async (stage, nodeType, output) => {
       const harness = createHarness()
-      harness.repository.loadStageContext.mockReturnValue({
+      harness.repository.loadStageContext.mockResolvedValue({
         ...context,
         stage,
         nodeType,
@@ -290,7 +311,7 @@ describe('createStageRunner', () => {
 
   it('reuses the same FABRICATE session for at most two gate-feedback retries', async () => {
     const harness = createHarness()
-    harness.repository.loadStageContext.mockReturnValue({
+    harness.repository.loadStageContext.mockResolvedValue({
       ...context,
       nodeType: 'shot-codegen',
       stage: 'FABRICATE',
@@ -343,7 +364,7 @@ describe('createStageRunner', () => {
 
   it('fails with the last violation detail after exhausting two feedback retries', async () => {
     const harness = createHarness()
-    harness.repository.loadStageContext.mockReturnValue({
+    harness.repository.loadStageContext.mockResolvedValue({
       ...context,
       nodeType: 'shot-codegen',
       stage: 'FABRICATE',
@@ -372,7 +393,7 @@ describe('createStageRunner', () => {
 
   it('applies the same bounded feedback mechanism to SHOT_SPEC validation', async () => {
     const harness = createHarness()
-    harness.repository.loadStageContext.mockReturnValue({
+    harness.repository.loadStageContext.mockResolvedValue({
       ...context,
       nodeType: 'shot-script',
       stage: 'SHOT_SPEC',

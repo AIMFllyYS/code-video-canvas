@@ -15,20 +15,20 @@ export default async function ShotDetailPage({
 }) {
   const [{ id }, { projectId }] = await Promise.all([params, searchParams])
   if (!projectId) notFound()
-  const graph = getCanvasGraph(projectId)
+  const graph = await getCanvasGraph(projectId)
   const node = graph.nodes.find(({ id: nodeId }) => nodeId === id)
   if (!node || node.type !== 'shot-codegen') notFound()
   const renderNodes = graph.nodes
     .filter((candidate) => candidate.type === 'shot-codegen')
     .sort((left, right) => (left.laneKey ?? '').localeCompare(right.laneKey ?? ''))
   const nodeIndex = renderNodes.findIndex((candidate) => candidate.id === id)
-  const preview = getLatestArtifact(projectId, id, 'director-fabricate')
+  const preview = await getLatestArtifact(projectId, id, 'director-fabricate')
   const previewUrl = preview
     ? `/api/artifacts/${preview.id}?projectId=${encodeURIComponent(projectId)}`
     : undefined
   // §1/§5：历史 render-mp4 作为初始视频；分辨率/fps 取自 renderSpec，构图模式取自
   // 同通道 shot-script 节点的 director-shot-spec（缺失则由页面显式展示"待生成"）。
-  const rendered = getLatestArtifact(projectId, id, 'render-mp4')
+  const rendered = await getLatestArtifact(projectId, id, 'render-mp4')
   const initialOutputUrl = rendered
     ? `/api/artifacts/${rendered.id}?projectId=${encodeURIComponent(projectId)}`
     : undefined
@@ -37,7 +37,10 @@ export default async function ShotDetailPage({
   return (
     <ShotDetail
       projectId={projectId}
-      projectTitle={listProjects().find((project) => project.id === projectId)?.title ?? '未命名项目'}
+      projectTitle={
+        (await listProjects()).find((project) => project.id === projectId)
+          ?.title ?? '未命名项目'
+      }
       nodeId={id}
       laneKey={node.laneKey ?? 'S000'}
       sourceText={sourceTextOf(node)}

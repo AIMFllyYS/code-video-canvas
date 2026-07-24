@@ -79,7 +79,7 @@ describe('HyperframesRenderer', () => {
         await writeFile(outputPath, Buffer.from('mp4'))
         return outputPath
       }),
-      writeCache: vi.fn(() => {
+      writeCache: vi.fn(async () => {
         order.push('index')
         return 'artifact-1'
       }),

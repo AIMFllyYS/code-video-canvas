@@ -9,10 +9,10 @@ import { PublishNavContext } from '@/features/navigation/nav-context'
 
 export const dynamic = 'force-dynamic'
 
-export default function HomePage() {
-  const projects = listProjects()
-  const projectCards = projects.map((project) => {
-    const nodes = getCanvasGraph(project.id).nodes
+export default async function HomePage() {
+  const projects = await listProjects()
+  const projectCards = await Promise.all(projects.map(async (project) => {
+    const nodes = (await getCanvasGraph(project.id)).nodes
     const lanes = new Set(nodes.flatMap((node) => node.laneKey ? [node.laneKey] : []))
     const codeNodes = nodes.filter((node) => node.type === 'shot-codegen')
     const rendered = codeNodes.length > 0 && codeNodes.every((node) => node.status === 'success')
@@ -22,7 +22,7 @@ export default function HomePage() {
       rendererNodeId: codeNodes[0]?.id,
       status: rendered ? 'rendered' as const : 'pending' as const,
     }
-  })
+  }))
 
   return (
     <>

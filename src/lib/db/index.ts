@@ -1,4 +1,3 @@
-export { getDb, getPostgresDb } from './client'
-export type { PostgresDb } from './client'
-export type { Db } from './migrate'
-export { projects, canvasNodes, canvasEdges, jobs, artifacts, settings } from './schema'
+export { getDb, LOCAL_WORKSPACE_ID } from './client'
+export type { Db, PostgresDb } from './client'
+export * from './schema/index'

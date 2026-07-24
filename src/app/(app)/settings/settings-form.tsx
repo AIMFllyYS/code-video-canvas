@@ -11,7 +11,6 @@ import { ThemeControl } from './theme-control'
 
 interface SettingsResponse {
   renderConcurrency?: number
-  storageDir?: string
 }
 
 export function SettingsForm({
@@ -22,7 +21,6 @@ export function SettingsForm({
   rendererNodeId?: string
 }) {
   const [renderConcurrency, setRenderConcurrency] = useState<number>()
-  const [storageDir, setStorageDir] = useState<string>()
 
   usePublishNavContext({ projectId, rendererNodeId })
 
@@ -31,7 +29,6 @@ export function SettingsForm({
       .then((response) => response.json() as Promise<SettingsResponse>)
       .then((body) => {
         setRenderConcurrency(body.renderConcurrency)
-        setStorageDir(body.storageDir)
       })
       .catch(() => undefined)
   }, [])
@@ -59,10 +56,8 @@ export function SettingsForm({
             )}
           </SettingsRow>
           <SettingsSeparator />
-          <SettingsRow label="存储位置" value={storageDir ?? undefined} />
-          <SettingsSeparator />
           <SettingsRow label="崩溃续渲">
-            {/* Demo 占位：队列作业状态已落 SQLite，但暂无崩溃后自动重新入队的恢复逻辑，
+            {/* Demo 占位：执行状态已落 Postgres，但暂无崩溃后自动重新入队的恢复逻辑，
                 见 docs/issues/issue-10-*.md；不得用恒 checked 的 Toggle 伪装为已实现。 */}
             <span className="text-[13px] text-label-tertiary">尚未实现（Demo 占位）</span>
           </SettingsRow>

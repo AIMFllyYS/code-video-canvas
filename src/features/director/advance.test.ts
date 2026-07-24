@@ -26,13 +26,15 @@ function harness(
   ready: Record<string, boolean> = {}
 ) {
   const repository: AdvanceDependencies['repository'] = {
-    isAutopilotEnabled: vi.fn(() => true),
-    listDownstreamCandidates: vi.fn(() => candidates),
-    areAllUpstreamsSuccessful: vi.fn((_projectId, nodeId) => ready[nodeId] ?? true),
-    recordStageError: vi.fn(),
+    isAutopilotEnabled: vi.fn(async () => true),
+    listDownstreamCandidates: vi.fn(async () => candidates),
+    areAllUpstreamsSuccessful: vi.fn(
+      async (_projectId, nodeId) => ready[nodeId] ?? true
+    ),
+    recordStageError: vi.fn(async () => {}),
   }
   const enqueueDirectorStage =
-    vi.fn<AdvanceDependencies['enqueueDirectorStage']>(() => 'director-job')
+    vi.fn<AdvanceDependencies['enqueueDirectorStage']>(async () => 'director-job')
   const enqueueRenderShot =
     vi.fn<AdvanceDependencies['enqueueRenderShot']>(async () => 'render-job')
   const prepareFinalExport =
@@ -54,7 +56,7 @@ function harness(
 describe('advancePipeline', () => {
   it('does nothing while project autopilot is disabled', async () => {
     const test = harness([candidate()])
-    vi.mocked(test.repository.isAutopilotEnabled).mockReturnValue(false)
+    vi.mocked(test.repository.isAutopilotEnabled).mockResolvedValue(false)
 
     const result = await advancePipeline('project-1', 'node-1', test.dependencies)
 
@@ -131,7 +133,7 @@ describe('advancePipeline', () => {
       candidate({ id: 'good', stage: 'ASSEMBLE' }),
     ])
     test.enqueueDirectorStage.mockImplementation(
-      (input: { stage: PipelineStage }) => {
+      async (input: { stage: PipelineStage }) => {
         if (input.stage === 'SHOT_SPEC') throw new Error('队列拒绝')
         return 'director-job'
       }
@@ -201,8 +203,8 @@ describe('startProjectPipeline', () => {
       const test = harness([])
       const repository = {
         ...test.repository,
-        setAutopilot: vi.fn(() => true),
-        getEntryNode: vi.fn(() =>
+        setAutopilot: vi.fn(async () => true),
+        getEntryNode: vi.fn(async () =>
           candidate({
             id: 'ingest',
             type: 'script-import',
@@ -210,7 +212,7 @@ describe('startProjectPipeline', () => {
             status,
           })
         ),
-        listSuccessfulNodeIds: vi.fn(() => []),
+        listSuccessfulNodeIds: vi.fn(async () => []),
       }
 
       const result = await startProjectPipeline('project-1', {
@@ -247,8 +249,8 @@ describe('startProjectPipeline', () => {
       })
     const repository = {
       ...test.repository,
-      setAutopilot: vi.fn(() => true),
-      getEntryNode: vi.fn(() =>
+      setAutopilot: vi.fn(async () => true),
+      getEntryNode: vi.fn(async () =>
         candidate({
           id: 'ingest',
           type: 'script-import',
@@ -256,7 +258,7 @@ describe('startProjectPipeline', () => {
           status: 'success',
         })
       ),
-      listSuccessfulNodeIds: vi.fn(() => ['ingest', 'direct']),
+      listSuccessfulNodeIds: vi.fn(async () => ['ingest', 'direct']),
     }
 
     const result = await startProjectPipeline('project-1', {
@@ -280,8 +282,8 @@ describe('startProjectPipeline', () => {
     const test = harness([])
     const repository = {
       ...test.repository,
-      setAutopilot: vi.fn(() => true),
-      getEntryNode: vi.fn(() =>
+      setAutopilot: vi.fn(async () => true),
+      getEntryNode: vi.fn(async () =>
         candidate({
           id: 'ingest',
           type: 'script-import',
@@ -289,7 +291,7 @@ describe('startProjectPipeline', () => {
           status: 'pending',
         })
       ),
-      listSuccessfulNodeIds: vi.fn(() => []),
+      listSuccessfulNodeIds: vi.fn(async () => []),
     }
 
     const result = await startProjectPipeline('project-1', {

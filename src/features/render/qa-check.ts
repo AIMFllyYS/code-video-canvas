@@ -110,7 +110,7 @@ export async function runShotQaChecks(
   deps: Partial<ShotQaDependencies> = {}
 ): Promise<void> {
   const dependencies = { ...defaultDependencies(), ...deps }
-  const targets = dependencies.repository.getShotQaTargets(projectId)
+  const targets = await dependencies.repository.getShotQaTargets(projectId)
   for (const target of targets) {
     try {
       await runOneShotQa(projectId, target, dependencies)
@@ -131,9 +131,9 @@ export async function runShotQaCheck(
   deps: Partial<ShotQaDependencies> = {}
 ): Promise<ShotQaCheckData> {
   const dependencies = { ...defaultDependencies(), ...deps }
-  const target = dependencies.repository
-    .getShotQaTargets(projectId)
-    .find((candidate) => candidate.qaNodeId === qaNodeId)
+  const target = (
+    await dependencies.repository.getShotQaTargets(projectId)
+  ).find((candidate) => candidate.qaNodeId === qaNodeId)
   if (!target) {
     throw new Error(`shot-qa 节点不具备 QA 前置条件：${qaNodeId}`)
   }
@@ -145,7 +145,7 @@ async function runOneShotQa(
   target: ShotQaTarget,
   dependencies: ShotQaDependencies
 ): Promise<ShotQaCheckData> {
-  const context: ThumbnailContext = dependencies.repository.loadCompletedThumbnailContext(
+  const context: ThumbnailContext = await dependencies.repository.loadCompletedThumbnailContext(
     projectId,
     target.codegenNodeId
   )
@@ -155,7 +155,7 @@ async function runOneShotQa(
   )
   const thumbnailContentHash = aggregateHash(thumbnails)
 
-  const existing = dependencies.repository.readShotQaCheck(target.qaNodeId)
+  const existing = await dependencies.repository.readShotQaCheck(target.qaNodeId)
   if (existing && existing.thumbnailContentHash === thumbnailContentHash) {
     return existing
   }
@@ -172,7 +172,7 @@ async function runOneShotQa(
     thumbnailContentHash,
     results,
   } satisfies ShotQaCheckData
-  dependencies.repository.writeShotQaCheck(target.qaNodeId, qaCheck)
+  await dependencies.repository.writeShotQaCheck(target.qaNodeId, qaCheck)
   return qaCheck
 }
 

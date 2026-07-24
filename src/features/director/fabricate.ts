@@ -16,10 +16,10 @@ import { writeValidatedArtifact } from './tools/write-artifact'
  * 使后续渲染流程仍能使用自己的状态机（idle -> pending -> running -> success）。
  */
 export async function fabricateShot(projectId: string, nodeId: string): Promise<void> {
-  const repository = new DirectorRuntimeRepository(getDb(), storage)
+  const repository = new DirectorRuntimeRepository(await getDb(), storage)
   const runner = createStageRunner({
     repository,
-    transitionNodeStatus: () => {
+    transitionNodeStatus: async () => {
       // 渲染队列自己管理 shot-codegen 节点状态；这里只负责产出 artifact 和 renderSpec。
       // no-op 避免改变节点 pending/running 状态。
     },
@@ -27,7 +27,7 @@ export async function fabricateShot(projectId: string, nodeId: string): Promise<
     buildPrompt: buildStagePrompt,
     writeArtifact: writeValidatedArtifact,
     prepareResult: prepareStageResult,
-    commitResult: (context, result, artifact) =>
+    commitResult: async (context, result, artifact) =>
       commitStageResult(repository, context, result, artifact),
     runStageEffect: async () => {
       // FABRICATE 的真实副作用是 MP4 渲染，由 render queue handler 负责。

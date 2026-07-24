@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
-  const graph = getCanvasGraph(parsed.data.projectId)
+  const graph = await getCanvasGraph(parsed.data.projectId)
   if (!graph.nodes.some((node) => node.id === parsed.data.nodeId)) {
     return NextResponse.json(
       { ok: false, error: '节点不存在或不属于该项目' },
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     )
   }
   try {
-    const jobId = enqueueDirectorStage(parsed.data)
+    const jobId = await enqueueDirectorStage(parsed.data)
     return NextResponse.json({ ok: true, jobId })
   } catch (error) {
     return NextResponse.json(

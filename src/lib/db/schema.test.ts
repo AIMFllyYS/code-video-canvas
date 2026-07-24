@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { createDb } from './migrate'
+import { createLegacySqliteTestDatabase } from '@/lib/migration/legacy-sqlite-test-database'
 import { canvasNodes, projects } from './schema'
 
 describe('db schema', () => {
   it('migrates in-memory and round-trips a project', () => {
-    const { db, sqlite } = createDb(':memory:')
+    const { db, sqlite } = createLegacySqliteTestDatabase(':memory:')
     const id = randomUUID()
     db.insert(projects).values({ id, title: '测试项目', script: '稿子' }).run()
 
@@ -18,7 +18,7 @@ describe('db schema', () => {
   })
 
   it('applies canvas node execution defaults and permits nullable lane metadata', () => {
-    const { db, sqlite } = createDb(':memory:')
+    const { db, sqlite } = createLegacySqliteTestDatabase(':memory:')
     const projectId = randomUUID()
     db.insert(projects).values({ id: projectId, title: '节点状态测试' }).run()
     db.insert(canvasNodes)

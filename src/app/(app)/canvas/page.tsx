@@ -17,11 +17,11 @@ interface CanvasPageProps {
 
 export default async function CanvasPage({ searchParams }: CanvasPageProps) {
   const requestedProjectId = (await searchParams).projectId
-  const projects = listProjects()
+  const projects = await listProjects()
   const projectId = requestedProjectId ?? projects[0]?.id
   if (!projectId) return <CanvasEmptyState description="请先创建一个项目，再进入节点画布。" />
 
-  const graph = getCanvasGraph(projectId)
+  const graph = await getCanvasGraph(projectId)
   if (graph.nodes.length === 0) {
     return <CanvasEmptyState projectId={projectId} description="当前项目还没有节点，请先导入并拆分脚本。" />
   }
@@ -37,7 +37,7 @@ export default async function CanvasPage({ searchParams }: CanvasPageProps) {
     <CanvasLoader
       projectId={projectId}
       projectTitle={projectTitle}
-      autopilot={getProjectAutopilot(projectId)}
+      autopilot={await getProjectAutopilot(projectId)}
       nodes={nodes}
       edges={graph.edges}
     />

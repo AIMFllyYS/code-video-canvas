@@ -26,13 +26,14 @@ interface ThumbnailRepositoryPort {
     nodeId: string,
     sourceKey: string,
     frame: number
-  ): ThumbnailArtifactRecord | null
+  ): Promise<ThumbnailArtifactRecord | null>
   registerThumbnail(input: {
     projectId: string
     nodeId: string
     outputKey: string
     contentHash: string
-  }): string
+    sizeBytes: number
+  }): Promise<string>
 }
 
 export interface ThumbnailDependencies {
@@ -102,7 +103,7 @@ export async function captureThumbnails(
   const missingFrames: number[] = []
   for (const item of plan) {
     if (recordByFrame.has(item.frame)) continue
-    const existing = deps.repository.findThumbnail(
+    const existing = await deps.repository.findThumbnail(
       context.projectId,
       context.nodeId,
       sourceKey,
@@ -161,11 +162,12 @@ async function captureMissingFrames(
       )
       await deps.storage.put(outputKey, png)
       try {
-        const artifactId = deps.repository.registerThumbnail({
+        const artifactId = await deps.repository.registerThumbnail({
           projectId: context.projectId,
           nodeId: context.nodeId,
           outputKey,
           contentHash,
+          sizeBytes: png.byteLength,
         })
         results.set(frame, { artifactId, contentHash })
       } catch (error) {

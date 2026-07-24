@@ -1,6 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { artifacts, getDb } from '@/lib/db'
+import { resolveCurrentAttemptId } from '@/features/artifacts'
+import {
+  getDb,
+  LOCAL_WORKSPACE_ID,
+} from '@/lib/db/client'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
 import { inspectDeterminism } from './check-determinism'
 import { validateShotPlanValue } from './validate-shot-plan'
@@ -26,25 +30,29 @@ export type ArtifactPrevalidation =
   | { ok: true }
   | { ok: false; errors: string[] }
 
-interface ArtifactIndexRecord {
-  id: string
-  projectId: string
-  nodeId?: string
-  kind: string
-  path: string
-  contentHash: string
-}
-
 interface WriteArtifactDependencies {
   storage?: StorageAdapter
   validate?: (input: WriteArtifactInput) => ArtifactPrevalidation
-  insertArtifact?: (record: ArtifactIndexRecord) => Promise<void>
+  resolveAttempt?: (input: {
+    projectId: string
+    nodeId?: string
+  }) => Promise<string>
+  createId?: () => string
 }
 
 export interface ArtifactCommitResult {
   id: string
+  workspaceId: string
+  projectId: string
+  aggregateType: 'node' | 'project'
+  aggregateId: string
+  kind: string
+  schemaVersion: 'cvc.director-artifact/v1'
   storageKey: string
+  sizeBytes: number
   contentHash: string
+  attemptId: string
+  storageKeyAlreadyExisted: boolean
 }
 
 export class ArtifactValidationError extends Error {
@@ -55,42 +63,69 @@ export class ArtifactValidationError extends Error {
 }
 
 /**
- * 可信应用写服务。projectId/nodeId/key 必须来自 stage runner 的持久执行上下文，
- * 本函数不会被注册为 Pi Agent Tool。
+ * 校验并写入未提交对象。artifact row 与 node 投影由 Director repository 在同一
+ * Postgres 事务提交；事务失败后 repository 负责补偿本次新写对象。
  */
 export async function writeValidatedArtifact(
   input: WriteArtifactInput,
   dependencies: WriteArtifactDependencies = {}
 ): Promise<ArtifactCommitResult> {
-  const storage = dependencies.storage ?? defaultStorage
+  const targetStorage = dependencies.storage ?? defaultStorage
   const validate = dependencies.validate ?? validateArtifact
-  const insertArtifact = dependencies.insertArtifact ?? insertArtifactRecord
   const parsed = inputSchema.safeParse(input)
   if (!parsed.success) {
     throw new ArtifactValidationError(
-      parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      parsed.error.issues.map(
+        (issue) => `${issue.path.join('.')}: ${issue.message}`
+      )
     )
   }
   const prevalidation = validate(parsed.data)
-  if (!prevalidation.ok) throw new ArtifactValidationError(prevalidation.errors)
-
-  const contentHash = createHash('sha256').update(parsed.data.content).digest('hex')
-  const id = randomUUID()
-  const storageKey = await storage.put(parsed.data.key, parsed.data.content)
-  try {
-    await insertArtifact({
-      id,
-      projectId: parsed.data.projectId,
-      nodeId: parsed.data.nodeId,
-      kind: parsed.data.kind,
-      path: storageKey,
-      contentHash,
-    })
-  } catch (error) {
-    await storage.delete(storageKey)
-    throw error
+  if (!prevalidation.ok) {
+    throw new ArtifactValidationError(prevalidation.errors)
   }
-  return { id, storageKey, contentHash }
+
+  const aggregateType = parsed.data.nodeId ? 'node' : 'project'
+  const aggregateId = parsed.data.nodeId ?? parsed.data.projectId
+  const attemptId = await (dependencies.resolveAttempt ?? defaultAttemptResolver)({
+    projectId: parsed.data.projectId,
+    nodeId: parsed.data.nodeId,
+  })
+  const contentHash = createHash('sha256')
+    .update(parsed.data.content)
+    .digest('hex')
+  const storageKeyAlreadyExisted = await targetStorage.exists(parsed.data.key)
+  const storageKey = await targetStorage.put(
+    parsed.data.key,
+    parsed.data.content
+  )
+  return {
+    id: (dependencies.createId ?? randomUUID)(),
+    workspaceId: LOCAL_WORKSPACE_ID,
+    projectId: parsed.data.projectId,
+    aggregateType,
+    aggregateId,
+    kind: parsed.data.kind,
+    schemaVersion: 'cvc.director-artifact/v1',
+    storageKey,
+    sizeBytes: Buffer.byteLength(parsed.data.content),
+    contentHash,
+    attemptId,
+    storageKeyAlreadyExisted,
+  }
+}
+
+async function defaultAttemptResolver(input: {
+  projectId: string
+  nodeId?: string
+}): Promise<string> {
+  const database = await getDb()
+  return resolveCurrentAttemptId(database, {
+    workspaceId: LOCAL_WORKSPACE_ID,
+    projectId: input.projectId,
+    aggregateType: input.nodeId ? 'node' : 'project',
+    aggregateId: input.nodeId ?? input.projectId,
+  })
 }
 
 function validateArtifact(input: WriteArtifactInput): ArtifactPrevalidation {
@@ -106,23 +141,28 @@ function validateArtifact(input: WriteArtifactInput): ArtifactPrevalidation {
       : {
           ok: false,
           errors: inspection.violations.map(
-            (violation) => `${violation.ruleId}@${violation.line}: ${violation.message}`
+            (violation) =>
+              `${violation.ruleId}@${violation.line}: ${violation.message}`
           ),
         }
   }
   try {
-    const validation = validateShotPlanValue(JSON.parse(input.content) as unknown)
-    return validation.ok ? { ok: true } : { ok: false, errors: validation.errors }
+    const validation = validateShotPlanValue(
+      JSON.parse(input.content) as unknown
+    )
+    return validation.ok
+      ? { ok: true }
+      : { ok: false, errors: validation.errors }
   } catch {
     return { ok: false, errors: ['shot-plan 内容不是合法 JSON'] }
   }
 }
 
-async function insertArtifactRecord(record: ArtifactIndexRecord): Promise<void> {
-  getDb().insert(artifacts).values(record).run()
-}
-
 function isSafeStorageKey(key: string): boolean {
-  if (key.includes('\\') || key.startsWith('/') || /^[A-Za-z]:/.test(key)) return false
-  return !key.split('/').some((segment) => segment === '..' || segment.length === 0)
+  if (key.includes('\\') || key.startsWith('/') || /^[A-Za-z]:/.test(key)) {
+    return false
+  }
+  return !key
+    .split('/')
+    .some((segment) => segment === '..' || segment.length === 0)
 }

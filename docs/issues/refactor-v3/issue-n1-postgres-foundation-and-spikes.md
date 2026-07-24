@@ -513,6 +513,8 @@ import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.
 - Create: `src/features/routing/media-route-repository.ts`
 - Create: `src/features/routing/media-route-repository.pg.test.ts`
 - Create: `src/features/artifacts/commit.ts`
+- Create: `src/features/credentials/credential-envelope.ts`
+- Create: `src/features/credentials/credential-envelope.test.ts`
 - Create: `src/features/credentials/index.ts`
 - Create: `src/features/routing/index.ts`
 - Create: `src/features/director/advance-repository.ts`
@@ -525,6 +527,7 @@ import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.
 - Create: `src/features/render/render.pg-fixture.ts`
 - Create: `src/lib/queue/in-process-queue.pg.test.ts`
 - Create: `src/features/canvas/actions.pg.test.ts`
+- Create: `src/features/canvas/contracts.ts`
 - Create: `src/features/canvas/fan-out.pg.test.ts`
 - Create: `src/features/canvas/queries.pg.test.ts`
 - Create: `src/features/canvas/status.pg.test.ts`
@@ -545,13 +548,10 @@ import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.
 - Modify: `src/lib/db/migrate.ts`
 - Modify: `src/lib/db/schema.test.ts`
 - Modify: `src/features/canvas/actions.ts`
-- Modify: `src/features/canvas/actions.test.ts`
 - Modify: `src/features/canvas/fan-out.ts`
-- Modify: `src/features/canvas/fan-out.test.ts`
 - Modify: `src/features/canvas/queries.ts`
-- Modify: `src/features/canvas/queries.test.ts`
 - Modify: `src/features/canvas/status.ts`
-- Modify: `src/features/canvas/status.test.ts`
+- Modify: `src/features/canvas/index.ts`
 - Modify: `src/features/ai/config.ts`
 - Modify: `src/features/ai/config.test.ts`
 - Modify: `src/features/ai/gemini-adapter.test.ts`
@@ -564,13 +564,13 @@ import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.
 - Modify: `src/features/audio/repository.test.ts`
 - Modify: `src/features/audio/runtime-repository.ts`
 - Modify: `src/features/audio/runtime-repository.test.ts`
+- Modify: `src/features/audio/index.ts`
 - Modify: `src/features/director/advance.ts`
 - Modify: `src/features/director/advance.test.ts`
 - Modify: `src/features/director/fabricate.ts`
 - Modify: `src/features/director/queue-handler.ts`
 - Modify: `src/features/director/queue-handler.test.ts`
 - Modify: `src/features/director/runtime-repository.ts`
-- Modify: `src/features/director/runtime-repository.test.ts`
 - Modify: `src/features/director/stage-effects.ts`
 - Modify: `src/features/director/stage-effects.test.ts`
 - Modify: `src/features/director/stage-runner.ts`
@@ -578,11 +578,9 @@ import 不自动连接或迁移。冻结的 legacy SQLite caller 仍由 N1.3/N1.
 - Modify: `src/features/director/tools/write-artifact.ts`
 - Modify: `src/features/director/tools/write-artifact.test.ts`
 - Modify: `src/features/render/cache.ts`
-- Modify: `src/features/render/cache.test.ts`
+- Modify: `src/features/render/concat.ts`
 - Modify: `src/features/render/render-shot-repository.ts`
 - Modify: `src/features/render/repository.ts`
-- Modify: `src/features/render/repository.test.ts`
-- Modify: `src/features/render/thumbnail.integration.test.ts`
 - Modify: `src/features/render/vision-qa.ts`
 - Modify: `src/features/render/vision-qa.test.ts`
 - Modify: `src/lib/queue/in-process-queue.ts`
@@ -632,6 +630,8 @@ barrel 删除 legacy schema/client export。legacy `createDb()` 只迁到
 `TEST_DATABASE_URL`，而真实数据库合同只由 `vitest.pg.config.ts` 运行。Director 与
 Render 新文件是为满足生产文件 350 行硬上限而按 repository、artifact persistence
 与 test fixture 职责拆分；它们不得引入第二套状态或平行 artifact commit 实现。
+因异步合同传播而新增的跨域调用必须同步补到各 feature 根 `index.ts`，调用方只改
+import 路径，禁止继续 deep import 其他域的 types、status、fan-out 或 repository。
 
 - [ ] **Step 1: 写 async/transaction/credential 的失败测试**
 
@@ -652,7 +652,7 @@ Render 新文件是为满足生产文件 350 行硬上限而按 repository、art
 Run:
 
 ```powershell
-pnpm test -- src/features/canvas/actions.test.ts src/features/canvas/fan-out.test.ts
+pnpm vitest run --config vitest.pg.config.ts src/features/canvas/actions.pg.test.ts src/features/canvas/fan-out.pg.test.ts
 pnpm vitest run --config vitest.pg.config.ts src/features/credentials/provider-credential-store.pg.test.ts src/features/routing/model-route-repository.pg.test.ts src/features/routing/media-route-repository.pg.test.ts
 ```
 

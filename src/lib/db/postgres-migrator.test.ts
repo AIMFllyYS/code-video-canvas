@@ -13,9 +13,6 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('better-sqlite3', () => ({ default: vi.fn() }))
-vi.mock('drizzle-orm/better-sqlite3', () => ({ drizzle: vi.fn() }))
-vi.mock('drizzle-orm/better-sqlite3/migrator', () => ({ migrate: vi.fn() }))
 vi.mock('drizzle-orm/postgres-js', () => ({
   drizzle: mocks.drizzlePostgres,
 }))
@@ -24,7 +21,6 @@ vi.mock('drizzle-orm/postgres-js/migrator', () => ({
 }))
 vi.mock('postgres', () => ({ default: mocks.postgres }))
 vi.mock('@/lib/db/schema/index', () => ({}))
-vi.mock('./schema', () => ({}))
 
 async function loadMigrator() {
   vi.resetModules()

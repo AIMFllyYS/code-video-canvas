@@ -1,12 +1,14 @@
 import 'server-only'
 import { getDb } from '@/lib/db/client'
 import { storage } from '@/lib/storage'
-import { generateSubtitle, generateVoiceover } from '@/features/audio'
 import {
   AudioRuntimeRepository,
+  generateSubtitle,
+  generateVoiceover,
   type LoadedVoiceover,
-} from '@/features/audio/runtime-repository'
-import type { SubtitleInput, VoiceoverInput } from '@/features/audio/types'
+  type SubtitleInput,
+  type VoiceoverInput,
+} from '@/features/audio'
 import { runShotQaCheck } from '@/features/render/qa-check'
 import { runShotVisionQa } from '@/features/render/vision-qa'
 import type { DirectorStageContext } from './runtime-repository'
@@ -83,8 +85,8 @@ export function createDirectorStageEffect(
 export const runDirectorStageEffect = createDirectorStageEffect({
   generateVoiceover,
   generateSubtitle,
-  loadVoiceover: (projectId, shotId) =>
-    new AudioRuntimeRepository(getDb(), storage).loadVoiceover(
+  loadVoiceover: async (projectId, shotId) =>
+    new AudioRuntimeRepository(await getDb(), storage).loadVoiceover(
       projectId,
       shotId
     ),
