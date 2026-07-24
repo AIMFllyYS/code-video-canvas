@@ -12,6 +12,14 @@ export const fabricatePromptInputSchema = z
 
 export type FabricatePromptInput = z.infer<typeof fabricatePromptInputSchema>
 
+const retryPromptInputSchema = z
+  .object({
+    retry: z.number().int().positive(),
+    maxRetries: z.number().int().positive(),
+    errors: z.array(z.string().trim().min(1)).min(1),
+  })
+  .strict()
+
 /** 构建 FABRICATE 阶段的确定性 HTML+GSAP 生成提示词。 */
 export function buildFabricatePrompt(input: FabricatePromptInput): string {
   const parsed = fabricatePromptInputSchema.parse(input)
@@ -42,4 +50,18 @@ style bible：
 ${parsed.styleBible}
 
 只返回完整、自包含且可被确定性守卫扫描的 HTML。`
+}
+
+/** 把可信确定性门禁的逐条违规反馈回同一 FABRICATE 会话。 */
+export function buildFabricateRetryPrompt(
+  input: z.input<typeof retryPromptInputSchema>
+): string {
+  const parsed = retryPromptInputSchema.parse(input)
+  return `上一版 HTML 未通过 CodeVideoCanvas 的确定性门禁，正在执行第 ${parsed.retry}/${parsed.maxRetries} 次自动修正。
+
+可信门禁逐条违规：
+${parsed.errors.map((error, index) => `${index + 1}. ${error}`).join('\n')}
+
+只修正这些违规及其直接影响，不改变 shot 职责、文案、时长、视觉合同或已正确部分。
+重新输出完整 HTML，不要输出补丁、解释、Markdown 围栏或省略内容；最终 HTML 仍须自包含并满足 window.__CVC_RENDER__@v1。`
 }

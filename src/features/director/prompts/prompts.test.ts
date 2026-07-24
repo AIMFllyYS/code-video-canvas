@@ -5,10 +5,10 @@ import {
   buildShotSubtitlePrompt,
 } from './assemble'
 import { buildDirectPrompt } from './direct'
-import { buildFabricatePrompt } from './fabricate'
+import { buildFabricatePrompt, buildFabricateRetryPrompt } from './fabricate'
 import { buildExportFinalizePrompt, buildShotQaPrompt } from './finalize'
 import { buildIngestPrompt } from './ingest'
-import { buildShotSpecPrompt } from './shot-spec'
+import { buildShotSpecPrompt, buildShotSpecRetryPrompt } from './shot-spec'
 
 const digest = `sha256:${'a'.repeat(64)}`
 const scriptUnits = [{ unitId: 'U001' as const, text: '测试文稿', order: 0 }]
@@ -160,5 +160,25 @@ describe('director prompt templates', () => {
     ]) {
       expect(prompt).toContain(term)
     }
+  })
+
+  it('builds typed gate feedback prompts with exact violations and full-output instructions', () => {
+    const fabricateRetry = buildFabricateRetryPrompt({
+      retry: 1,
+      maxRetries: 2,
+      errors: ['set-interval@457: 禁止 setInterval 驱动动画'],
+    })
+    expect(fabricateRetry).toContain('set-interval@457')
+    expect(fabricateRetry).toContain('第 1/2 次')
+    expect(fabricateRetry).toContain('重新输出完整 HTML')
+
+    const shotSpecRetry = buildShotSpecRetryPrompt({
+      retry: 2,
+      maxRetries: 2,
+      errors: ['shots.0.mustShow: Required'],
+    })
+    expect(shotSpecRetry).toContain('shots.0.mustShow')
+    expect(shotSpecRetry).toContain('第 2/2 次')
+    expect(shotSpecRetry).toContain('完整 JSON')
   })
 })

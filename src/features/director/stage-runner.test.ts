@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createStageRunner } from './stage-runner'
+import type { DirectorStageContext } from './runtime-repository'
+import { ArtifactValidationError } from './tools/write-artifact'
 
 vi.mock('server-only', () => ({}))
 
-const context = {
+const context: DirectorStageContext = {
   projectId: 'project-1',
   nodeId: 'node-1',
-  nodeType: 'script-import' as const,
-  stage: 'INGEST' as const,
-  status: 'pending' as const,
+  nodeType: 'script-import',
+  stage: 'INGEST',
+  status: 'pending',
   projectTitle: '项目',
   projectScript: '脚本',
   directorInput: { rawScript: '脚本' },
@@ -226,5 +228,128 @@ describe('createStageRunner', () => {
     ])
     expect(harness.transitionNodeStatus).not.toHaveBeenCalledWith('node-1', 'success')
     expect(harness.advancePipeline).not.toHaveBeenCalled()
+  })
+
+  it('reuses the same FABRICATE session for at most two gate-feedback retries', async () => {
+    const harness = createHarness()
+    harness.repository.loadStageContext.mockReturnValue({
+      ...context,
+      nodeType: 'shot-codegen',
+      stage: 'FABRICATE',
+    })
+    harness.session.run
+      .mockResolvedValueOnce({ text: '<html>违规一</html>' })
+      .mockResolvedValueOnce({ text: '<html>违规二</html>' })
+      .mockResolvedValueOnce({ text: '<html>合格</html>' })
+    harness.writeArtifact
+      .mockImplementationOnce(async () => {
+        harness.calls.push('artifact')
+        throw new ArtifactValidationError([
+          'set-interval@457: 禁止 setInterval 驱动动画',
+        ])
+      })
+      .mockImplementationOnce(async () => {
+        harness.calls.push('artifact')
+        throw new ArtifactValidationError([
+          'date-now@99: 禁止读取墙钟时间',
+        ])
+      })
+
+    await harness.runner('project-1', 'node-1', 'FABRICATE')
+
+    expect(harness.session.run).toHaveBeenCalledTimes(3)
+    expect(harness.writeArtifact).toHaveBeenCalledTimes(3)
+    expect(harness.session.run.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        prompt: expect.stringContaining('set-interval@457'),
+      })
+    )
+    expect(harness.session.run.mock.calls[2]?.[0]).toEqual(
+      expect.objectContaining({
+        prompt: expect.stringContaining('date-now@99'),
+      })
+    )
+    expect(harness.calls.filter((call) => call === 'commit')).toHaveLength(1)
+    expect(harness.calls).toContain('success')
+  })
+
+  it('fails with the last violation detail after exhausting two feedback retries', async () => {
+    const harness = createHarness()
+    harness.repository.loadStageContext.mockReturnValue({
+      ...context,
+      nodeType: 'shot-codegen',
+      stage: 'FABRICATE',
+    })
+    harness.writeArtifact.mockImplementation(async () => {
+      harness.calls.push('artifact')
+      throw new ArtifactValidationError([
+        'css-animation@88: 禁止 CSS animation',
+      ])
+    })
+
+    await expect(
+      harness.runner('project-1', 'node-1', 'FABRICATE')
+    ).rejects.toThrow('自动重试 2 次后仍违规')
+
+    expect(harness.session.run).toHaveBeenCalledTimes(3)
+    expect(harness.repository.recordStageError).toHaveBeenCalledWith(
+      'node-1',
+      'FABRICATE',
+      expect.objectContaining({
+        message: expect.stringContaining('css-animation@88'),
+      })
+    )
+    expect(harness.advancePipeline).not.toHaveBeenCalled()
+  })
+
+  it('applies the same bounded feedback mechanism to SHOT_SPEC validation', async () => {
+    const harness = createHarness()
+    harness.repository.loadStageContext.mockReturnValue({
+      ...context,
+      nodeType: 'shot-script',
+      stage: 'SHOT_SPEC',
+    })
+    harness.writeArtifact.mockImplementationOnce(async () => {
+      harness.calls.push('artifact')
+      throw new ArtifactValidationError(['shots.0.mustShow: Required'])
+    })
+
+    await harness.runner('project-1', 'node-1', 'SHOT_SPEC')
+
+    expect(harness.session.run).toHaveBeenCalledTimes(2)
+    expect(harness.session.run.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        prompt: expect.stringContaining('完整 JSON'),
+      })
+    )
+  })
+
+  it('does not retry network, normalization, or storage failures', async () => {
+    const network = createHarness(
+      vi.fn(async () => {
+        throw new Error('网络失败')
+      })
+    )
+    await expect(
+      network.runner('project-1', 'node-1', 'FABRICATE')
+    ).rejects.toThrow('网络失败')
+    expect(network.session.run).toHaveBeenCalledOnce()
+
+    const normalization = createHarness()
+    normalization.prepareResult.mockImplementationOnce(() => {
+      throw new Error('schema 归一失败')
+    })
+    await expect(
+      normalization.runner('project-1', 'node-1', 'FABRICATE')
+    ).rejects.toThrow('schema 归一失败')
+    expect(normalization.session.run).toHaveBeenCalledOnce()
+    expect(normalization.writeArtifact).not.toHaveBeenCalled()
+
+    const storage = createHarness()
+    storage.writeArtifact.mockRejectedValueOnce(new Error('存储失败'))
+    await expect(
+      storage.runner('project-1', 'node-1', 'FABRICATE')
+    ).rejects.toThrow('存储失败')
+    expect(storage.session.run).toHaveBeenCalledOnce()
   })
 })

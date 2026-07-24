@@ -13,6 +13,14 @@ export const shotSpecPromptInputSchema = z
 
 export type ShotSpecPromptInput = z.infer<typeof shotSpecPromptInputSchema>
 
+const retryPromptInputSchema = z
+  .object({
+    retry: z.number().int().positive(),
+    maxRetries: z.number().int().positive(),
+    errors: z.array(z.string().trim().min(1)).min(1),
+  })
+  .strict()
+
 /** 构建 SHOT-SPEC 阶段的 canonical shot-plan 提示词。 */
 export function buildShotSpecPrompt(input: ShotSpecPromptInput): string {
   const parsed = shotSpecPromptInputSchema.parse(input)
@@ -37,4 +45,18 @@ audio allocation：
 ${JSON.stringify(parsed.audioAllocation)}
 
 输出必须可由项目原生 shotPlanSchema 直接解析，不要添加额外键或 Markdown 围栏。`
+}
+
+/** 把可信 shot-plan schema 门禁错误反馈回同一 SHOT_SPEC 会话。 */
+export function buildShotSpecRetryPrompt(
+  input: z.input<typeof retryPromptInputSchema>
+): string {
+  const parsed = retryPromptInputSchema.parse(input)
+  return `上一版 shot plan 未通过 CodeVideoCanvas schema 门禁，正在执行第 ${parsed.retry}/${parsed.maxRetries} 次自动修正。
+
+可信门禁逐条错误：
+${parsed.errors.map((error, index) => `${index + 1}. ${error}`).join('\n')}
+
+只修正这些 schema 错误及其直接影响，不改写 master plan、style bible、原稿事实或已正确的镜头合同。
+重新输出一份可直接解析的完整 JSON，不要输出补丁、解释、Markdown 围栏或省略内容。`
 }

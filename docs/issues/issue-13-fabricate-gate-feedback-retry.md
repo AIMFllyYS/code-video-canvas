@@ -6,7 +6,7 @@
 | Wave | 7（建议在 issue-11 合并后施工——二者都触碰 `stage-runner.ts`，先后串行避免同文件冲突） |
 | 依赖 | 无硬依赖；与 issue-11 有 `stage-runner.ts` 文件级冲突（见文末） |
 | 关联证据 | 用户实测截图：FABRICATE 阶段失败弹窗 `产物校验失败：set-interval@457: 禁止 setInterval 驱动动画；用帧取模表达` |
-| 状态 | 待施工 |
+| 状态 | **已完成**（2026-07-24） |
 
 ## 背景：门禁在正确工作，但失败即全盘作废
 
@@ -64,10 +64,24 @@ session.run(prompt) → prepareStageResult() → writeValidatedArtifact()
 
 **完成条件**：
 
-- [ ] FABRICATE 产物违规时自动在同一会话内反馈重试，最多 2 轮；成功则正常提交，用户无感知
-- [ ] 重试耗尽后 failed，错误消息包含重试次数与最后一轮违规明细
-- [ ] 非门禁类错误（网络/schema/存储）不触发反馈循环的回归测试
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿
+- [x] FABRICATE 产物违规时自动在同一会话内反馈重试，最多 2 轮；成功则正常提交，用户无感知
+- [x] 重试耗尽后 failed，错误消息包含重试次数与最后一轮违规明细
+- [x] 非门禁类错误（网络/schema/存储）不触发反馈循环的回归测试
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿
+
+## 2026-07-24 实施记录
+
+- `MAX_GATE_RETRIES = 2` 固定在应用编排层；首轮 + 两轮反馈共最多三次
+  `session.run()`，始终复用同一 `DirectorSession`。
+- 只有 `writeValidatedArtifact()` 抛出的 `ArtifactValidationError` 会进入循环；
+  模型网络错误、`prepareStageResult()` schema 归一错误、存储/索引错误保持原有
+  立即失败语义。
+- FABRICATE 与 SHOT_SPEC 分别使用原生类型化 retry prompt builder；反馈逐条包含
+  可信门禁错误，并要求重新输出完整 HTML / JSON，runner 不临时拼 prompt。
+- 两轮耗尽后错误消息为“自动重试 2 次后仍违规”并保留最后一轮全部明细，
+  `recordStageError`、SSE 终态与 Inspector 会读取同一真实错误。
+- 新鲜验证：`pnpm lint`、`pnpm tsc --noEmit`、73 files / 329 tests、
+  `pnpm build` 全部通过。
 
 ## 与其他 issue 的并行性
 

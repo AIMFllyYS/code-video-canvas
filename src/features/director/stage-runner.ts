@@ -15,12 +15,15 @@ import { streamBus } from '@/lib/stream/stream-bus'
 import { createCheckDeterminismTool } from './tools/check-determinism'
 import { createValidateShotPlanTool } from './tools/validate-shot-plan'
 import {
+  ArtifactValidationError,
   writeValidatedArtifact,
   type ArtifactCommitResult,
   type WriteArtifactInput,
 } from './tools/write-artifact'
 import type { PipelineStage } from './types'
 import { advancePipeline } from './advance'
+import { buildFabricateRetryPrompt } from './prompts/fabricate'
+import { buildShotSpecRetryPrompt } from './prompts/shot-spec'
 
 interface StageRepository {
   loadStageContext(
@@ -76,6 +79,8 @@ type StageRunner = (
   nodeId: string,
   stage: PipelineStage
 ) => Promise<void>
+
+export const MAX_GATE_RETRIES = 2
 
 let defaultRunner: StageRunner | undefined
 
@@ -134,11 +139,13 @@ export function createStageRunner(
         kind: 'pi-session',
         storageKey: session.storageKey,
       })
-      const result = await session.run({ prompt, tools: toolsForStage(stage) })
-      const prepared = dependencies.prepareResult(context, result.text)
-      const artifact = await dependencies.writeArtifact(
-        outputArtifact(context, prepared.content)
-      )
+      const { rawText, prepared, artifact } = await generateValidatedArtifact({
+        stage,
+        context,
+        session,
+        initialPrompt: prompt,
+        dependencies,
+      })
       dependencies.commitResult(context, prepared, artifact)
       await dependencies.runStageEffect(context, prepared, artifact)
       // 持久化已流出的全文（回退 result.text）为可回看日志，并收尾流。
@@ -146,7 +153,7 @@ export function createStageRunner(
         projectId,
         nodeId,
         stage,
-        streamBus.getSnapshot(streamKey).text || result.text
+        streamBus.getSnapshot(streamKey).text || rawText
       )
       streamBus.markDone(streamKey)
       await session.close()
@@ -210,6 +217,71 @@ async function advanceWithoutMasking(
       message: error instanceof Error ? error.message : String(error),
     })
   }
+}
+
+async function generateValidatedArtifact(input: {
+  stage: PipelineStage
+  context: DirectorStageContext
+  session: DirectorSession
+  initialPrompt: string
+  dependencies: StageRunnerDependencies
+}): Promise<{
+  rawText: string
+  prepared: PreparedStageResult
+  artifact: ArtifactCommitResult
+}> {
+  let prompt = input.initialPrompt
+  let retries = 0
+  while (true) {
+    const result = await input.session.run({
+      prompt,
+      tools: toolsForStage(input.stage),
+    })
+    const prepared = input.dependencies.prepareResult(input.context, result.text)
+    try {
+      const artifact = await input.dependencies.writeArtifact(
+        outputArtifact(input.context, prepared.content)
+      )
+      return { rawText: result.text, prepared, artifact }
+    } catch (error) {
+      if (
+        !(error instanceof ArtifactValidationError) ||
+        !isFeedbackStage(input.stage)
+      ) {
+        throw error
+      }
+      if (retries >= MAX_GATE_RETRIES) {
+        throw exhaustedGateError(error)
+      }
+      retries += 1
+      prompt = buildGateRetryPrompt(input.stage, retries, error.errors)
+    }
+  }
+}
+
+function isFeedbackStage(
+  stage: PipelineStage
+): stage is 'SHOT_SPEC' | 'FABRICATE' {
+  return stage === 'SHOT_SPEC' || stage === 'FABRICATE'
+}
+
+function buildGateRetryPrompt(
+  stage: 'SHOT_SPEC' | 'FABRICATE',
+  retry: number,
+  errors: string[]
+): string {
+  const input = { retry, maxRetries: MAX_GATE_RETRIES, errors }
+  return stage === 'FABRICATE'
+    ? buildFabricateRetryPrompt(input)
+    : buildShotSpecRetryPrompt(input)
+}
+
+function exhaustedGateError(error: ArtifactValidationError): ArtifactValidationError {
+  const exhausted = new ArtifactValidationError(error.errors)
+  exhausted.message =
+    `产物校验失败（自动重试 ${MAX_GATE_RETRIES} 次后仍违规）：` +
+    error.errors.join('；')
+  return exhausted
 }
 
 function toolsForStage(stage: PipelineStage): readonly DirectorTool[] {
