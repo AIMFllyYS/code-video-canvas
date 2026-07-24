@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "verify:v3": "tsx scripts/verify/v3-architecture.ts --check",
+    "report:v3": "tsx scripts/verify/v3-architecture.ts --report",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
