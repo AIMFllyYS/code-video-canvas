@@ -1,16 +1,19 @@
 import { z } from 'zod'
 import type { DirectorTool, DirectorToolResult } from '../pi-session'
-import { shotPlanSchema, type ShotPlan } from '../schemas/shot-plan'
+import {
+  directorShotPlanSchema,
+  type DirectorShotPlan,
+} from '../schemas/director-shot-plan'
 
 const inputSchema = z.object({ shotPlan: z.unknown() }).strict()
 
 export type ShotPlanValidation =
-  | { ok: true; value: ShotPlan }
+  | { ok: true; value: DirectorShotPlan }
   | { ok: false; errors: string[] }
 
 /** 使用项目原生 schema 校验分镜合同，不读取运行时 JSON Schema 文件。 */
 export function validateShotPlanValue(value: unknown): ShotPlanValidation {
-  const parsed = shotPlanSchema.safeParse(value)
+  const parsed = directorShotPlanSchema.safeParse(value)
   if (parsed.success) return { ok: true, value: parsed.data }
   return {
     ok: false,
@@ -24,7 +27,7 @@ export function createValidateShotPlanTool(): DirectorTool {
   return {
     name: 'validate_shot_plan',
     label: '校验分镜合同',
-    description: '用 CodeVideoCanvas 原生 shotPlanSchema 校验 canonical shot plan。',
+    description: '用 CodeVideoCanvas 运行时 directorShotPlanSchema 校验 canonical shot plan。',
     parameters: {
       type: 'object',
       properties: { shotPlan: { type: 'object' } },

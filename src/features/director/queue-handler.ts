@@ -1,6 +1,8 @@
 import 'server-only'
 import { z } from 'zod'
 import { transitionNodeStatus } from '@/features/canvas/status'
+import { getDb } from '@/lib/db/client'
+import { storage } from '@/lib/storage'
 import { queue as defaultQueue, type QueueAdapter } from '@/lib/queue'
 import { DirectorRuntimeRepository } from './runtime-repository'
 import { runStage as defaultRunStage } from './stage-runner'
@@ -67,7 +69,7 @@ export function enqueueDirectorStage(
 }
 
 function createDefaultEnqueueDependencies(): EnqueueDependencies {
-  const repository = new DirectorRuntimeRepository()
+  const repository = new DirectorRuntimeRepository(getDb(), storage)
   return {
     queue: defaultQueue,
     assertEnqueueable: (input) =>

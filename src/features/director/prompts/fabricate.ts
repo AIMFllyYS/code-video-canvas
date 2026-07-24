@@ -1,10 +1,10 @@
 import { z } from 'zod'
 import { audioAllocationSchema } from '../schemas/ingest'
-import { shotSchema } from '../schemas/shot-plan'
+import { directorShotSchema } from '../schemas/director-shot-plan'
 
 export const fabricatePromptInputSchema = z
   .object({
-    shot: shotSchema,
+    shot: directorShotSchema,
     audioAllocation: audioAllocationSchema,
     styleBible: z.string().min(1),
   })

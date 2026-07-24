@@ -46,8 +46,6 @@ export class RenderRepository {
     if (!ENQUEUEABLE_STATUSES.has(node.status)) {
       throw new Error(`渲染节点当前不可入队：${node.status}`)
     }
-    this.parseRenderSpec(node.data)
-    this.requireFabricateArtifact(projectId, nodeId)
   }
 
   loadRenderContext(projectId: string, nodeId: string): RenderJob {

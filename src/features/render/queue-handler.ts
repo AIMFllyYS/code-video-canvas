@@ -1,6 +1,7 @@
 import 'server-only'
 import { z } from 'zod'
 import { transitionNodeStatus } from '@/features/canvas/status'
+import { fabricateShot } from '@/features/director/fabricate'
 import { queue as defaultQueue, type QueueAdapter } from '@/lib/queue'
 import { RenderRepository } from './repository'
 import { HyperframesRenderer, type Renderer } from './renderer'
@@ -42,10 +43,19 @@ export function registerRenderShotHandler(
     const payload = renderJobPayloadSchema.parse(job.payload)
     resolved.transitionNodeStatus(payload.nodeId, 'running')
     try {
-      const context = resolved.repository.loadRenderContext(
-        payload.projectId,
-        payload.nodeId
-      )
+      let context: ReturnType<typeof resolved.repository.loadRenderContext>
+      try {
+        context = resolved.repository.loadRenderContext(
+          payload.projectId,
+          payload.nodeId
+        )
+      } catch {
+        await fabricateShot(payload.projectId, payload.nodeId)
+        context = resolved.repository.loadRenderContext(
+          payload.projectId,
+          payload.nodeId
+        )
+      }
       await resolved.renderer.render(context)
       resolved.transitionNodeStatus(payload.nodeId, 'success')
     } catch (error) {
