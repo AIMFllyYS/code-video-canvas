@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from 'react'
+import type { CSSProperties, InputHTMLAttributes, ReactNode } from 'react'
 import { Search } from 'lucide-react'
 import { Clapperboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils'
 export interface SidebarProps {
   children?: ReactNode
   className?: string
+  style?: CSSProperties
+  /** 图标条态：收窄为 64px，隐藏文字型子件 */
+  compact?: boolean
 }
 
 /**
@@ -13,11 +16,14 @@ export interface SidebarProps {
  * canvas.pen: 宽 60（240px）、glass-sidebar 底、右侧 separator 边框、
  * backdrop-blur-[20px]、垂直布局、gap-1、p-4。
  */
-export function Sidebar({ children, className }: SidebarProps) {
+export function Sidebar({ children, className, style, compact }: SidebarProps) {
   return (
     <aside
+      data-compact={compact ? 'true' : undefined}
+      style={style}
       className={cn(
-        'flex h-full w-60 flex-col gap-1 border-r border-separator bg-glass-sidebar p-4 backdrop-blur-[20px]',
+        'flex h-full flex-col gap-1 border-r border-separator bg-glass-sidebar backdrop-blur-[20px]',
+        compact ? 'w-16 items-center px-2 py-4' : 'w-60 p-4',
         className,
       )}
     >
@@ -28,24 +34,37 @@ export function Sidebar({ children, className }: SidebarProps) {
 
 export interface SidebarBrandProps {
   className?: string
+  compact?: boolean
 }
 
-export function SidebarBrand({ className }: SidebarBrandProps) {
+export function SidebarBrand({ className, compact }: SidebarBrandProps) {
   return (
-    <div className={cn('flex items-center gap-2 px-2.5 py-1', className)}>
-      <Clapperboard className="h-5 w-5 text-accent" />
-      <span className="text-[17px] font-semibold font-sc text-label">CodeVideoCanvas</span>
+    <div
+      className={cn(
+        'flex items-center gap-2 py-1',
+        compact ? 'justify-center px-0' : 'px-2.5',
+        className,
+      )}
+    >
+      <Clapperboard className="h-5 w-5 shrink-0 text-accent" />
+      {!compact && (
+        <span className="text-[17px] font-semibold font-sc text-label">CodeVideoCanvas</span>
+      )}
     </div>
   )
 }
 
-export type SidebarSearchProps = InputHTMLAttributes<HTMLInputElement>
+export type SidebarSearchProps = InputHTMLAttributes<HTMLInputElement> & {
+  compact?: boolean
+}
 
 export function SidebarSearch({
   placeholder = '搜索项目',
   className,
+  compact,
   ...props
 }: SidebarSearchProps) {
+  if (compact) return null
   return (
     <div
       className={cn(
@@ -66,9 +85,11 @@ export function SidebarSearch({
 export interface SidebarSectionProps {
   children: ReactNode
   className?: string
+  compact?: boolean
 }
 
-export function SidebarSection({ children, className }: SidebarSectionProps) {
+export function SidebarSection({ children, className, compact }: SidebarSectionProps) {
+  if (compact) return null
   return (
     <div className={cn('px-2.5 py-1 text-xs font-sc text-label-tertiary', className)}>
       {children}
@@ -97,13 +118,25 @@ export function SidebarFooter({ children, className }: SidebarFooterProps) {
 export interface SidebarLocalStatusProps {
   label?: string
   className?: string
+  compact?: boolean
 }
 
-export function SidebarLocalStatus({ label = '本地模式 · 数据不出本机', className }: SidebarLocalStatusProps) {
+export function SidebarLocalStatus({
+  label = '本地模式 · 数据不出本机',
+  className,
+  compact,
+}: SidebarLocalStatusProps) {
   return (
-    <div className={cn('flex items-center gap-1.5 px-2.5 py-1', className)}>
-      <span className="h-1.5 w-1.5 rounded-full bg-success" />
-      <span className="text-xs font-sc text-label-tertiary">{label}</span>
+    <div
+      className={cn(
+        'flex items-center gap-1.5 py-1',
+        compact ? 'justify-center px-0' : 'px-2.5',
+        className,
+      )}
+      title={compact ? label : undefined}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
+      {!compact && <span className="text-xs font-sc text-label-tertiary">{label}</span>}
     </div>
   )
 }
