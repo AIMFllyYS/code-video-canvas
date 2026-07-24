@@ -223,11 +223,11 @@ Expected: commit 只含 contracts/config；无业务编排、DB schema 或 Key�
 - Create: `src/features/pipeline/services/shot-qa-service.ts`
 - Create: `src/features/pipeline/services/project-compose-service.ts`
 - Create: `src/features/pipeline/services/service-contract.test.ts`
-- Modify: `src/features/director/stage-runner.ts`
-- Modify: `src/features/audio/runtime-repository.ts`
-- Modify: `src/features/render/renderer.ts`
-- Modify: `src/features/render/qa-check.ts`
-- Modify: `src/features/render/export-service.ts`
+- Deferred unchanged (`N2-DOMAIN-ADAPTER-001`): `src/features/director/stage-runner.ts`
+- Deferred unchanged (`N2-DOMAIN-ADAPTER-001`): `src/features/audio/runtime-repository.ts`
+- Deferred unchanged (`N2-DOMAIN-ADAPTER-001`): `src/features/render/renderer.ts`
+- Deferred unchanged (`N2-DOMAIN-ADAPTER-001`): `src/features/render/qa-check.ts`
+- Deferred unchanged (`N2-DOMAIN-ADAPTER-001`): `src/features/render/export-service.ts`
 - Prohibited in `trigger/tasks/**`: Drizzle/schema import、prompt 文本、source parser、
   FFmpeg 参数、StorageAdapter 路径、UI DTO
 - Prohibited: OpenAI Agents SDK、第二 Agent、把 TTS/ASR 交给 Pi
@@ -262,9 +262,11 @@ Expected: 六个 task 文件与 services 尚不存在，测试 RED。
 `ExecutionContextV1` 固定包含 payload 中的可信 IDs、Trigger run ID、attempt ID、
 workflow/fingerprint、`AbortSignal` 与 `ProgressSink`。`ProgressSink` 只接受 N2.1
 safe event；service 不直接 import Trigger SDK。Task adapter 将 Trigger `signal` 与
-typed stream writer 注入 context；下游 Pi、Playwright/HyperFrames、FFmpeg/media
-调用必须接收同一 signal，所有 temp cleanup 留在各领域 `finally`，不能只依赖
-`onCancel`。
+typed stream writer 注入 context；N2.2 必须证明同一个 signal 到达每个具名领域
+Port。Pi、Playwright/HyperFrames、FFmpeg/media 的物理取消仍是最终硬要求，但因
+当前旧 runtime 缺少 UUID shot resolver 且底层取消文件不在本 Task 范围，分别在
+N3、N4、N5 替换真实 adapter 时完成；禁止用 `Promise.race` 冒充取消，所有 temp
+cleanup 仍留在各领域 `finally`，不能只依赖 `onCancel`。
 
 - [ ] **Step 3: 用现有领域能力实现六个 service，保持 Pi 唯一 Agent**
 
@@ -283,6 +285,13 @@ typed stream writer 注入 context；下游 Pi、Playwright/HyperFrames、FFmpeg
 service 返回 `TaskResultV1` 所需的 artifact ID/checkpoint hash，绝不返回本机路径。
 六个领域 service 必须复用 `task-service.ts` 的唯一 result mapper/port 合同，禁止为
 每个 task 复制一套仅 task ID 不同的平行 wrapper。
+
+`N2-DOMAIN-ADAPTER-001`：新合同的 `shotId`/tag 是真实 UUID，但旧 Director、
+audio、render 仍分别用 `S001` laneKey 与 `shot-script/codegen/sfx/subtitle/qa`
+node ID 寻址，仓库当前没有可信统一 resolver。N2.2 只建立具名 Port 与薄 shell；
+默认未绑定 adapter 必须抛稳定 `DOMAIN_ADAPTER_PENDING`，不得把 UUID 猜成旧 ID、
+回退旧进程内 queue 或返回伪造 completed。N3–N5 创建 canonical shot/checkpoint/
+artifact 合同后绑定真实 adapter，N7 Tier C 前必须关闭本标记。
 
 - [ ] **Step 4: 实现七个 task shell 与稳定错误映射**
 
@@ -304,21 +313,20 @@ Run:
 
 ```powershell
 pnpm test -- src/features/pipeline/contracts/task-source-boundary.test.ts src/features/pipeline/services/service-contract.test.ts
-pnpm test -- src/features/director/stage-runner.test.ts src/features/render/renderer.test.ts src/features/render/qa-check.test.ts src/features/render/export-service.test.ts
 pnpm typecheck
 ```
 
-Expected: source guard、service fake-port、现有领域回归与 typecheck 全绿；七 task
-无 prohibited import；取消 signal 到达所有长任务 port。
+Expected: source guard、service fake-port 与 typecheck 全绿；七 task 无 prohibited
+import；取消 signal 到达所有具名领域 Port；未绑定 adapter 稳定失败且不伪造完成。
 
 - [ ] **Step 6: Task-Light 检查并本地提交**
 
 Run:
 
 ```powershell
-pnpm eslint trigger/tasks src/features/pipeline src/features/director/stage-runner.ts src/features/audio/runtime-repository.ts src/features/render/renderer.ts src/features/render/qa-check.ts src/features/render/export-service.ts
+pnpm eslint trigger/tasks src/features/pipeline
 git diff --check
-git add -- trigger/tasks src/features/pipeline/execution-context.ts src/features/pipeline/progress src/features/pipeline/services src/features/director/stage-runner.ts src/features/audio/runtime-repository.ts src/features/render/renderer.ts src/features/render/qa-check.ts src/features/render/export-service.ts
+git add -- trigger/tasks src/features/pipeline/execution-context.ts src/features/pipeline/progress src/features/pipeline/services
 git diff --cached --check
 git commit -m "feat(orchestration): add seven thin Trigger tasks"
 ```
@@ -326,8 +334,8 @@ git commit -m "feat(orchestration): add seven thin Trigger tasks"
 Expected: commit 只含七 task、application boundary 与必要 signal 改造。
 
 **N2.2 exit gate:** 七个 task ID 一一对应七个薄 shell；所有业务逻辑留在
-application service；Pi 是 plan/generate 唯一 Agent，media 零 Agent；取消 signal
-贯穿领域调用。
+application service；Pi 仍是 plan/generate 唯一 Agent，media Port 零 Agent；取消
+signal 贯穿到领域 Port；`N2-DOMAIN-ADAPTER-001` 被显式保留且未伪造领域完成。
 
 <a id="task-n23"></a>
 
