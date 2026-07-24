@@ -268,29 +268,37 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   豁免 Trigger.dev 登录和真实云端 run，evidence 保持 `passed:false/waived:true`
   且不宣称 Realtime 实跑，聚合与 `--verify-evidence` 均通过；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n15)
-- [ ] **N1.6 移除 runtime SQLite，仅保留只读 migration 工具** —
-  `task_state=in_progress; status=ready; blocked_by=none; execution_override=user-authorized-independent-progress`;
+- [x] **N1.6 移除 runtime SQLite，仅保留只读 migration 工具** —
+  `task_state=done; status=ready; blocked_by=none; commit=bc603a7; scope_docs=1170c19,bddd3ae`;
+  runtime SQLite schema/migrations 与 import-time FS 副作用已删除，原 SQLite/WAL、
+  Online Backup 与正式只读 migration 工具保留；`better-sqlite3@12.1.0` 与 types
+  仅为精确 dev dependency，ordinary `openai` 保留；runtime boundary 3 files /
+  15 tests、常规 83 files / 384 tests、PG 16 files / 77 tests、lint/typecheck/build、
+  `verify:v3` 与 evidence verifier 全部 exit 0；PG migration 连续两次幂等，
+  final reconciliation 272/272 且所有 mismatch 为 0；架构扫描 Agents SDK 0、
+  Trigger forbidden 0、Canvas forbidden 15/23、U+FFFD 0；全局 diff check 仅命中
+  用户受保护 `.qoder/**` WIP 的既有尾随空格，本 Task scoped/cached diff check 为 0；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n16)
 
 ### Track N2 — Trigger orchestration
 
 - [ ] **N2.1 Trigger config、queues、tags 与 typed streams** —
-  `task_state=todo; status=blocked; blocked_by=N1`;
+  `task_state=todo; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n21)
 - [ ] **N2.2 七类 Trigger task 与统一 TaskResult** —
-  `task_state=todo; status=blocked; blocked_by=N1`;
+  `task_state=todo; status=blocked; blocked_by=N2.1`;
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n22)
 - [ ] **N2.3 DAG、checkpoint、global idempotency、receipt 与 attempt fence** —
-  `task_state=todo; status=blocked; blocked_by=N1`;
+  `task_state=todo; status=blocked; blocked_by=N2.2`;
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n23)
 - [ ] **N2.4 start/cancel/retry API 与 scoped Realtime token** —
-  `task_state=todo; status=blocked; blocked_by=N1`;
+  `task_state=todo; status=blocked; blocked_by=N2.3`;
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n24)
 - [ ] **N2.5 ProjectRunSnapshotV1 与 Snapshot/Realtime 对账 hook** —
-  `task_state=todo; status=blocked; blocked_by=N1`;
+  `task_state=todo; status=blocked; blocked_by=N2.4`;
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n25)
 - [ ] **N2.6 删除进程内 queue、stream 与旧 instrumentation startup** —
-  `task_state=todo; status=blocked; blocked_by=N1`;
+  `task_state=todo; status=blocked; blocked_by=N2.5`;
   [details](../issues/refactor-v3/issue-n2-trigger-orchestration.md#task-n26)
 
 ### Track N3 — Pi Agent structured runtime
