@@ -1,5 +1,8 @@
 # issue-13 — FABRICATE 确定性门禁失败的会话内反馈重试
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 | 字段 | 值 |
 |---|---|
 | 优先级 | **P2**（体验/成功率优化：门禁本身按设计正确工作，但失败后只能整段人工重试，浪费已消耗的 token 且成功率低） |

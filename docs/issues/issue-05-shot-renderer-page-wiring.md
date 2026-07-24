@@ -1,5 +1,8 @@
 # issue-05 — 分镜渲染器页面真实数据打通
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 | 字段 | 值 |
 |---|---|
 | 优先级 | P1 |

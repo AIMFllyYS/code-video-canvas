@@ -1,5 +1,8 @@
 # issue-04 — 分镜静态帧缩略图共享基础设施
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 | 字段 | 值 |
 |---|---|
 | 优先级 | P1 |

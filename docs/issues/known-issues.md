@@ -1,5 +1,11 @@
 # 系统性前后端打通修复：已知问题清单（Track H + 第二轮全局审查）
 
+> [!IMPORTANT]
+> **状态：Frozen Demo v1 issue index。** 诊断事实继续保留，但新的 v3 实施范围、
+> 状态与证据分别由
+> [N0–N7 Track Plans](./refactor-v3/) 和
+> [v3 Task Breakdown](../specs/2026-07-24-refactor-v3-task-breakdown.md) 管理。
+
 > Created: 2026-07-24 · 第二轮（issue-09~13）追加于 2026-07-24
 > 与 [`docs/specs/2026-07-23-harness-task-breakdown.md`](../specs/2026-07-23-harness-task-breakdown.md) 的 Track H 小节互为索引：本文件是详细清单，task-breakdown 只登记摘要。
 > 背景分析见对应会话记录；核心根因是既往验收标准只测"按钮点击是否触发对应 API"，未测"页面展示的每个字段是否真实"，详见 AGENTS.md「UI 字段真实性门禁」。

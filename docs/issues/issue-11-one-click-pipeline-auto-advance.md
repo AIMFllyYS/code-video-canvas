@@ -1,5 +1,8 @@
 # issue-11 — 工作流一键启动与 DAG 自动推进（advancePipeline + autopilot）
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 | 字段 | 值 |
 |---|---|
 | 优先级 | **P1**（核心体验缺口：用户必须逐节点手动点击 19 次才能跑完一个 3 分镜项目；DAG 边是无人消费的死数据） |

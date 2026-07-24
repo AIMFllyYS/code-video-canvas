@@ -1,5 +1,7 @@
 # issue-01 处理全过程总结
 
+> **Archived Demo v1 handoff.** 只保留历史证据，不作为 v3 Goal 输入。
+
 ## 一、任务与背景
 
 **issue-01 — Director 六阶段输入契约补全（ASSEMBLE/FINALIZE）**，P0 级。
@@ -470,7 +472,7 @@ issue-07 独立提交快照验证结果：
 - `pnpm lint`：通过
 - `pnpm tsc --noEmit`：通过
 - `pnpm build`：通过
-- UTF-8/U+FFFD 扫描：未发现 `�`
+- UTF-8/U+FFFD 扫描：未发现替换字符（U+FFFD）
 - `git diff --cached --check`：通过
 
 后续其他 issue 合入后的最新主分支验证曾达到：

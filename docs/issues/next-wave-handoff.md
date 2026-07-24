@@ -1,5 +1,8 @@
 # Track H 收尾交接：issue-05 / issue-06 并行施工指南
 
+> **Archived Demo v1 handoff.** 其中 Goal 提示词已失效；v3 只使用
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 > Created: 2026-07-24
 > 承接对象：`docs/issues/known-issues.md`（总索引）+ 本次对 issue-01/02/03/04/07/08 的完成情况审查。
 > 目的：给下一轮并行 Codex/Cursor Agent 会话提供可直接复制使用的 Goal 启动提示词，并说明为什么现在可以安全并行开工。

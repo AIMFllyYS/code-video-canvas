@@ -1,5 +1,8 @@
 # issue-09 — AI 流式输出全链路修复：进程内单例 split-brain + SSE 判定缺陷 + 回放兜底
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 | 字段 | 值 |
 |---|---|
 | 优先级 | **P0**（用户可见核心功能失效：所有 Director 节点的"AI 流式输出"面板在多数场景下永久卡在"正在连接 AI 流… 0 字"） |

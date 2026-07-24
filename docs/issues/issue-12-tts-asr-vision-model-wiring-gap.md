@@ -1,5 +1,8 @@
 # issue-12 — TTS / ASR / Vision 三类模型接线缺口（audio 域 + shot-qa 多模态验收）
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 | 字段 | 值 |
 |---|---|
 | 优先级 | **P2**（功能缺口登记：`.env.example` 承诺的三类模型能力当前为零实现；PRD 将配音/字幕/多模态验收列为 P1 后置项） |

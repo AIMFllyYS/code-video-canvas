@@ -1,5 +1,8 @@
 # issue-01 — Director 六阶段输入契约补全（ASSEMBLE/FINALIZE）
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 > Created: 2026-07-24
 > Status: ✅ 已完成（2026-07-24）——`resolveDirectorInput` 已补全 `score`/`shot-sfx`/`shot-subtitle`/`export`/`shot-qa` 五种节点分支，`stage-prompt.ts` 按 `nodeType` 二次路由；六阶段输入契约无 mock 全部可跑通（决策记录见 §3）
 > Priority: P0（见 `docs/specs/2026-07-23-harness-task-breakdown.md` Track H 索引）

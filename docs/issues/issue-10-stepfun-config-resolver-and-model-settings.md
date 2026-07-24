@@ -1,5 +1,8 @@
 # issue-10 — StepFun 配置统一 resolver：settings 表 > env > 默认值，设置页支持 4 类模型
 
+> **Frozen Demo v1 issue.** 保留诊断与完成证据；v3 施工只按
+> [`refactor-v3/`](./refactor-v3/) 与 v3 Task Breakdown。
+
 | 字段 | 值 |
 |---|---|
 | 优先级 | **P0**（配置机制断裂：Key 走双层配置而模型只读 env；设置页展示硬编码假值，违反 AGENTS.md「UI 字段真实性门禁」） |
