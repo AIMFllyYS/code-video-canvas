@@ -1242,6 +1242,7 @@ commit 不含 `.trigger/**`、MP4、Key、raw model text。
 - Move: `src/features/canvas/queries.pg.test.ts` → `src/lib/db/integration/canvas-queries.pg.test.ts`
 - Move: `src/features/canvas/status.pg.test.ts` → `src/lib/db/integration/canvas-status.pg.test.ts`
 - Modify: `scripts/setup/README.md`
+- Modify: `scripts/spikes/run-v3-spikes.ts`
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml`（只能由 pnpm 生成）
 - Retain unchanged: `src/lib/migration/**` 中除上述 test-only helper 外的正式迁移工具
@@ -1308,6 +1309,8 @@ pnpm verify:v3
 Expected: 第一组 GREEN；runtime SQLite scan 无匹配；Agents SDK scan 无匹配；
 ordinary `openai` 不在禁止 pattern 中且仍可被 StepFun/Gemini client 使用；
 `canvasForbiddenImports` 不高于既有 cap，禁止通过修改 baseline 掩盖 N1.3 回归。
+若 N1.5 waiver verifier 在完整 typecheck 暴露 `unknown` 收窄错误，只允许在
+`scripts/spikes/run-v3-spikes.ts` 内做最小类型收窄修复，不得改变 evidence 语义。
 
 - [ ] **Step 5: 执行 Track N1 Tier B gate**
 
@@ -1335,7 +1338,7 @@ accounted；三 spikes 仍为真实通过；build 不需要 SQLite runtime。
 Run:
 
 ```powershell
-git add -- src/lib/db/runtime-boundary.test.ts src/lib/config/paths.ts src/lib/storage/index.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/schema.ts src/lib/db/schema.test.ts src/lib/db/migrations src/lib/db/integration src/features/canvas/actions.pg.test.ts src/features/canvas/fan-out.pg.test.ts src/features/canvas/queries.pg.test.ts src/features/canvas/status.pg.test.ts src/lib/migration/legacy-sqlite-test-database.ts scripts/setup/README.md package.json pnpm-lock.yaml
+git add -- src/lib/db/runtime-boundary.test.ts src/lib/config/paths.ts src/lib/storage/index.ts src/lib/db/client.ts src/lib/db/index.ts src/lib/db/migrate.ts src/lib/db/schema.ts src/lib/db/schema.test.ts src/lib/db/migrations src/lib/db/integration src/features/canvas/actions.pg.test.ts src/features/canvas/fan-out.pg.test.ts src/features/canvas/queries.pg.test.ts src/features/canvas/status.pg.test.ts src/lib/migration/legacy-sqlite-test-database.ts scripts/setup/README.md scripts/spikes/run-v3-spikes.ts package.json pnpm-lock.yaml
 git diff --cached --check
 git commit -m "refactor(db): remove active SQLite runtime"
 git status --short --branch
