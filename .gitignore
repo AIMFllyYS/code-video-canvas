@@ -109,6 +109,9 @@ out_intellij/
 # Design-package preview renders are local references, not versioned sources.
 /docs/designs/archive/**/images/*.png
 
+# HyperFrames spike snapshots are local validation output; keep the spike source tracked.
+/scripts/spikes/**/snapshots/
+
 # ========================
 # IDE - Sublime Text
 # ========================
