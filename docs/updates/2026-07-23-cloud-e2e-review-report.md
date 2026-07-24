@@ -341,6 +341,18 @@ $ git rev-parse origin/main
 | 5 | `export-service.ts` 裸 fs 操作 | 与 §7.3 相同，尚未修复。 | P2 |
 | 6 | SHOT_SPEC 产出的 `directorShotPlanSchema` 字段与 `shotPlanSchema` 严格字段的语义桥接 | 当前采用运行时透传，下游 `assemble` / `finalize` 若恢复严格 schema 可能失败。 | P2 |
 
+### 10.5 合并记录
+
+| 项目 | 内容 |
+|------|------|
+| PR | https://github.com/AIMFllyYS/code-video-canvas/pull/6 |
+| 标题 | `fix(director): propagate directorInput from upstream artifacts` |
+| 源分支 | `fix/director-input` |
+| 目标分支 | `main` |
+| 合并后 `main` HEAD | `0a24e07` |
+| 合并方式 | merge commit（`--no-ff`），GitHub 已识别并自动关闭 PR |
+| `origin/main` 同步 | 已 push，`9dec2d7..0a24e07` |
+
 ## 附图目录
 
 截图保存在 `docs/updates/2026-07-23-cloud-e2e-review-screenshots/`：
