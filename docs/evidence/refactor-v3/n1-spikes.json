@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-25T11:38:42.0767711+13:00",
+  "taskStatus": "blocked",
+  "trigger": {
+    "schemaVersion": 1,
+    "passed": false,
+    "version": "4.5.7",
+    "blocker": "EXTERNAL_AUTH_REQUIRED",
+    "cliLoggedIn": false,
+    "projectRefConfigured": false,
+    "serverKeyConfigured": false,
+    "runObserved": false,
+    "exitCode": 1,
+    "scopedTokenDeferred": true
+  },
+  "pi": {
+    "schemaVersion": 1,
+    "passed": true,
+    "version": "0.81.1",
+    "provider": "stepfun",
+    "model": "step-3.5-flash",
+    "toolName": "submit_probe_result",
+    "callHash": "57f21bd46889ba3008cc9172161c1e1df47d12d085d9a8f7101348ab63d09afa",
+    "resultHash": "e883095f1a0f794a53dff39fac6e34686a39f9d13c7a47ad57a50ea1ec4bddac",
+    "usage": {
+      "input": 322,
+      "output": 115,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 437
+    },
+    "terminatedAfterTool": true,
+    "trailingAssistantText": false,
+    "exitCode": 0
+  },
+  "hyperframes": {
+    "schemaVersion": 1,
+    "passed": true,
+    "version": "0.7.70",
+    "doctorOk": true,
+    "doctorExitCode": 0,
+    "checkExitCode": 0,
+    "renderExitCode": 0,
+    "exitCode": 0,
+    "doctorPayloadHash": "2926861ec54599507f204d387b7482c44a5479b68e1957029a2ea621edef7e51",
+    "checkPayloadHash": "501638df16cf5e9c7c97fed859b76d811f40a87403a6c7532e268139a58e2179",
+    "snapshotHashes": [
+      "760d21be84ccfb60b05587112a532b5dceaa9e8ddb26d7ae8ec55bd25d8213b6",
+      "42b93dd2afa9fdd6c780fa314499008ae44fafcd4bb0d4a70d19659d172134f3",
+      "a030265e1103911b2f4fe9e0644061c1abc66fafa41dff6dc3accf8851a465cb",
+      "d06bd53ca3c8a42d92397b88ce86c05367a82e06e9ef56fb4e498ac74e0c0168",
+      "8ed05dca789ef4fb5f6346d61341b5b5a6df3abcd156b9719759f8485effe7fc"
+    ],
+    "ffprobe": {
+      "duration": 2.5,
+      "size": 61851,
+      "width": 640,
+      "height": 360,
+      "frames": 60,
+      "codecName": "h264",
+      "frameRate": "24/1"
+    },
+    "mp4Sha256": "cff626cc7644ed846c1e031f8d11427fdb820e59c1f4d8f8f7a088faba905049"
+  }
+}
