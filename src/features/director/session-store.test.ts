@@ -24,6 +24,9 @@ describe('DirectorSessionStore', () => {
       exists: (key) => localStorage.exists(key),
       localPath: localPathMock,
       delete: (key) => localStorage.delete(key),
+      tempDir: (prefix) => localStorage.tempDir(prefix),
+      readLocalFile: (absolutePath) => localStorage.readLocalFile(absolutePath),
+      removeTempDir: (absolutePath) => localStorage.removeTempDir(absolutePath),
     }
   })
 

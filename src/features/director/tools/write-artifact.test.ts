@@ -14,6 +14,9 @@ function createStorage(): StorageAdapter {
     exists: vi.fn(),
     localPath: vi.fn(),
     delete: vi.fn(),
+    tempDir: vi.fn(),
+    readLocalFile: vi.fn(),
+    removeTempDir: vi.fn(),
   }
 }
 

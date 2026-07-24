@@ -27,6 +27,9 @@ describe('render cache', () => {
       exists: vi.fn(async () => true),
       localPath: vi.fn(),
       delete: vi.fn(),
+      tempDir: vi.fn(),
+      readLocalFile: vi.fn(),
+      removeTempDir: vi.fn(),
     }
     db.insert(projects).values({ id: 'project-1', title: '项目', script: '' }).run()
     db.insert(canvasNodes)

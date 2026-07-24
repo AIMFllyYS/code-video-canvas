@@ -1,6 +1,6 @@
 import os from 'node:os'
 import path from 'node:path'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StorageAdapter } from '@/lib/storage'
 import { exportProject } from './export-service'
@@ -46,6 +46,15 @@ describe('exportProject', () => {
     vi.mocked(storage.exists).mockResolvedValue(true)
     vi.mocked(storage.localPath).mockImplementation((key) => path.join(tempRoot, key))
     vi.mocked(storage.put).mockImplementation(async (key) => key)
+    vi.mocked(storage.tempDir).mockImplementation((prefix) =>
+      mkdtemp(path.join(tempRoot, prefix))
+    )
+    vi.mocked(storage.readLocalFile).mockImplementation((absolutePath) =>
+      readFile(absolutePath)
+    )
+    vi.mocked(storage.removeTempDir).mockImplementation((absolutePath) =>
+      rm(absolutePath, { recursive: true, force: true })
+    )
     const registerFinalArtifact = vi.fn(() => 'artifact-final')
     const concat = vi.fn(async (_shots, _music, outputPath: string) => {
       await writeFile(outputPath, Buffer.from('deterministic-final-mp4'))
@@ -66,7 +75,6 @@ describe('exportProject', () => {
       },
       storage,
       concat,
-      tempRoot,
     })
 
     expect(result).toMatchObject({ ok: true, artifactId: 'artifact-final' })
@@ -76,6 +84,40 @@ describe('exportProject', () => {
     ])
     expect(storage.put).toHaveBeenCalledOnce()
     expect(registerFinalArtifact).toHaveBeenCalledOnce()
+    expect(storage.removeTempDir).toHaveBeenCalledOnce()
+  })
+
+  it('cleans up the temp dir even when concat throws', async () => {
+    const tempRoot = await createTempRoot()
+    const storage = createStorage()
+    vi.mocked(storage.exists).mockResolvedValue(true)
+    vi.mocked(storage.localPath).mockImplementation((key) => path.join(tempRoot, key))
+    vi.mocked(storage.tempDir).mockImplementation((prefix) =>
+      mkdtemp(path.join(tempRoot, prefix))
+    )
+    vi.mocked(storage.removeTempDir).mockImplementation((absolutePath) =>
+      rm(absolutePath, { recursive: true, force: true })
+    )
+    const concat = vi.fn(async () => {
+      throw new Error('ffmpeg boom')
+    })
+
+    await expect(
+      exportProject('project-1', {
+        repository: {
+          getExportPlan: vi.fn(() => ({
+            incompleteNodeIds: [],
+            shots: [{ nodeId: 'node-1', laneKey: 'S001', outputKey: 'render/S001.mp4' }],
+            musicKey: null,
+          })),
+          registerFinalArtifact: vi.fn(() => 'unused'),
+        },
+        storage,
+        concat,
+      })
+    ).rejects.toThrow('ffmpeg boom')
+
+    expect(storage.removeTempDir).toHaveBeenCalledOnce()
   })
 })
 
@@ -86,6 +128,9 @@ function createStorage(): StorageAdapter {
     exists: vi.fn(),
     localPath: vi.fn(),
     delete: vi.fn(),
+    tempDir: vi.fn(),
+    readLocalFile: vi.fn(),
+    removeTempDir: vi.fn(),
   }
 }
 

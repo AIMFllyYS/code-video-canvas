@@ -119,6 +119,9 @@ function createStorage(html: string): StorageAdapter {
     exists: vi.fn(),
     localPath: vi.fn(() => 'shot.html'),
     delete: vi.fn(),
+    tempDir: vi.fn(),
+    readLocalFile: vi.fn(),
+    removeTempDir: vi.fn(),
   }
 }
 

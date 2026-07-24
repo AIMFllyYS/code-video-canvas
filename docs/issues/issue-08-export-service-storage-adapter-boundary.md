@@ -6,7 +6,7 @@
 | Wave | 2（`docs/specs/2026-07-23-harness-task-breakdown.md` Track H），纯重构，随时可做 |
 | 依赖 | 无 |
 | 关联证据 | `docs/updates/2026-07-23-cloud-e2e-review-report.md` §7.3（已记录未修的遗留技术债） |
-| 状态 | 待施工 |
+| 状态 | **已完成**（2026-07-24） |
 
 ## 背景
 
@@ -97,7 +97,7 @@ try {
 - 不改变 `exportProject()` 的公开签名与行为（同一份输入产出同一份输出，只是内部实现路径改变）
 
 **完成条件**：
-- [ ] `export-service.ts` 全文零处 `import ... from 'node:fs/promises'`
-- [ ] `StorageAdapter` 扩展方法有独立单元测试覆盖（临时目录创建/清理、异常路径下清理仍执行）
-- [ ] 现有 `export-service.test.ts`/导出相关集成测试全部通过，行为无回归
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过
+- [x] `export-service.ts` 全文零处 `import ... from 'node:fs/promises'`
+- [x] `StorageAdapter` 扩展方法有独立单元测试覆盖（临时目录创建/清理、异常路径下清理仍执行）
+- [x] 现有 `export-service.test.ts`/导出相关集成测试全部通过，行为无回归
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过

@@ -10,4 +10,10 @@ export interface StorageAdapter {
   localPath(key: string): string
   /** 删除。 */
   delete(key: string): Promise<void>
+  /** 创建隔离临时工作目录，返回本机绝对路径；调用方负责后续 removeTempDir 清理。 */
+  tempDir(prefix: string): Promise<string>
+  /** 从本机绝对路径读取文件内容（区别于 get()：get() 按 storage key 读，本方法按绝对路径读）。 */
+  readLocalFile(absolutePath: string): Promise<Buffer>
+  /** 递归删除临时工作目录。 */
+  removeTempDir(absolutePath: string): Promise<void>
 }

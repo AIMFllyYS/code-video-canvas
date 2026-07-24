@@ -1,8 +1,6 @@
 import 'server-only'
 import { createHash } from 'node:crypto'
-import os from 'node:os'
 import path from 'node:path'
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
 import { concatExport } from './concat'
 import {
@@ -24,7 +22,6 @@ interface ExportDependencies {
   repository?: ExportRepository
   storage?: StorageAdapter
   concat?: typeof concatExport
-  tempRoot?: string
 }
 
 export async function exportProject(
@@ -47,9 +44,7 @@ export async function exportProject(
     throw new Error(`配乐 artifact 文件不存在：${plan.musicKey}`)
   }
 
-  const root = dependencies.tempRoot ?? os.tmpdir()
-  await mkdir(root, { recursive: true })
-  const workDirectory = await mkdtemp(path.join(root, 'cvc-export-'))
+  const workDirectory = await storage.tempDir('cvc-export-')
   try {
     const temporaryOutput = path.join(workDirectory, 'final.mp4')
     await concat(
@@ -57,7 +52,7 @@ export async function exportProject(
       plan.musicKey ? storage.localPath(plan.musicKey) : null,
       temporaryOutput
     )
-    const bytes = await readFile(temporaryOutput)
+    const bytes = await storage.readLocalFile(temporaryOutput)
     const contentHash = createHash('sha256').update(bytes).digest('hex')
     const outputKey = await storage.put(
       `exports/${projectId}/final-${contentHash}.mp4`,
@@ -66,7 +61,7 @@ export async function exportProject(
     const artifactId = repository.registerFinalArtifact({ projectId, outputKey, contentHash })
     return { ok: true, artifactId, outputKey, contentHash }
   } finally {
-    await rm(workDirectory, { recursive: true, force: true })
+    await storage.removeTempDir(workDirectory)
   }
 }
 

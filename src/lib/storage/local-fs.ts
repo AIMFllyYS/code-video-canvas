@@ -1,4 +1,5 @@
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import type { StorageAdapter } from './types'
 
@@ -36,5 +37,17 @@ export class LocalFsStorage implements StorageAdapter {
 
   async delete(key: string): Promise<void> {
     await rm(this.resolve(key), { force: true })
+  }
+
+  async tempDir(prefix: string): Promise<string> {
+    return mkdtemp(path.join(os.tmpdir(), prefix))
+  }
+
+  async readLocalFile(absolutePath: string): Promise<Buffer> {
+    return readFile(absolutePath)
+  }
+
+  async removeTempDir(absolutePath: string): Promise<void> {
+    await rm(absolutePath, { recursive: true, force: true })
   }
 }
