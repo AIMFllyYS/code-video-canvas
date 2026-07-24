@@ -33,7 +33,6 @@ interface Entry {
   done: boolean
   error?: StreamError
   truncated: boolean
-  listeners: Set<Listener>
 }
 
 /**
@@ -45,11 +44,13 @@ interface Entry {
  */
 export class StreamBus {
   private readonly entries = new Map<string, Entry>()
+  /** 订阅者独立于缓冲 entry 维护：subscribe 这个只读动作绝不创建 entry。 */
+  private readonly listeners = new Map<string, Set<Listener>>()
 
   private ensure(key: string): Entry {
     let entry = this.entries.get(key)
     if (!entry) {
-      entry = { text: '', done: false, truncated: false, listeners: new Set() }
+      entry = { text: '', done: false, truncated: false }
       this.entries.set(key, entry)
     }
     return entry
@@ -76,7 +77,7 @@ export class StreamBus {
       entry.text = entry.text.slice(entry.text.length - MAX_BUFFER_CHARS)
       entry.truncated = true
     }
-    this.emit(entry, { type: 'delta', text: delta })
+    this.emit(key, { type: 'delta', text: delta })
   }
 
   /** 标记该键的流正常结束并广播 done。 */
@@ -84,7 +85,7 @@ export class StreamBus {
     const entry = this.ensure(key)
     entry.done = true
     entry.error = undefined
-    this.emit(entry, { type: 'done' })
+    this.emit(key, { type: 'done' })
   }
 
   /** 标记该键的流失败并广播 error（随后视为结束）。 */
@@ -92,7 +93,7 @@ export class StreamBus {
     const entry = this.ensure(key)
     entry.done = true
     entry.error = error
-    this.emit(entry, { type: 'error', error })
+    this.emit(key, { type: 'error', error })
   }
 
   /** 读取即时快照（键不存在时返回空快照）。 */
@@ -112,18 +113,21 @@ export class StreamBus {
    * 返回退订函数；末位订阅者断开且流已结束时延时清理缓冲。
    */
   subscribe(key: string, listener: Listener): () => void {
-    const entry = this.ensure(key)
+    const entry = this.entries.get(key)
     listener({
       type: 'snapshot',
-      text: entry.text,
-      done: entry.done,
-      error: entry.error,
-      truncated: entry.truncated,
+      text: entry?.text ?? '',
+      done: entry?.done ?? false,
+      error: entry?.error,
+      truncated: entry?.truncated ?? false,
     })
-    entry.listeners.add(listener)
+    const set = this.listeners.get(key) ?? new Set<Listener>()
+    this.listeners.set(key, set)
+    set.add(listener)
     return () => {
-      entry.listeners.delete(listener)
-      this.maybeCleanup(key, entry)
+      set.delete(listener)
+      if (set.size === 0) this.listeners.delete(key)
+      this.maybeCleanup(key)
     }
   }
 
@@ -140,8 +144,10 @@ export class StreamBus {
     entry.truncated = false
   }
 
-  private emit(entry: Entry, event: StreamEvent): void {
-    for (const listener of entry.listeners) {
+  private emit(key: string, event: StreamEvent): void {
+    const set = this.listeners.get(key)
+    if (!set) return
+    for (const listener of set) {
       try {
         listener(event)
       } catch {
@@ -150,11 +156,15 @@ export class StreamBus {
     }
   }
 
-  private maybeCleanup(key: string, entry: Entry): void {
-    if (entry.listeners.size > 0 || !entry.done) return
+  private maybeCleanup(key: string): void {
+    const set = this.listeners.get(key)
+    if (set && set.size > 0) return
+    const entry = this.entries.get(key)
+    if (!entry || !entry.done) return
     const timer = setTimeout(() => {
+      const listeners = this.listeners.get(key)
       const current = this.entries.get(key)
-      if (current && current.listeners.size === 0 && current.done) {
+      if ((!listeners || listeners.size === 0) && current && current.done) {
         this.entries.delete(key)
       }
     }, CLEANUP_DELAY_MS)
@@ -162,5 +172,9 @@ export class StreamBus {
   }
 }
 
-/** 进程内流式总线单例（服务端各处共用同一实例）。 */
-export const streamBus = new StreamBus()
+/**
+ * 进程内流式总线单例：锚定到 globalThis，避免 Next.js（Turbopack dev 按路由入口
+ * 编译 + HMR 重新求值模块）下同一模块被多次求值、产生互不相通实例的 split-brain。
+ */
+const globalStore = globalThis as unknown as { __cvcStreamBus?: StreamBus }
+export const streamBus: StreamBus = (globalStore.__cvcStreamBus ??= new StreamBus())

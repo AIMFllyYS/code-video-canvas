@@ -99,4 +99,41 @@ describe('StreamBus', () => {
     expect(a.some((e) => e.type === 'delta' && e.text === '仅A')).toBe(true)
     expect(b.some((e) => e.type === 'delta')).toBe(false)
   })
+
+  it('订阅只读动作不再隐式创建缓冲 entry', () => {
+    const bus = new StreamBus()
+    const events: StreamEvent[] = []
+    bus.subscribe('p:n', (event) => events.push(event))
+
+    // 只回放一个空快照，且不建立缓冲（不变式：仅 publish/markDone/markError 建 entry）。
+    expect(events).toEqual([
+      { type: 'snapshot', text: '', done: false, error: undefined, truncated: false },
+    ])
+    expect(bus.has('p:n')).toBe(false)
+  })
+
+  it('订阅先于首个 delta 时仍收到后续增量（回归执行中实时性）', () => {
+    const bus = new StreamBus()
+    const events: StreamEvent[] = []
+    bus.subscribe('p:n', (event) => events.push(event))
+    // 订阅在 publish 之前：空快照后，发布端的增量仍需送达订阅者。
+    bus.publish('p:n', '你好')
+    bus.publish('p:n', '世界')
+
+    expect(events).toEqual([
+      { type: 'snapshot', text: '', done: false, error: undefined, truncated: false },
+      { type: 'delta', text: '你好' },
+      { type: 'delta', text: '世界' },
+    ])
+    expect(bus.getSnapshot('p:n').text).toBe('你好世界')
+  })
+
+  it('isActive 语义：无缓冲 / 活跃 / 已结束三态', () => {
+    const bus = new StreamBus()
+    expect(bus.isActive('p:n')).toBe(false) // 无缓冲
+    bus.publish('p:n', 'a')
+    expect(bus.isActive('p:n')).toBe(true) // 活跃（未结束）
+    bus.markDone('p:n')
+    expect(bus.isActive('p:n')).toBe(false) // 已结束
+  })
 })

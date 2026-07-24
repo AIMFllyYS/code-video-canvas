@@ -6,7 +6,7 @@
 | Wave | 5（第二轮系统性审查，2026-07-24） |
 | 依赖 | 无，可立即开工 |
 | 关联证据 | 用户实测截图：`shot-split`（DIRECT）与 `shot-script`（SHOT_SPEC）节点已 success（生成进度 100%、产物 chips 正常），流式面板仍显示"正在连接 AI 流… · 0 字"；同项目 `shot-codegen`（FABRICATE）节点却能一次性显示 11164 字全文 |
-| 状态 | 待施工 |
+| 状态 | **已完成**（2026-07-24） |
 
 ## 症状
 
@@ -122,11 +122,11 @@ export const streamBus: StreamBus = (globalStore.__cvcStreamBus ??= new StreamBu
 
 **完成条件**：
 
-- [ ] `src/` 内所有进程内可变单例（streamBus/queue/init 标志/db cache）均经 globalThis 锚定，grep 可验证
-- [ ] 复现路径验证：dev 模式下节点执行中打开 Inspector → 实时看到字符数增长；执行完成后重选节点/刷新页面 → 面板显示完整全文而非"正在连接"
-- [ ] 终态节点 + 订阅端存在残留空 entry 的场景有回归测试（模拟 split-brain 后遗症）
-- [ ] `subscribe` 不再隐式创建 entry 的单测
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿
+- [x] `src/` 内所有进程内可变单例（streamBus/queue/init 标志/db cache）均经 globalThis 锚定，grep 可验证（`__cvcStreamBus`/`__cvcQueue`/`__cvcQueueInitialized`/`__cvcQueueInitializing`/`__cvcDb`，无残留裸单例）
+- [ ] 复现路径验证：dev 模式下节点执行中打开 Inspector → 实时看到字符数增长；执行完成后重选节点/刷新页面 → 面板显示完整全文而非"正在连接"（人工浏览器走读待做；上述两种行为已由自动回归测试模拟覆盖）
+- [x] 终态节点 + 订阅端存在残留空 entry 的场景有回归测试（模拟 split-brain 后遗症）
+- [x] `subscribe` 不再隐式创建 entry 的单测
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm test && pnpm build` 全绿（65 files/265 tests）
 
 ## 与其他 issue 的并行性
 

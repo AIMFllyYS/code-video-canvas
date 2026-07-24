@@ -83,4 +83,27 @@ describe('GET /api/director/stream/[nodeId]', () => {
     expect(body).toContain('已持久化日志')
     expect(body).toContain('event: done')
   })
+
+  it('终态节点存在残留非 done 空 entry 时合并回放持久化日志（split-brain 后遗症）', async () => {
+    getNodeStreamContext.mockReturnValue({ status: 'success' })
+    getLatestArtifact.mockReturnValue({
+      id: 'a2',
+      projectId: 'p',
+      nodeId: 'node-3',
+      kind: 'director-stream-log',
+      contentHash: null,
+    })
+    readArtifact.mockResolvedValue({ descriptor: {}, bytes: Buffer.from('回放全文') })
+    // 构造残留非 done 空 entry（模拟 split-brain 后遗症 / 竞态）：publish 后 reset。
+    streamBus.publish('p:node-3', 'x')
+    streamBus.reset('p:node-3')
+
+    const body = await readSse(
+      await get('node-3', 'http://x/api/director/stream/node-3?projectId=p')
+    )
+    expect(getLatestArtifact).toHaveBeenCalledWith('p', 'node-3', 'director-stream-log')
+    expect(body).toContain('event: snapshot')
+    expect(body).toContain('回放全文')
+    expect(body).toContain('event: done')
+  })
 })

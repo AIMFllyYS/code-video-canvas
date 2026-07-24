@@ -39,7 +39,9 @@ export async function GET(
 
   const key = `${projectId}:${nodeId}`
   const useLive =
-    streamBus.has(key) || context.status === 'running' || context.status === 'pending'
+    streamBus.isActive(key) || context.status === 'running' || context.status === 'pending'
+  // 节点已终态（非 running/pending）：live 分支若订到空快照则合并回放，兑底 split-brain 后遗症。
+  const nodeSettled = context.status !== 'running' && context.status !== 'pending'
   const directorError: StreamError | undefined = context.directorError
 
   const encoder = new TextEncoder()
@@ -48,6 +50,7 @@ export async function GET(
       let closed = false
       let unsubscribe: (() => void) | undefined
       let keepalive: ReturnType<typeof setInterval> | undefined
+      let settledReplay = false
 
       const send = (event: string, data: unknown): void => {
         if (closed) return
@@ -75,7 +78,25 @@ export async function GET(
         }, KEEPALIVE_MS)
         ;(keepalive as { unref?: () => void }).unref?.()
         unsubscribe = streamBus.subscribe(key, (event) => {
+          if (settledReplay) return
           if (event.type === 'snapshot') {
+            // 终态节点订到空且未结束的残留快照（split-brain 后遗症 / 竞态）：
+            // 服务端合并回放持久化日志全文替代空文本下发，前端无感知。
+            if (event.text === '' && !event.done && nodeSettled) {
+              settledReplay = true
+              void readPersistedLog(projectId, nodeId).then((text) => {
+                send('snapshot', {
+                  text,
+                  done: true,
+                  error: directorError ?? null,
+                  truncated: false,
+                })
+                if (directorError) send('error', directorError)
+                else send('done', {})
+                finish()
+              })
+              return
+            }
             send('snapshot', {
               text: event.text,
               done: event.done,

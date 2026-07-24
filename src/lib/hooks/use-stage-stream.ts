@@ -81,6 +81,8 @@ export function useStageStream(
         streaming: !data.done,
         error: data.error ?? undefined,
       })
+      // 快照已是终态：主动关闭（双保险，服务端 finish + done 事件之外）。
+      if (data.done) source.close()
     })
 
     source.addEventListener('delta', (event) => {
