@@ -76,6 +76,12 @@ describe('concatExport', () => {
       )
     ).rejects.toThrow('分镜索引 1')
   })
+
+  it('re-encodes to a non-master resolution via the scale filter', async () => {
+    const output = path.join(directory, 'scaled.mp4')
+    await concatExport(clips, null, output, { width: 540, height: 960 })
+    expect(await probeResolution(output)).toEqual({ width: 540, height: 960 })
+  }, 30_000)
 })
 
 function probeDuration(file: string): Promise<number> {
@@ -95,6 +101,28 @@ function probeDuration(file: string): Promise<number> {
       const match = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(stderr)
       if (!match) reject(new Error(`无法读取时长：${stderr}`))
       else resolve(Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]))
+    })
+  })
+}
+
+function probeResolution(file: string): Promise<{ width: number; height: number }> {
+  const executable = ffmpegPath
+  if (!executable) throw new Error('ffmpeg-static unavailable')
+  return new Promise((resolve, reject) => {
+    const child = spawn(executable, ['-hide_banner', '-i', file, '-f', 'null', '-'], {
+      windowsHide: true,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    })
+    let stderr = ''
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (chunk: string) => {
+      stderr += chunk
+    })
+    child.once('close', () => {
+      // 区分分辨率 540x960 与编解码器 tag 0x31637661：宽高限定 2-4 位数字。
+      const match = /\b(\d{2,4})x(\d{2,4})\b/.exec(stderr)
+      if (!match) reject(new Error(`无法读取分辨率：${stderr}`))
+      else resolve({ width: Number(match[1]), height: Number(match[2]) })
     })
   })
 }

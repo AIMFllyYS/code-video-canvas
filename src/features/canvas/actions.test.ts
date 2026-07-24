@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDb, type Db } from '@/lib/db/migrate'
 import { canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
-import { createProject } from './actions'
+import { createProject, updateExportSettings } from './actions'
+import { getExportSettings } from './queries'
 
 const { getDbMock } = vi.hoisted(() => ({ getDbMock: vi.fn<() => Db>() }))
 
@@ -53,5 +54,40 @@ describe('createProject', () => {
       'injected graph failure'
     )
     expect(database.db.select().from(projects).all()).toHaveLength(0)
+  })
+})
+
+describe('export settings', () => {
+  let database: ReturnType<typeof createDb>
+
+  beforeEach(() => {
+    database = createDb(':memory:')
+    getDbMock.mockReturnValue(database.db)
+    database.db.insert(projects).values({ id: 'p1', title: '项目', script: '' }).run()
+  })
+
+  afterEach(() => {
+    database.sqlite.close()
+    vi.clearAllMocks()
+  })
+
+  it('defaults to the master preset when never set', () => {
+    expect(getExportSettings('p1')).toEqual({ resolutionPreset: '1080x1920' })
+  })
+
+  it('persists a valid preset and reads it back', () => {
+    updateExportSettings('p1', { resolutionPreset: '720x1280' })
+    expect(getExportSettings('p1')).toEqual({ resolutionPreset: '720x1280' })
+  })
+
+  it('rejects an invalid preset without writing', () => {
+    expect(() => updateExportSettings('p1', { resolutionPreset: '9999x9999' })).toThrow()
+    expect(getExportSettings('p1')).toEqual({ resolutionPreset: '1080x1920' })
+  })
+
+  it('throws when the project does not exist', () => {
+    expect(() =>
+      updateExportSettings('missing', { resolutionPreset: '720x1280' })
+    ).toThrow('项目不存在')
   })
 })

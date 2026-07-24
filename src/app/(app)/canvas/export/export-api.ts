@@ -1,7 +1,16 @@
+import {
+  DEFAULT_EXPORT_SETTINGS,
+  EXPORT_RESOLUTION_PRESETS,
+  type ResolutionPreset,
+} from '@/features/canvas/export-settings'
+
 export interface ExportReadiness {
   ready: boolean
   incompleteNodeIds: string[]
   shotCount: number
+  /** laneKey → QA 是否通过；null/缺失表示尚未检测（不得当作通过）。 */
+  shotQa: Record<string, boolean | null>
+  resolutionPreset: ResolutionPreset
 }
 
 export async function loadExportReadiness(
@@ -25,6 +34,10 @@ export async function loadExportReadiness(
     ready: body.ready,
     incompleteNodeIds: body.incompleteNodeIds as string[],
     shotCount: body.shotCount,
+    shotQa: toShotQa(body.shotQa),
+    resolutionPreset: isResolutionPreset(body.resolutionPreset)
+      ? body.resolutionPreset
+      : DEFAULT_EXPORT_SETTINGS.resolutionPreset,
   }
 }
 
@@ -53,4 +66,34 @@ async function objectBody(response: Response): Promise<Record<string, unknown>> 
 
 function errorOf(body: Record<string, unknown>, fallback: string): string {
   return typeof body.error === 'string' ? body.error : fallback
+}
+
+/** 更新项目导出分辨率预设（PATCH /api/projects/[id]）。 */
+export async function updateExportResolution(
+  projectId: string,
+  resolutionPreset: ResolutionPreset,
+  fetcher: typeof fetch = fetch
+): Promise<void> {
+  const response = await fetcher(`/api/projects/${encodeURIComponent(projectId)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ exportSettings: { resolutionPreset } }),
+  })
+  if (!response.ok) {
+    const body = await objectBody(response).catch(() => ({}))
+    throw new Error(errorOf(body, '导出设置更新失败'))
+  }
+}
+
+function toShotQa(value: unknown): Record<string, boolean | null> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const result: Record<string, boolean | null> = {}
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    result[key] = typeof raw === 'boolean' ? raw : null
+  }
+  return result
+}
+
+function isResolutionPreset(value: unknown): value is ResolutionPreset {
+  return typeof value === 'string' && value in EXPORT_RESOLUTION_PRESETS
 }

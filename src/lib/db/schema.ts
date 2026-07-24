@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+// type-only：编译期擦除，不产生 lib/db → features/canvas 的运行时依赖（避免循环）。
+import type { ExportSettings } from '@/features/canvas/export-settings'
 
 const now = sql`(unixepoch() * 1000)`
 
@@ -8,6 +10,8 @@ export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   script: text('script').notNull().default(''),
+  // 可空：null = 从未设置，应用层读到 null 时回退 DEFAULT_EXPORT_SETTINGS。
+  exportSettings: text('export_settings', { mode: 'json' }).$type<ExportSettings>(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull().default(now),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull().default(now),
 })

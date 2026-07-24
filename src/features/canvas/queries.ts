@@ -3,6 +3,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { artifacts, canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
 import { canvasNodeTypeSchema } from './schemas'
+import { resolveExportSettings, type ExportSettings } from './export-settings'
 import type { CanvasNodeType, Project } from './types'
 
 export interface CanvasNodeArtifact {
@@ -38,6 +39,17 @@ export interface CanvasGraph {
 /** 列出全部项目（按更新时间倒序）。 */
 export function listProjects(): Project[] {
   return getDb().select().from(projects).orderBy(desc(projects.updatedAt)).all()
+}
+
+/** 读取项目导出设置；null/缺省时回退 DEFAULT_EXPORT_SETTINGS。项目不存在抛错。 */
+export function getExportSettings(projectId: string): ExportSettings {
+  const row = getDb()
+    .select({ exportSettings: projects.exportSettings })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .get()
+  if (!row) throw new Error(`项目不存在：${projectId}`)
+  return resolveExportSettings(row.exportSettings)
 }
 
 /** 读取单个项目的画布投影；不会跨项目返回节点或边。 */

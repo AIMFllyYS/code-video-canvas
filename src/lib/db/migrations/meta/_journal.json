@@ -15,6 +15,13 @@
       "when": 1784802756457,
       "tag": "0001_friendly_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784869667975,
+      "tag": "0002_solid_prism",
+      "breakpoints": true
     }
   ]
 }

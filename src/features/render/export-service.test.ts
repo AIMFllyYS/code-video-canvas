@@ -26,6 +26,9 @@ describe('exportProject', () => {
           incompleteNodeIds: ['node-2', 'node-1'],
           shots: [],
           musicKey: null,
+          targetResolution: { width: 1080, height: 1920 },
+          resolutionPreset: '1080x1920' as const,
+          shotQa: {},
         })),
         registerFinalArtifact: vi.fn(() => 'unused'),
       },
@@ -56,7 +59,14 @@ describe('exportProject', () => {
       rm(absolutePath, { recursive: true, force: true })
     )
     const registerFinalArtifact = vi.fn(() => 'artifact-final')
-    const concat = vi.fn(async (_shots, _music, outputPath: string) => {
+    const concat = vi.fn<
+      (
+        shots: string[],
+        music: string | null,
+        outputPath: string,
+        targetResolution?: { width: number; height: number } | null
+      ) => Promise<string>
+    >(async (_shots, _music, outputPath) => {
       await writeFile(outputPath, Buffer.from('deterministic-final-mp4'))
       return outputPath
     })
@@ -70,6 +80,9 @@ describe('exportProject', () => {
             { nodeId: 'node-1', laneKey: 'S001', outputKey: 'render/S001.mp4' },
           ],
           musicKey: null,
+          targetResolution: { width: 1080, height: 1920 },
+          resolutionPreset: '1080x1920' as const,
+          shotQa: {},
         })),
         registerFinalArtifact,
       },
@@ -82,6 +95,7 @@ describe('exportProject', () => {
       path.join(tempRoot, 'render/S001.mp4'),
       path.join(tempRoot, 'render/S002.mp4'),
     ])
+    expect(concat.mock.calls[0]?.[3]).toEqual({ width: 1080, height: 1920 })
     expect(storage.put).toHaveBeenCalledOnce()
     expect(registerFinalArtifact).toHaveBeenCalledOnce()
     expect(storage.removeTempDir).toHaveBeenCalledOnce()
@@ -109,6 +123,9 @@ describe('exportProject', () => {
             incompleteNodeIds: [],
             shots: [{ nodeId: 'node-1', laneKey: 'S001', outputKey: 'render/S001.mp4' }],
             musicKey: null,
+            targetResolution: { width: 1080, height: 1920 },
+            resolutionPreset: '1080x1920' as const,
+            shotQa: {},
           })),
           registerFinalArtifact: vi.fn(() => 'unused'),
         },

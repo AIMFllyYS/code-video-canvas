@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import type { ShotLaneSeed } from '@/features/canvas/fan-out'
+import { MASTER_RESOLUTION_PRESET, resolutionForPreset } from '@/features/canvas/export-settings'
 import { fabricatePromptInputSchema } from './prompts/fabricate'
 import { buildDemoAudioAllocation, buildDemoAudioManifest } from './audio-demo'
 import { ingestStageResultSchema } from './schemas/ingest'
@@ -58,8 +59,8 @@ export function prepareStageResult(
       renderSpec: renderSpecSchema.parse({
         fps: input.audioAllocation.fps,
         durationInFrames: allocation.durationInFrames,
-        width: 1080,
-        height: 1920,
+        // 母版画幅（与导出预设同一母版）；分辨率仅在导出时缩放，不下沉到渲染层。
+        ...resolutionForPreset(MASTER_RESOLUTION_PRESET),
         seed: stableSeed(context.projectId, context.nodeId, input.shot.id),
       }),
     }

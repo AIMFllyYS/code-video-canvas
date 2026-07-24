@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `export_settings` text;

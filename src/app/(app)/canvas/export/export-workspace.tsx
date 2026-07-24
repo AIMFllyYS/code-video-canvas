@@ -11,9 +11,9 @@ import { ProgressBar } from '@/components/ui/progress-bar'
 import { ResizeHandle } from '@/components/ui/resize-handle'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SettingsGroup, SettingsSeparator } from '@/components/ui/settings-group'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 import { SettingsRow } from '@/components/ui/settings-row'
 import { TimelineTrack } from '@/components/ui/timeline-track'
-import { Toggle } from '@/components/ui/toggle'
 import { TopBar } from '@/components/ui/top-bar'
 import { Toast } from '@/components/ui/toast'
 import { usePublishNavContext } from '@/features/navigation/nav-context'
@@ -29,8 +29,18 @@ import {
   EXPORT_SETTINGS_MAX_WIDTH,
   EXPORT_SETTINGS_MIN_WIDTH,
 } from '@/lib/layout/breakpoints'
-import { loadExportReadiness, startProjectExport, type ExportReadiness } from './export-api'
+import {
+  loadExportReadiness,
+  startProjectExport,
+  updateExportResolution,
+  type ExportReadiness,
+} from './export-api'
 import { buildShotClips, fullTrackClip } from './export-view-model'
+import {
+  EXPORT_RESOLUTION_PRESETS,
+  MASTER_RESOLUTION_PRESET,
+  type ResolutionPreset,
+} from '@/features/canvas/export-settings'
 
 export function ExportWorkspace({
   projectId,
@@ -63,12 +73,14 @@ export function ExportWorkspace({
         <ExportTimeline laneKeys={laneKeys} shotClips={shotClips} />
         <ExportReview
           laneKeys={laneKeys}
+          projectId={projectId}
           readiness={runtime.readiness}
           outputUrl={runtime.outputUrl}
           exporting={runtime.exporting}
           error={runtime.error}
           disabled={disabled}
           onExport={runtime.exportVideo}
+          onResolutionChange={runtime.updateResolution}
         />
       </main>
   )
@@ -100,7 +112,18 @@ function useExportRuntime(projectId: string) {
     }
   }
 
-  return { readiness, outputUrl, error, exporting, exportVideo }
+  async function updateResolution(preset: ResolutionPreset) {
+    // 乐观更新：先反映新预设；PATCH 失败时重拉真实状态回滚。
+    setReadiness((prev) => (prev ? { ...prev, resolutionPreset: preset } : prev))
+    try {
+      await updateExportResolution(projectId, preset)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '导出设置更新失败')
+      void loadExportReadiness(projectId).then(setReadiness).catch(() => {})
+    }
+  }
+
+  return { readiness, outputUrl, error, exporting, exportVideo, updateResolution }
 }
 
 function ExportPreview({
@@ -158,12 +181,14 @@ function ExportTimeline({
 
 function ExportReview(props: {
   laneKeys: string[]
+  projectId: string
   readiness?: ExportReadiness
   outputUrl?: string
   exporting: boolean
   error?: string
   disabled: boolean
   onExport: () => void
+  onResolutionChange: (preset: ResolutionPreset) => void
 }) {
   const autoCollapse = useMediaQuery(`(max-width: ${BP_SECONDARY_PANEL_COLLAPSE - 1}px)`)
   const [manualCollapsed, setManualCollapsed] = usePersistentToggle(
@@ -252,26 +277,50 @@ function ExportReview(props: {
   )
 }
 
+const RESOLUTION_TIER_LABEL: Record<ResolutionPreset, string> = {
+  '1080x1920': '高清',
+  '720x1280': '标清',
+  '540x960': '流畅',
+}
+
+const RESOLUTION_OPTIONS = Object.keys(EXPORT_RESOLUTION_PRESETS).map((key) => ({
+  value: key,
+  label: RESOLUTION_TIER_LABEL[key as ResolutionPreset],
+}))
+
 function ExportSettings({
+  readiness,
   outputUrl,
   exporting,
   disabled,
   onExport,
+  onResolutionChange,
 }: Pick<
   Parameters<typeof ExportReview>[0],
-  'outputUrl' | 'exporting' | 'disabled' | 'onExport'
+  'readiness' | 'outputUrl' | 'exporting' | 'disabled' | 'onExport' | 'onResolutionChange'
 >) {
+  const currentPreset = readiness?.resolutionPreset ?? MASTER_RESOLUTION_PRESET
   return (
     <SettingsGroup>
-      <SettingsRow label="分辨率" value="1080×1920 · 竖屏" />
+      <div className="flex flex-col gap-2 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[15px] font-sc text-label">分辨率</span>
+          <span className="text-[13px] font-mono text-label-secondary">
+            {EXPORT_RESOLUTION_PRESETS[currentPreset].label}
+          </span>
+        </div>
+        <SegmentedControl
+          options={RESOLUTION_OPTIONS}
+          value={currentPreset}
+          onChange={(value) => onResolutionChange(value as ResolutionPreset)}
+        />
+      </div>
       <SettingsSeparator />
       <SettingsRow label="帧率" value="30 fps" />
       <SettingsSeparator />
       <SettingsRow label="格式" value="MP4 (H.264)" />
       <SettingsSeparator />
-      <SettingsRow label="字幕烧录">
-        <Toggle checked readOnly />
-      </SettingsRow>
+      <SettingsRow label="字幕烧录" value="暂不支持（P1）" />
       <div className="flex flex-col gap-3 p-4">
         <Button icon={Download} disabled={disabled} onClick={onExport}>
           开始导出
@@ -299,7 +348,11 @@ function ExportQa({
       </div>
       <div className="flex gap-4 overflow-x-auto">
         {laneKeys.map((laneKey) => (
-          <ContactSheetThumb key={laneKey} label={laneKey} checked />
+          <ContactSheetThumb
+            key={laneKey}
+            label={laneKey}
+            checked={readiness?.shotQa[laneKey] ?? undefined}
+          />
         ))}
       </div>
       {!readiness && !error && (

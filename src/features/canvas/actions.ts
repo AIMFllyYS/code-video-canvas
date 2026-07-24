@@ -1,8 +1,9 @@
 import 'server-only'
 import { randomUUID } from 'node:crypto'
+import { eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db/client'
 import { canvasEdges, canvasNodes, projects } from '@/lib/db/schema'
-import { createProjectSchema } from './schemas'
+import { createProjectSchema, exportSettingsSchema, type ExportSettings } from './schemas'
 import type { Project } from './types'
 
 const GLOBAL_NODE_DEFINITIONS = [
@@ -50,4 +51,20 @@ export function createProject(input: unknown): Project {
       .run()
     return project
   })
+}
+
+/**
+ * 更新项目导出设置（当前仅分辨率预设）。非法输入由 zod 抛错，不写库；
+ * 项目不存在抛可读错误。返回已持久化的设置供调用方回显。
+ */
+export function updateExportSettings(projectId: string, input: unknown): ExportSettings {
+  const exportSettings = exportSettingsSchema.parse(input)
+  const updated = getDb()
+    .update(projects)
+    .set({ exportSettings, updatedAt: new Date() })
+    .where(eq(projects.id, projectId))
+    .returning({ id: projects.id })
+    .get()
+  if (!updated) throw new Error(`项目不存在：${projectId}`)
+  return exportSettings
 }

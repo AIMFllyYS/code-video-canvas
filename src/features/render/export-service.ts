@@ -2,7 +2,9 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { storage as defaultStorage, type StorageAdapter } from '@/lib/storage'
+import type { ResolutionPreset } from '@/features/canvas/export-settings'
 import { concatExport } from './concat'
+import { runShotQaChecks } from './qa-check'
 import {
   RenderRepository,
   type FinalArtifactInput,
@@ -50,7 +52,8 @@ export async function exportProject(
     await concat(
       orderedShots.map((shot) => storage.localPath(shot.outputKey)),
       plan.musicKey ? storage.localPath(plan.musicKey) : null,
-      temporaryOutput
+      temporaryOutput,
+      plan.targetResolution
     )
     const bytes = await storage.readLocalFile(temporaryOutput)
     const contentHash = createHash('sha256').update(bytes).digest('hex')
@@ -68,13 +71,29 @@ export async function exportProject(
 export function getExportReadiness(
   projectId: string,
   repository: Pick<ExportRepository, 'getExportPlan'> = new RenderRepository()
-): { ready: boolean; incompleteNodeIds: string[]; shotCount: number } {
+): {
+  ready: boolean
+  incompleteNodeIds: string[]
+  shotCount: number
+  shotQa: Record<string, boolean | null>
+  resolutionPreset: ResolutionPreset
+} {
   const plan = repository.getExportPlan(projectId)
   return {
     ready: plan.incompleteNodeIds.length === 0,
     incompleteNodeIds: plan.incompleteNodeIds,
     shotCount: plan.shots.length,
+    shotQa: plan.shotQa,
+    resolutionPreset: plan.resolutionPreset,
   }
+}
+
+/**
+ * 幂等触发分镜 Final QA 检测并写回 shot-qa 节点（内部逐 shot 已容错、
+ * contentHash 未变自动跳过）。供 readiness 路由在返回前调用，使 shotQa 反映真实结果。
+ */
+export async function ensureShotQaChecked(projectId: string): Promise<void> {
+  await runShotQaChecks(projectId)
 }
 
 async function missingShotIds(

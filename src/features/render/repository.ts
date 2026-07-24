@@ -5,8 +5,18 @@ import { z } from 'zod'
 import { getDb } from '@/lib/db/client'
 import type { Db } from '@/lib/db/migrate'
 import { artifacts, canvasNodes, projects } from '@/lib/db/schema'
+import {
+  resolutionForPreset,
+  resolveExportSettings,
+  type ResolutionPreset,
+} from '@/features/canvas/export-settings'
 import { FRAME_THUMBNAIL_KIND, thumbnailOutputPath } from './types'
-import type { RenderJob, ThumbnailArtifactRecord, ThumbnailContext } from './types'
+import type {
+  RenderJob,
+  ShotQaCheckData,
+  ThumbnailArtifactRecord,
+  ThumbnailContext,
+} from './types'
 
 const renderSpecSchema = z
   .object({
@@ -30,6 +40,18 @@ export interface RenderExportPlan {
   incompleteNodeIds: string[]
   shots: ExportShot[]
   musicKey: string | null
+  /** 导出目标分辨率（由项目 exportSettings 解析），仅用于 concat 阶段。 */
+  targetResolution: { width: number; height: number }
+  resolutionPreset: ResolutionPreset
+  /** laneKey → QA 是否通过；null 表示尚未检测（不得默认 true）。 */
+  shotQa: Record<string, boolean | null>
+}
+
+/** shot-qa 检测编排所需的一个目标：已成功渲染的 shot-codegen + 同 laneKey 的 shot-qa 节点。 */
+export interface ShotQaTarget {
+  codegenNodeId: string
+  qaNodeId: string
+  laneKey: string
 }
 
 export interface FinalArtifactInput {
@@ -91,11 +113,12 @@ export class RenderRepository {
 
   getExportPlan(projectId: string): RenderExportPlan {
     const project = this.db
-      .select({ id: projects.id })
+      .select({ id: projects.id, exportSettings: projects.exportSettings })
       .from(projects)
       .where(eq(projects.id, projectId))
       .get()
     if (!project) throw new Error(`项目不存在：${projectId}`)
+    const settings = resolveExportSettings(project.exportSettings)
 
     const nodes = this.db
       .select({
@@ -103,6 +126,7 @@ export class RenderRepository {
         type: canvasNodes.type,
         status: canvasNodes.status,
         laneKey: canvasNodes.laneKey,
+        data: canvasNodes.data,
       })
       .from(canvasNodes)
       .where(and(eq(canvasNodes.projectId, projectId), isNotNull(canvasNodes.laneKey)))
@@ -141,10 +165,20 @@ export class RenderRepository {
       })
       .sort((left, right) => left.laneKey.localeCompare(right.laneKey))
 
+    const shotQa: Record<string, boolean | null> = {}
+    for (const node of nodes) {
+      if (node.type === 'shot-qa' && node.laneKey) {
+        shotQa[node.laneKey] = qaPassedOf(node.data)
+      }
+    }
+
     return {
       incompleteNodeIds: [...incomplete].sort(),
       shots,
       musicKey: this.latestMusicKey(projectId),
+      targetResolution: resolutionForPreset(settings.resolutionPreset),
+      resolutionPreset: settings.resolutionPreset,
+      shotQa,
     }
   }
 
@@ -230,6 +264,59 @@ export class RenderRepository {
     return id
   }
 
+  /**
+   * 列出可跑 QA 的目标：已成功渲染的 shot-codegen 节点与同 laneKey 的 shot-qa 节点配对。
+   * 单次查询 + 内存 join，不产生 N+1。
+   */
+  getShotQaTargets(projectId: string): ShotQaTarget[] {
+    const nodes = this.db
+      .select({
+        id: canvasNodes.id,
+        type: canvasNodes.type,
+        status: canvasNodes.status,
+        laneKey: canvasNodes.laneKey,
+      })
+      .from(canvasNodes)
+      .where(and(eq(canvasNodes.projectId, projectId), isNotNull(canvasNodes.laneKey)))
+      .all()
+    const qaNodeByLane = new Map<string, string>()
+    for (const node of nodes) {
+      if (node.type === 'shot-qa' && node.laneKey) qaNodeByLane.set(node.laneKey, node.id)
+    }
+    const targets: ShotQaTarget[] = []
+    for (const node of nodes) {
+      if (node.type !== 'shot-codegen' || node.status !== 'success' || !node.laneKey) continue
+      const qaNodeId = qaNodeByLane.get(node.laneKey)
+      if (qaNodeId) targets.push({ codegenNodeId: node.id, qaNodeId, laneKey: node.laneKey })
+    }
+    return targets.sort((left, right) => left.laneKey.localeCompare(right.laneKey))
+  }
+
+  /** 读取 shot-qa 节点已持久化的 qaCheck（供 contentHash 跳过判断）；不存在/非法返回 null。 */
+  readShotQaCheck(nodeId: string): ShotQaCheckData | null {
+    const node = this.db
+      .select({ data: canvasNodes.data })
+      .from(canvasNodes)
+      .where(eq(canvasNodes.id, nodeId))
+      .get()
+    return node ? asShotQaCheckData(node.data.qaCheck) : null
+  }
+
+  /** 将 QA 结果写回 shot-qa 节点 data.qaCheck（保留其他 data 字段）。 */
+  writeShotQaCheck(nodeId: string, qaCheck: ShotQaCheckData): void {
+    const node = this.db
+      .select({ data: canvasNodes.data })
+      .from(canvasNodes)
+      .where(eq(canvasNodes.id, nodeId))
+      .get()
+    if (!node) throw new Error(`节点不存在：${nodeId}`)
+    this.db
+      .update(canvasNodes)
+      .set({ data: { ...node.data, qaCheck } })
+      .where(eq(canvasNodes.id, nodeId))
+      .run()
+  }
+
   private getRenderNode(projectId: string, nodeId: string) {
     const node = this.db
       .select({
@@ -288,4 +375,27 @@ export class RenderRepository {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/** 从节点 data 中安全提取 qaCheck.passed；缺失/非法返回 null（不得默认 true）。 */
+function qaPassedOf(data: Record<string, unknown>): boolean | null {
+  const qaCheck = data.qaCheck
+  if (qaCheck && typeof qaCheck === 'object' && 'passed' in qaCheck) {
+    const passed = (qaCheck as { passed: unknown }).passed
+    if (typeof passed === 'boolean') return passed
+  }
+  return null
+}
+
+/** 将未知 data.qaCheck 归一为 ShotQaCheckData；形状不符返回 null。 */
+function asShotQaCheckData(value: unknown): ShotQaCheckData | null {
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof (value as ShotQaCheckData).thumbnailContentHash === 'string' &&
+    typeof (value as ShotQaCheckData).passed === 'boolean'
+  ) {
+    return value as ShotQaCheckData
+  }
+  return null
 }

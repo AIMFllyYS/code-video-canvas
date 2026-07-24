@@ -6,7 +6,7 @@
 | Wave | 4（`docs/specs/2026-07-23-harness-task-breakdown.md` Track H） |
 | 依赖 | `issue-04-shot-thumbnail-infrastructure`（`features/render/thumbnail.ts` 必须先落地）；建议 `issue-01` 收口后回归验证 FINALIZE 输入契约 |
 | 关联决策 | `docs/specs/2026-07-23-ai-development-harness.md` §6.6（导出参数存储位置待办，本 issue 落地后需回填该节）、§3.1 移植映射表第 64 行（`features/render/qa-check.ts`） |
-| 状态 | 已拍板，可开工（Part A 架构选择、Part B 依赖选型均已确认，见 §A.5、§B.2 结论） |
+| 状态 | 已完成（2026-07-24）。**施工修正**：`export-settings.ts` 因模块边界实置于 `src/features/canvas/`（非 `render/`），见 §A.2 修正说明 |
 
 ## 背景
 
@@ -75,7 +75,9 @@ export const projects = sqliteTable('projects', {
 
 ### A.2 `exportSettings` 结构设计
 
-新增 `src/features/render/export-settings.ts`（新文件）：
+新增 `src/features/canvas/export-settings.ts`（新文件）：
+
+> **施工修正（2026-07-24）**：原计划置于 `src/features/render/export-settings.ts`，但经依赖核实此路径会引入被禁止的循环依赖——`render→director`、`render→canvas`、`director→canvas` 均为既有合法方向，且 memory「director与render模块依赖边界」硬约束 `director` 不得 `import` `features/render`。若本模块放 `render`：`stage-result.ts`（director）引用它 → `director→render`（违规 + 与 `render→director` 成环）；`canvas/schemas.ts` 引用它 → `canvas→render`（与 `render→canvas` 成环）。故改置于 `features/canvas`（`render`/`director` 共依赖的最底层叶子，且 `canvas` 不 import 二者），三方共享同一事实源且零新增循环。`exportSettingsSchema` 亦定义于此，经 `canvas/schemas.ts` 与 `canvas/index.ts` re-export；`schema.ts` 用 `import type` 引用 `ExportSettings` 避免 `lib/db↔canvas` 环。
 
 ```typescript
 export const EXPORT_RESOLUTION_PRESETS = {
@@ -164,7 +166,7 @@ function buildArgs(
 
 **允许改动范围**：
 - `src/lib/db/schema.ts`（新增 `exportSettings` 列）+ `pnpm db:generate` 产出的新迁移文件与 `meta/*.json` snapshot（不得手写/手改 snapshot）
-- `src/features/render/export-settings.ts`（新增）
+- `src/features/canvas/export-settings.ts`（新增；原计划 `render/`，因模块边界实置 `canvas/`，见 §A.2 修正）
 - `src/features/director/stage-result.ts`（把 `width: 1080, height: 1920` 字面量替换为引用 `MASTER_RESOLUTION_PRESET`，不改变其他行为）
 - `src/features/canvas/schemas.ts` / `actions.ts` / `queries.ts` / `index.ts`（新增 `exportSettingsSchema` / `updateExportSettings` / `getExportSettings` 并导出）
 - `src/app/api/projects/[id]/route.ts`（新增 PATCH）
@@ -180,13 +182,13 @@ function buildArgs(
 - 任何非 9:16 比例的新增预设（跨比例改造不在本 issue 范围）
 
 **完成条件**：
-- [ ] `projects` 表迁移已生成并可在全新数据库与既有数据库上无损应用
-- [ ] `PATCH /api/projects/[id]` 校验非法 `resolutionPreset` 返回 400 且不落库；合法值成功持久化
-- [ ] `exportProject()` 按项目 `exportSettings` 选择分辨率；默认预设（1080×1920）仍走 `-c:v copy` 无损路径，产出结果与改动前逐字节一致（可用既有测试快照/hash 校验）
-- [ ] 非默认预设导出产物的实际分辨率经 ffprobe（或等价手段）校验与所选预设一致
-- [ ] 已渲染的单镜 mp4（`render-mp4` artifact）不因切换导出分辨率而失效或重新入队渲染
-- [ ] 合成导出页分辨率 `SettingsRow` 改为真实受控组件，展示并可切换当前项目设置
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过；新增/改动路径有测试覆盖且 `pnpm test` 通过
+- [x] `projects` 表迁移已生成并可在全新数据库与既有数据库上无损应用
+- [x] `PATCH /api/projects/[id]` 校验非法 `resolutionPreset` 返回 400 且不落库；合法值成功持久化
+- [x] `exportProject()` 按项目 `exportSettings` 选择分辨率；默认预设（1080×1920）仍走 `-c:v copy` 无损路径，产出结果与改动前逐字节一致（可用既有测试快照/hash 校验）
+- [x] 非默认预设导出产物的实际分辨率经 ffprobe（或等价手段）校验与所选预设一致
+- [x] 已渲染的单镜 mp4（`render-mp4` artifact）不因切换导出分辨率而失效或重新入队渲染
+- [x] 合成导出页分辨率 `SettingsRow` 改为真实受控组件，展示并可切换当前项目设置
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过；新增/改动路径有测试覆盖且 `pnpm test` 通过
 
 ---
 
@@ -294,11 +296,11 @@ interface ShotQaCheckData {
 - 不新建独立的 QA 结果 artifact kind（除非施工中发现 B.4 的"写节点 data 字段"方案有具体实现障碍，需回来更新本文档并说明原因）
 
 **完成条件**：
-- [ ] `checkThumbnailQa()` 对已知黑帧样本（如纯黑 PNG）与正常样本分别返回正确的 `isBlackFrame`/`passed`，有单元测试覆盖阈值边界
-- [ ] `shot-qa` 节点在缩略图产出后写入真实 `qaCheck` 字段，contentHash 不变时不重复计算
-- [ ] `GET /api/render/export` 返回的 `shotQa` 对未检测分镜返回 `null` 而非默认 `true`
-- [ ] 合成导出页每个分镜的 `ContactSheetThumb` 勾选状态来自 `shotQa`，未检测/未通过时不显示勾选图标
-- [ ] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过；新增路径有测试覆盖且 `pnpm test` 通过
+- [x] `checkThumbnailQa()` 对已知黑帧样本（如纯黑 PNG）与正常样本分别返回正确的 `isBlackFrame`/`passed`，有单元测试覆盖阈值边界
+- [x] `shot-qa` 节点在缩略图产出后写入真实 `qaCheck` 字段，contentHash 不变时不重复计算
+- [x] `GET /api/render/export` 返回的 `shotQa` 对未检测分镜返回 `null` 而非默认 `true`
+- [x] 合成导出页每个分镜的 `ContactSheetThumb` 勾选状态来自 `shotQa`，未检测/未通过时不显示勾选图标
+- [x] `pnpm lint && pnpm tsc --noEmit && pnpm build` 通过；新增路径有测试覆盖且 `pnpm test` 通过
 
 ---
 

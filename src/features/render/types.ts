@@ -64,3 +64,25 @@ export interface ThumbnailResult {
   artifactId: string
   contentHash: string
 }
+
+/** 单张缩略图的 QA 规则检测结果（黑帧 / 纯色），由 qa-check.ts 产出。 */
+export interface ThumbnailQaResult {
+  /** 时间点标识，如 25% / 60% / 95%。 */
+  label: string
+  /** 全图平均亮度（0-255）。 */
+  meanLuminance: number
+  /** 全图亮度标准差。 */
+  luminanceStdDev: number
+  isBlackFrame: boolean
+  isNearSolidColor: boolean
+  passed: boolean
+}
+
+/** 写入 shot-qa 节点 canvas_nodes.data.qaCheck 的分镜 QA 汇总。 */
+export interface ShotQaCheckData {
+  passed: boolean
+  checkedAt: number
+  /** 触发本次检测的缩略图 contentHash 聚合，用于判断是否需要重跑。 */
+  thumbnailContentHash: string
+  results: ThumbnailQaResult[]
+}

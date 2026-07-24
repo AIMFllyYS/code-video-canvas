@@ -4,12 +4,14 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises'
 import ffmpegPath from 'ffmpeg-static'
+import { MASTER_HEIGHT, MASTER_WIDTH } from '@/features/canvas/export-settings'
 
 /** 按序流拷贝分镜视频；配乐可选且不会触发视频重编码。 */
 export async function concatExport(
   mp4Paths: string[],
   musicPath: string | null,
-  outputPath: string
+  outputPath: string,
+  targetResolution: { width: number; height: number } | null = null
 ): Promise<string> {
   if (!ffmpegPath) throw new Error('ffmpeg-static 未提供当前平台二进制')
   if (mp4Paths.length === 0) throw new Error('concat 至少需要一个分镜 mp4')
@@ -27,7 +29,7 @@ export async function concatExport(
       ...mp4Paths.map((file) => `file '${escapeConcatPath(file)}'`),
     ].join('\n')
     await writeFile(listPath, `${list}\n`, 'utf8')
-    await runFfmpeg(buildArgs(listPath, musicPath, temporaryPath))
+    await runFfmpeg(buildArgs(listPath, musicPath, temporaryPath, targetResolution))
     await rename(temporaryPath, outputPath)
     return outputPath
   } catch (error) {
@@ -63,8 +65,14 @@ async function assertInputs(
 function buildArgs(
   listPath: string,
   musicPath: string | null,
-  outputPath: string
+  outputPath: string,
+  targetResolution: { width: number; height: number } | null
 ): string[] {
+  // 仅当目标分辨率 ≠ 母版时才重编码；默认/母版分辨率保持 -c:v copy 无损快路径（零回归）。
+  const needsScale =
+    targetResolution !== null &&
+    (targetResolution.width !== MASTER_WIDTH || targetResolution.height !== MASTER_HEIGHT)
+
   const args = [
     '-hide_banner',
     '-loglevel',
@@ -77,25 +85,29 @@ function buildArgs(
     '-i',
     listPath,
   ]
-  if (musicPath) {
+  if (musicPath) args.push('-stream_loop', '-1', '-i', musicPath)
+
+  args.push('-map', '0:v:0')
+  if (musicPath) args.push('-map', '1:a:0')
+
+  if (needsScale && targetResolution) {
     args.push(
-      '-stream_loop',
-      '-1',
-      '-i',
-      musicPath,
-      '-map',
-      '0:v:0',
-      '-map',
-      '1:a:0',
+      '-vf',
+      `scale=${targetResolution.width}:${targetResolution.height}`,
       '-c:v',
-      'copy',
-      '-c:a',
-      'aac',
-      '-shortest'
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '20'
     )
   } else {
-    args.push('-map', '0:v:0', '-c:v', 'copy', '-an')
+    args.push('-c:v', 'copy')
   }
+
+  if (musicPath) args.push('-c:a', 'aac', '-shortest')
+  else args.push('-an')
+
   args.push('-map_metadata', '-1', '-movflags', '+faststart', '-y', outputPath)
   return args
 }

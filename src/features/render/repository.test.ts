@@ -111,6 +111,49 @@ describe('RenderRepository export plan', () => {
       frames: { fps: 30, durationInFrames: 60, width: 1920, height: 1080 },
     })
   })
+
+  it('carries default target resolution and null shotQa when unset', () => {
+    const plan = repository.getExportPlan('project-1')
+    expect(plan.targetResolution).toEqual({ width: 1080, height: 1920 })
+    expect(plan.resolutionPreset).toBe('1080x1920')
+    expect(plan.shotQa).toEqual({ S001: null, S002: null })
+  })
+
+  it('resolves target resolution from project export settings', () => {
+    db.update(projects)
+      .set({ exportSettings: { resolutionPreset: '540x960' } })
+      .where(eq(projects.id, 'project-1'))
+      .run()
+    const plan = repository.getExportPlan('project-1')
+    expect(plan.resolutionPreset).toBe('540x960')
+    expect(plan.targetResolution).toEqual({ width: 540, height: 960 })
+  })
+
+  it('round-trips shot-qa results and exposes them via plan + targets', () => {
+    const qaCheck = {
+      passed: false,
+      checkedAt: 1,
+      thumbnailContentHash: 'agg-1',
+      results: [],
+    }
+    repository.writeShotQaCheck('node-S001-shot-qa', qaCheck)
+    expect(repository.readShotQaCheck('node-S001-shot-qa')).toEqual(qaCheck)
+    expect(repository.getExportPlan('project-1').shotQa).toEqual({ S001: false, S002: null })
+    expect(repository.getShotQaTargets('project-1')).toEqual([
+      { codegenNodeId: 'node-S001-shot-codegen', qaNodeId: 'node-S001-shot-qa', laneKey: 'S001' },
+      { codegenNodeId: 'node-S002-shot-codegen', qaNodeId: 'node-S002-shot-qa', laneKey: 'S002' },
+    ])
+  })
+
+  it('excludes non-success shot-codegen from qa targets', () => {
+    db.update(canvasNodes)
+      .set({ status: 'pending' })
+      .where(eq(canvasNodes.id, 'node-S002-shot-codegen'))
+      .run()
+    expect(repository.getShotQaTargets('project-1')).toEqual([
+      { codegenNodeId: 'node-S001-shot-codegen', qaNodeId: 'node-S001-shot-qa', laneKey: 'S001' },
+    ])
+  })
 })
 
 function insertLane(db: Db, laneKey: string): void {
