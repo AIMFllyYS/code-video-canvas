@@ -11,6 +11,12 @@
 - [scripts/pi-stepfun-probe.ts](file://scripts/pi-stepfun-probe.ts)
 </cite>
 
+## 更新摘要
+**所做更改**   
+- 更新了 StepFun 适配器密钥验证策略的实现细节
+- 修正了从 models.list() 端点到 chat.completions.create() 探测调用的变更说明
+- 增强了密钥验证失败处理的相关章节内容
+
 ## 目录
 1. [简介](#简介)
 2. [项目结构](#项目结构)
@@ -88,7 +94,7 @@ S_probe_mts --> A_stepfun
 - [src/features/ai/stepfun-adapter.test.ts](file://src/features/ai/stepfun-adapter.test.ts)
 
 ## 架构总览
-整体采用“适配器模式”将不同 AI 供应商的能力收敛到统一接口，上层仅依赖抽象类型与契约，屏蔽底层差异。StepFun 作为首个实现，后续可按相同范式扩展其他厂商。
+整体采用"适配器模式"将不同 AI 供应商的能力收敛到统一接口，上层仅依赖抽象类型与契约，屏蔽底层差异。StepFun 作为首个实现，后续可按相同范式扩展其他厂商。
 
 ```mermaid
 classDiagram
@@ -150,6 +156,11 @@ StepFunAdapter --> Schemas : "使用"
   - 发送请求：支持普通 HTTP 或 SSE/流式通道。
   - 解析响应：按 schema 解析并转换为统一输出模型。
   - 错误处理：将 StepFun 错误码映射为内部错误类型，附带重试建议。
+- **已更新** 密钥验证策略改进
+  - 原方案：使用 `models.list()` 端点进行密钥有效性验证
+  - 新方案：改用 `chat.completions.create()` 探测调用进行验证
+  - 改进原因：解决了有效 API 密钥被错误拒绝的问题，提高了密钥验证的准确性
+  - 验证流程：发送轻量级聊天补全请求，检查响应状态而非模型列表获取
 - 注意事项
   - 幂等键：对可重试操作生成稳定幂等键，避免重复提交。
   - 限流与退避：结合指数退避与抖动，避免雪崩。
@@ -173,9 +184,11 @@ StepFunAdapter --> Schemas : "使用"
 - 单元测试
   - 覆盖正常路径、错误路径、超时与重试场景。
   - 使用 mock 隔离外部依赖，保证确定性。
+  - **已更新** 包含新的密钥验证策略测试用例，验证 chat.completions.create() 探测调用。
 - 探针脚本
   - 提供最小化的端到端连通性检查，便于 CI 与部署后自检。
   - 支持 TS 与 MTS 双入口，兼容不同运行环境。
+  - **已更新** 探针脚本已适配新的密钥验证机制。
 
 章节来源
 - [src/features/ai/stepfun-adapter.test.ts](file://src/features/ai/stepfun-adapter.test.ts)
@@ -218,7 +231,7 @@ ProbeMTS["pi-stepfun-probe.mts"] --> Adapter
 ## 性能与可靠性
 - 超时控制
   - 为网络 I/O 设置合理超时，避免长尾请求拖垮系统。
-  - 区分“首字节延迟”和“总耗时”，分别监控。
+  - 区分"首字节延迟"和"总耗时"，分别监控。
 - 重试与退避
   - 仅对幂等且可恢复的错误进行重试。
   - 使用指数退避+随机抖动，限制最大重试次数与总时长。
@@ -236,6 +249,7 @@ ProbeMTS["pi-stepfun-probe.mts"] --> Adapter
 ## 故障排查指南
 - 常见问题
   - 鉴权失败：检查密钥、签名算法与时间戳。
+  - **已更新** 密钥验证失败：确认使用的是 chat.completions.create() 探测调用而非 models.list() 端点。
   - 超时：确认网络链路、远端服务状态与超时阈值。
   - 限流：观察 429 错误，调整重试间隔与并发度。
   - 解析失败：核对 schema 版本与上游变更。
@@ -253,7 +267,7 @@ ProbeMTS["pi-stepfun-probe.mts"] --> Adapter
 - [scripts/pi-stepfun-probe.mts](file://scripts/pi-stepfun-probe.mts)
 
 ## 结论
-通过适配器模式，CodeVideoCanvas 实现了与 StepFun AI 服务的平滑集成，并以统一接口屏蔽了厂商差异。配合严格的类型与 schema 校验、完善的测试与探针，系统在可扩展性、稳定性与可观测性方面具备良好基础。后续可按相同范式快速接入更多 AI 提供商。
+通过适配器模式，CodeVideoCanvas 实现了与 StepFun AI 服务的平滑集成，并以统一接口屏蔽了厂商差异。配合严格的类型与 schema 校验、完善的测试与探针，系统在可扩展性、稳定性与可观测性方面具备良好基础。密钥验证策略的改进进一步提升了系统的可靠性和用户体验。后续可按相同范式快速接入更多 AI 提供商。
 
 [本节为总结性内容，不直接分析具体文件]
 
@@ -266,6 +280,7 @@ ProbeMTS["pi-stepfun-probe.mts"] --> Adapter
   5. 编写单元测试与探针用例，覆盖正常、异常与边界场景。
 - 关键实现要点
   - 鉴权与签名：遵循目标厂商规范，安全存储密钥。
+  - **已更新** 密钥验证：参考 StepFun 适配器的改进方案，使用实际的 API 调用进行验证而非元数据查询。
   - 请求构造：将统一输入模型映射为目标 API 所需格式。
   - 响应解析：严格按 schema 解析，失败时抛出结构化错误。
   - 错误映射：将厂商错误码映射为内部错误类型，便于统一处理。
@@ -274,6 +289,7 @@ ProbeMTS["pi-stepfun-probe.mts"] --> Adapter
   - Mock 网络层，断言请求结构与响应转换。
   - 使用探针脚本在预发环境进行真实连通性验证。
   - 回归测试覆盖 schema 变更带来的影响。
+  - **已更新** 包含密钥验证策略的测试用例，确保验证逻辑的正确性。
 
 章节来源
 - [src/features/ai/types.ts](file://src/features/ai/types.ts)
