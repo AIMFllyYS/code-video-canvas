@@ -6,6 +6,8 @@
 /* ─── Design Tokens（权威源：docs/designs/2026-07-23-design-system-inventory.md）─── */
 
 :root {
+  color-scheme: light;
+
   /* 品牌与语义色 */
   --color-accent: #007AFF;
   --color-success: #34C759;
@@ -76,6 +78,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+
   /* 品牌与语义色 */
   --color-accent: #0A84FF;
   --color-success: #30D158;
@@ -208,4 +212,5 @@ body {
   background-color: var(--color-bg);
   color: var(--color-label);
   font-family: var(--font-sans);
+  caret-color: var(--color-accent);
 }
