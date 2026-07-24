@@ -1,11 +1,12 @@
 import { fileURLToPath } from 'node:url'
-import { configDefaults, defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
-    exclude: [...configDefaults.exclude, '**/*.pg.test.ts'],
+    include: ['src/**/*.pg.test.ts'],
+    fileParallelism: false,
+    maxWorkers: 1,
   },
   resolve: {
     alias: {
