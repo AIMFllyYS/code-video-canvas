@@ -44,7 +44,8 @@ flowchart LR
 N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行：
 
 - N3 负责 `AiTaskRuntime → ShotSourcePackageV1`；
-- N4 负责 `ShotSourcePackageV1 → CompositionBundleV1 → RenderReceiptV1`。
+- N4 负责
+  `ShotSourcePackageV1 → CvcCompositionBundleV1 → RenderableBundleDescriptorV1 → RenderReceiptV1`。
 
 二者禁止同时修改同一合同文件；公共 contract 变更由先完成的一方提交，另一方只消费。
 
@@ -79,10 +80,10 @@ N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行�
 
 核心任务：
 
-- N1.1 `docker-compose.dev.yml` + Postgres health/migration 命令；
-- N1.2 Drizzle PG schema、复合 FK、CHECK、index、tracked migration；
+- N1.1 SQLite Online Backup、quick_check、计数/hash 与只读证据；
+- N1.2 `docker-compose.dev.yml` + Drizzle PG schema、约束和 tracked migration；
 - N1.3 repository async 化与逐域 cutover；
-- N1.4 SQLite 备份/export/import/计数与 hash 对账；
+- N1.4 SQLite export/Postgres import/计数与 hash 对账；
 - N1.5 三个 Spike：Trigger task+Realtime、Pi terminal Tool、HyperFrames CLI；
 - N1.6 移除运行时 SQLite，保留只读 migration 工具。
 
@@ -155,7 +156,8 @@ N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行�
 - N4.1 browser-safe extractor + authoritative SourceNormalizer；
 - N4.2 `ShotSourcePackageV1`/Patch 与 G1–G5；
 - N4.3 `packages/video-compiler` 纯编译；
-- N4.4 `CompositionBundleV1`、manifest、hash、provenance；
+- N4.4 `CvcCompositionBundleV1`、`RenderableBundleDescriptorV1`、canonical
+  manifest、hash、provenance；
 - N4.5 HyperFrames CLI provider 与 G6–G10；
 - N4.6 legacy renderer parity/fallback，默认切到 HyperFrames。
 
@@ -254,30 +256,30 @@ N3 与 N4 可以在 N1/N2 的 contracts 与 task payload 稳定后局部并行�
 | A01 | Docker Postgres healthcheck 成功 | N1 | `docker compose ps` |
 | A02 | fresh DB 全量 tracked migration 成功 | N1 | migration log |
 | A03 | workspace 复合 FK 阻止跨租户引用 | N1 | integration test |
-| A04 | 同 receipt key 不同 fingerprint 被拒绝 | N1/N2 | repository test |
-| A05 | SQLite 备份和 export manifest 可读取 | N1 | hash + file list |
+| A04 | 同 receipt key/同 fingerprint 重放原结果；不同 fingerprint 返回 409 | N1/N2 | repository/API test |
+| A05 | SQLite Online Backup 可读且 quick_check/计数/hash 通过 | N1 | backup report |
 | A06 | 旧项目/节点/artifact 计数导入对账 | N1 | migration report |
 | A07 | Trigger dev 简单 task 与 Realtime 成功 | N1/N2 | run ID + UI/test |
-| A08 | 仅七类 Trigger task | N2 | source scan |
+| A08 | 仅七类 Trigger task，且 generate→media/render 依赖正确 | N2 | graph/source test |
 | A09 | 取消映射为业务 `cancelled` | N2 | integration test |
-| A10 | transport retry 不重复已提交模型 checkpoint | N2/N3 | attempt test |
+| A10 | stale attempt publish 被拒绝，retry 跳过同 fingerprint checkpoint | N2/N3 | attempt test |
 | A11 | 旧 queue/stream runtime import 为 0 | N2 | `rg` scan |
 | A12 | 模型选择只在 ModelPolicy | N3 | import/source test |
 | A13 | 仅 PiStructuredRunner import `Agent` | N3 | `rg` scan |
 | A14 | Tool args 是结构化产物 | N0/N3 | transcript test |
-| A15 | 不向 UI 暴露隐藏 reasoning | N3/N6 | DTO/browser test |
+| A15 | safe trace 不含 raw delta/参数/错误，viewer depth/node/byte/copy 有界 | N3/N6 | DTO/browser test |
 | A16 | 仅四类模型任务 | N3 | exhaustive type test |
 | A17 | full HTML 可确定提取 fragments | N4 | normalizer test |
 | A18 | 明确四段代码可确定提取 | N4 | normalizer test |
 | A19 | 多 JSON/未知 script/额外正文被拒绝 | N4 | negative tests |
-| A20 | 网络/eval/墙钟/rAF/随机被门禁拒绝 | N4 | gate tests |
-| A21 | 相同输入 bundle hash 相同 | N4 | deterministic test |
+| A20 | 跨 workspace/raw-key/bundle-root 逃逸、网络/eval/墙钟/rAF/随机均被拒绝 | N4 | store/sandbox/gate tests |
+| A21 | canonical manifest 不受输入枚举顺序影响且 bundle hash 稳定 | N4 | deterministic test |
 | A22 | HyperFrames check 为 0 finding | N4 | CLI log |
 | A23 | 0/中/末/乱序 seek 可用 | N4 | smoke snapshots |
 | A24 | 同帧双拍像素 hash 相同 | N4 | hash report |
 | A25 | shot MP4 尺寸/时长/实体 hash 正确 | N4 | ffprobe + SHA |
 | A26 | final MP4 视频/音频/字幕合同成立 | N5 | ffprobe report |
-| A27 | UI 字段均可追溯 Snapshot/Realtime/artifact | N6 | field-source matrix |
+| A27 | attempt/run/node 状态所有权唯一，UI 字段均可追溯 Snapshot/artifact | N2/N6 | state + field-source matrix |
 | A28 | 新组件先 Pencil 后 Playbook 再页面 | N6 | design/registry/browser |
 | A29 | 文件长度和跨域 import 门禁通过 | N6/N7 | governance report |
 | A30 | workflowVersion 锚定的全链路 E2E 通过 | N7 | delivery report |

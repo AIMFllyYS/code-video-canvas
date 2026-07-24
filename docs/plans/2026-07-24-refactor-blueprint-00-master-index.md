@@ -37,7 +37,7 @@ SQLite + 进程内队列 + 自建逐帧渲染的 Demo 管线，重构为：
 | D5 | 模型任务 | 仅四类：`project-plan`、`shot-spec`、`fabricate`、`vision-qa` |
 | D6 | 服务任务 | normalize、gate、compile、render、audio、compose、verify 均不得进入 Agent loop |
 | D7 | 模型产物 | `ShotSourcePackageV1` 是 canonical；完整 HTML/代码块只是兼容输入 |
-| D8 | 渲染 | `video-compiler` 生成 `CompositionBundleV1`，HyperFrames 为默认 renderer |
+| D8 | 渲染 | `video-compiler` 生成 `CvcCompositionBundleV1`，并暴露 `RenderableBundleDescriptorV1`；HyperFrames 为默认 renderer |
 | D9 | 帧时钟 | HyperFrames 终态只保留一套 seek/frame clock；旧 `__CVC_RENDER__@v1` 仅迁移期兼容 |
 | D10 | 业务真源 | Postgres；Trigger 保存执行事实；二者不互相镜像整套状态 |
 | D11 | UI 真相 | `ProjectRunSnapshotV1` + Trigger Realtime；禁止固定假进度/假检测 |

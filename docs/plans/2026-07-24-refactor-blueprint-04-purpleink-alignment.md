@@ -220,7 +220,7 @@ Port 只包含：
 建议共享的跨项目 DTO：
 
 ```text
-CompositionBundleV1
+RenderableBundleDescriptorV1
 RenderTaskV1
 RenderReceiptV1
 MediaProbeV1
@@ -228,19 +228,19 @@ ArtifactProvenanceV1
 ContractIssueV1
 ```
 
-其中 `CompositionBundleV1` 必须至少表达：
+其中 `RenderableBundleDescriptorV1` 必须至少表达：
 
-- schema/compiler/workflow version；
-- entry file；
-- file list 与 hash；
+- schema 与 render format；
+- entry path；
+- 排序后的 file list、实体 hash、media type 与 byte size；
 - width/height/fps/duration；
-- asset/source/bundle hash；
-- composition ID；
-- created attempt；
-- required HyperFrames version。
+- required HyperFrames version；
+- bundle hash 与 provenance digest。
 
-共享 DTO 稳定前，先分别在两个项目实现同名本地合同；不要过早建立跨仓 package 和
-发布流程。
+CVC compiler 的本地输出叫 `CvcCompositionBundleV1`；PurpleInk compiler 的本地
+输出叫 `PurpleInkCompositionBundleV1`。两个 bundle schema 不宣称相同，仅由各自
+adapter 导出共同的 `RenderableBundleDescriptorV1`。在双方都有真实 release fixture
+前，不抽取共享实现包。
 
 ---
 

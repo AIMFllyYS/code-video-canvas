@@ -193,8 +193,8 @@ flowchart TD
 
   Run --> Plan
   Plan --> Generate
-  Plan --> Media
   Generate --> Render
+  Generate --> Media
   Render --> QA
   Media --> Compose
   QA --> Compose
@@ -202,11 +202,15 @@ flowchart TD
 
 ### 5.1 为什么 `shot-spec` 和 `fabricate` 不拆成两个 Trigger task
 
-二者共用 AI 并发边界、shot 上下文和内容修复会话。`shot-generate` 在内部先事务性
-提交 `ShotSpecV1` checkpoint，再调用 fabricate。若 worker crash，重试发现同一
-input hash 的 spec 已存在就跳过第一次付费调用。
+二者共用 Trigger task、AI 并发边界和 shot 上下文，但必须是两个独立、短生命周期的
+Pi invocation/session，各自只挂自己的 terminal Tool。`shot-generate` 先完成
+`shot-spec` invocation 并事务性提交 `ShotSpecV1` checkpoint，再新建 Agent 执行
+`fabricate` invocation。若 worker crash，重试发现同一 input hash 的 spec 已存在就
+跳过第一次付费调用。
 
-这保留了独立业务 artifact，又避免新增一层 parent/child wait 和版本锁定。
+结构化 repair 只发生在当前 invocation 内；spec 的消息、Tool 和 repair 历史不得泄漏
+到 fabricate。这样既保留独立业务 artifact，又避免新增一层 parent/child wait 和
+版本锁定。
 
 ### 5.2 队列
 
@@ -225,19 +229,26 @@ Trigger task key：
 
 ```text
 sha256(
-  workflowVersion + taskType + workspaceId + entityId +
-  sorted(inputArtifactHashes)
+  canonicalizerVersion + workflowVersion + intent + taskType +
+  workspaceId + entityId + sorted(inputArtifactHashes) +
+  modelPolicyRevision + resolvedProviderAndModelWhenApplicable
 )
 ```
 
 业务命令使用 `command_receipts`，保存：
 
 ```text
-(workspace_id, idempotency_key, command_type, request_fingerprint, result)
+(id, workspace_id, idempotency_key, command_type, request_fingerprint,
+ status, result, created_at, updated_at)
 ```
 
-Trigger idempotency 防重复执行；receipt 防同一业务键携带不同请求重放。二者职责
-不同，不追求虚假的 exactly-once。
+Trigger key 必须显式用
+`idempotencyKeys.create(key, { scope: 'global' })` 创建，不依赖 SDK 默认 scope。
+同 receipt key 且同 fingerprint 返回原始/当前 result；同 key 但 fingerprint 不同
+返回 `409 Conflict`。receipt 与 `pipeline_runs(triggering)` 在同一事务创建，随后才
+dispatch Trigger；若进程在事务提交后、dispatch/回写前崩溃，重复命令或 reconciler
+复用同一 global key 补发并回写 run handle。Trigger idempotency 防重复执行，receipt
+防业务命令歧义；二者不追求虚假的 exactly-once。
 
 ### 5.4 重试与取消
 
@@ -283,7 +294,7 @@ export interface AiTaskResult<TOutput> {
     inputTokens: number
     outputTokens: number
   }
-  trace: AgentTraceEventV1[]
+  trace: SafeTraceEventV1[]
 }
 
 export interface AiTaskRuntime {
@@ -330,18 +341,29 @@ Tool `execute()`：
 ### 6.4 安全轨迹
 
 ```ts
-export type AgentTraceEventV1 =
+export type SafeJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | SafeJsonValue[]
+  | { [key: string]: SafeJsonValue }
+
+export type SafeTraceEventV1 =
   | { type: 'model_started'; provider: string; modelId: string; at: string }
-  | { type: 'message_delta'; text: string; at: string }
-  | { type: 'tool_started'; tool: string; argumentSummary: unknown; at: string }
-  | { type: 'tool_completed'; tool: string; ok: boolean; at: string }
-  | { type: 'repair_requested'; issues: ContractIssueV1[]; at: string }
+  | { type: 'progress'; code: string; label: string; at: string }
+  | { type: 'tool_started'; tool: string; argumentKeys: string[]; at: string }
+  | { type: 'tool_completed'; tool: string; ok: boolean; resultCode: string; at: string }
+  | { type: 'repair_requested'; issueCodes: string[]; at: string }
   | { type: 'usage'; inputTokens: number; outputTokens: number; at: string }
   | { type: 'completed'; at: string }
-  | { type: 'failed'; code: string; message: string; at: string }
+  | { type: 'failed'; code: string; userMessage: string; at: string }
 ```
 
-不得把 provider 的隐藏 thinking/reasoning block 写入前端 DTO。
+轨迹不保存 raw assistant delta、Tool 参数值、provider 原始错误、prompt、source、密钥
+或隐藏 thinking/reasoning。所有字符串、数组、深度、节点数和总字节数都必须在
+`TraceMapper` 中截断并脱敏；结构化扩展只能使用 `SafeJsonValue`。前端 JSON viewer
+只用 React text node 渲染，默认限制 depth 6、node 500、copy 64 KiB。
 
 ---
 
@@ -351,16 +373,20 @@ export type AgentTraceEventV1 =
 
 ```ts
 export interface ShotSourcePackageV1 {
-  schemaVersion: 1
+  schemaVersion: 'cvc.shot-source/v1'
   bodyFragment: string
   css: string
   setupJs: string
-  seekJs: string
+  timelineJs: string
 }
 ```
 
 `bodyFragment` 不含 `<html>/<head>/<body>`；`css` 不含 `<style>`；JS 字段不含
-`<script>`。模型不得提供外部 URL、codec、frame count、artifact path 或 shell。
+`<script>`。`bodyFragment` 必须非空；其余字段必须存在，静态镜头可使用空
+`timelineJs`。`setupJs` 只能做同步、确定性的初始 DOM 设置；`timelineJs` 只能向
+compiler 提供的 paused GSAP timeline 添加 tween，不得创建第二时钟、注册
+`__CVC_RENDER__`、调用 play/ticker/timer。模型不得提供外部 URL、codec、frame
+count、artifact path 或 shell。
 
 ### 7.2 支持的输入形态
 
@@ -382,17 +408,17 @@ export interface ShotSourcePackageV1 {
 
 ```ts
 export interface ShotSourcePatchV1 {
-  schemaVersion: 1
+  schemaVersion: 'cvc.shot-source-patch/v1'
   baseContentHash: string
   changes: Partial<Pick<
     ShotSourcePackageV1,
-    'bodyFragment' | 'css' | 'setupJs' | 'seekJs'
+    'bodyFragment' | 'css' | 'setupJs' | 'timelineJs'
   >>
 }
 ```
 
-创建新 source 时四字段必须全部存在；允许字段为空字符串，但不得省略。这样“只生成
-一部分代码”有明确含义，而不是由前端猜测缺失内容。
+创建新 source 时四字段必须全部存在，且 `bodyFragment` 非空；其余字段允许空字符串，
+但不得省略。这样“只生成一部分代码”有明确含义，而不是由前端猜测缺失内容。
 
 ---
 
@@ -419,13 +445,33 @@ export interface CompileShotInputV1 {
 ### 8.2 Bundle
 
 ```ts
-export interface CompositionBundleV1 {
-  schemaVersion: 1
+export interface RenderableBundleDescriptorV1 {
+  schemaVersion: 'renderable-bundle-descriptor/v1'
+  format: 'hyperframes-html/v1'
+  entryPath: string
+  files: readonly {
+    path: string
+    sha256: string
+    mediaType: string
+    byteSize: number
+  }[]
+  width: number
+  height: number
+  fps: number
+  durationSeconds: number
+  requiredHyperframesVersion: string
+  bundleHash: string
+  provenanceDigest: string
+}
+
+export interface CvcCompositionBundleV1 {
+  schemaVersion: 'cvc.composition-bundle/v1'
   entryHtml: 'index.html'
   files: readonly {
     path: string
     sha256: string
     mediaType: string
+    byteSize: number
   }[]
   manifest: {
     compositionId: string
@@ -434,11 +480,17 @@ export interface CompositionBundleV1 {
     fps: number
     durationSeconds: number
     sourceHash: string
-    bundleHash: string
     compilerVersion: string
+    workflowVersion: string
+    provenance: ArtifactProvenanceV1
   }
+  renderable: RenderableBundleDescriptorV1
 }
 ```
+
+`bundleHash` 基于不含自身 hash 的 canonical manifest core 和实体文件 hash 计算；
+file 按 path 排序，asset hash 排序，数字/字符串按版本化 canonicalizer 编码。输入枚举
+顺序不同不得改变 `bundleHash`。
 
 ### 8.3 门禁链
 
@@ -447,7 +499,7 @@ export interface CompositionBundleV1 {
 | G1 | normalize | 输入形态唯一、无猜测式截取 |
 | G2 | schema | strict schema、长度和字段完整 |
 | G3 | syntax | HTML/CSS/JS 可解析 |
-| G4 | security | 无网络/import/eval/worker/storage/cookie |
+| G4 | static security | 无网络/import/eval/worker/storage/cookie |
 | G5 | determinism | 无墙钟、rAF、ticker、无种子随机、无限循环 |
 | G6 | compile | shell/timing/root/id/timeline 合同成立 |
 | G7 | HyperFrames lint/check | CLI 静态与运行时检查为 0 finding |
@@ -455,8 +507,14 @@ export interface CompositionBundleV1 {
 | G9 | pixel determinism | 同帧双拍 hash 相同，样本非空 |
 | G10 | media receipt | ffprobe 尺寸/时长/流和实体 SHA-256 正确 |
 
-G1–G5 失败可以把结构化问题反馈给同一 Pi session；G6–G10 属于 compiler/render
-问题，不允许继续让模型“猜着修基础设施”。
+G1–G5 失败可以把 `issueCodes` 反馈给 fabricate 的新短生命周期 repair invocation；
+不得复用已终止的 Agent session。G6–G10 属于 compiler/render 问题，不允许继续让
+模型“猜着修基础设施”。
+
+静态 G4 不能证明运行时安全。G6–G9 的执行必须发生在独立 browser context/进程中，
+配置 `default-src 'none'` 的受限 CSP、禁网、禁 Node integration、bundle-root 路径
+边界、allowlisted asset materialization、时间/内存/进程/输出大小配额，并对
+console/error 脱敏。`file://` 和相对路径不得逃逸 attempt workspace。
 
 ### 8.4 HyperFrames 单时钟
 
@@ -485,23 +543,45 @@ export interface RenderProvider {
 ## 9. ArtifactStore 与 RenderWorkspace
 
 ```ts
+export interface WorkspaceScope {
+  workspaceId: string
+  projectId: string
+  runId: string
+  attemptId: string
+}
+
 export interface ArtifactStore {
-  put(input: PutArtifactInput): Promise<StoredArtifact>
-  get(key: string): Promise<Uint8Array>
-  head(key: string): Promise<ArtifactHead | null>
-  remove(key: string): Promise<void>
+  put(scope: WorkspaceScope, input: PutArtifactInput): Promise<StoredArtifact>
+  get(scope: WorkspaceScope, artifactId: string): Promise<Uint8Array>
+  head(scope: WorkspaceScope, artifactId: string): Promise<ArtifactHead | null>
+}
+
+export interface ArtifactGcStore {
+  removeForGc(
+    scope: Pick<WorkspaceScope, 'workspaceId'>,
+    artifactId: string,
+    capability: GcCapability
+  ): Promise<void>
 }
 
 export interface RenderWorkspace {
-  create(attemptId: string): Promise<WorkspaceHandle>
-  materialize(artifact: StoredArtifact, target: WorkspaceHandle): Promise<string>
+  create(scope: WorkspaceScope): Promise<WorkspaceHandle>
+  materialize(
+    scope: WorkspaceScope,
+    artifactId: string,
+    target: WorkspaceHandle,
+    relativePath: string
+  ): Promise<string>
   cleanup(target: WorkspaceHandle): Promise<void>
 }
 ```
 
-远端 store 不承诺 `localPath()`；需要本地路径的 CLI/FFmpeg 必须经
-`RenderWorkspace.materialize()`。业务域不得直接 import `node:fs/promises` 管理
-跨域 artifact。
+ArtifactStore 自行生成 storage key，业务代码只持有 workspace-scoped artifact ID。
+删除只向 GC service 暴露，失败且尚未 commit 的上传按 upload token 回收，不能传 raw
+key。远端 store 不承诺 `localPath()`；需要本地路径的 CLI/FFmpeg 必须经
+`RenderWorkspace.materialize()`，且 `relativePath` 只能落在 attempt root 内。
+绝对路径不得持久化、进入日志或返回 UI。业务域不得直接 import
+`node:fs/promises` 管理跨域 artifact。
 
 ---
 
@@ -516,11 +596,12 @@ export interface RenderWorkspace {
 | `canvas_nodes` | 产品 DAG 节点 | 复合 FK project、node status CHECK |
 | `canvas_edges` | DAG 边 | source/target 复合 FK、唯一边 |
 | `pipeline_runs` | 一次用户启动的业务运行 | trigger_run_id、status、input fingerprint |
-| `task_attempts` | task/shot attempt 与 checkpoint | attempt fence、task kind/status CHECK |
-| `artifacts` | 不可变版本化产物索引 | hash、schema_version、supersedes、唯一版本 |
-| `command_receipts` | API 命令幂等 | key+fingerprint 冲突检测 |
-| `provider_settings` | 非秘密模型路由配置 | workspace scoped |
-| `ai_invocations` | 明确字段的调用审计 | task/provider/model/usage；非通用 event log |
+| `task_attempts` | Trigger/worker attempt 与 checkpoint | `(run_id,task_kind,entity_id,attempt_no)` unique；attempt fence |
+| `artifacts` | 不可变版本化聚合产物 | aggregate type/id、kind、version、lifecycle、hash、attempt、supersedes |
+| `command_receipts` | API 命令幂等 | UUID id；`(workspace_id,idempotency_key)` unique；fingerprint 冲突检测 |
+| `model_routes` | 非秘密模型路由配置 | `(workspace_id,ai_task_kind)` unique |
+| `provider_credentials` | 加密 provider credential | ciphertext、key_version、verified_at；禁止明文 fallback |
+| `ai_invocations` | Pi invocation/repair 审计 | `invocation_no`、`repair_no`、provider/model/usage；非通用 event log |
 
 ### 10.2 通用约定
 
@@ -533,6 +614,11 @@ export interface RenderWorkspace {
 - 状态使用 text + named CHECK，避免数据库 enum 难迁移；
 - 所有可更新聚合带 `revision`，使用 compare-and-swap；
 - approved/released artifact version 不可更新、不可删除；
+- artifact lifecycle 仅 `draft/approved/released/rejected`，唯一版本约束为
+  `(workspace_id,aggregate_type,aggregate_id,kind,version)`；
+- DB trigger 阻止 `approved/released` artifact 被 update/delete；
+- `model_routes` 不存 secret；credential 使用应用层 authenticated encryption，
+  master key 仅来自 server-only env/secret manager；
 - `content_hash` 是实体内容 SHA-256，不得用 input key 冒充。
 
 ### 10.3 不建 `run_events`
@@ -540,6 +626,14 @@ export interface RenderWorkspace {
 UI 所需业务进度来自 `pipeline_runs + task_attempts + canvas_nodes + artifacts`。
 Trigger 状态和日志由 Trigger Realtime/Dashboard 提供。只有模型调用审计进入字段
 明确的 `ai_invocations`，不把所有状态塞进任意 JSON event 表。
+
+状态所有权固定为：
+
+- `task_attempts` 的 checkpoint/terminal 是步骤级业务真源；
+- `pipeline_runs.status` 是持久化聚合状态；
+- `canvas_nodes.status` 是可重建产品投影，只能与 attempt/artifact commit 在同一事务
+  更新，不接受独立“改节点状态”命令；
+- Trigger status 只负责 transport/live view；Realtime 不能直接写业务 terminal。
 
 ---
 
@@ -612,17 +706,20 @@ PurpleInk SkillInputV1
   → StructuredModelPort
   → PurpleInk Plan DTO
   → PurpleInk compiler
-  → CompositionBundleV1-compatible manifest
+  → PurpleInkCompositionBundleV1
+  → RenderableBundleDescriptorV1
 
 CVC Project/Shot Input
   → Pi AiTaskRuntime
   → ShotSourcePackageV1
   → CVC video-compiler
-  → CompositionBundleV1
+  → CvcCompositionBundleV1
+  → RenderableBundleDescriptorV1
 ```
 
-共享点是 bundle/render task/receipt/provenance，不要求两个 compiler 使用相同输入。
-未来只有当双方向同一个 shared package 提交过真实生产 bundle 后，才迁出公共包。
+共享点是 `RenderableBundleDescriptorV1`、render task/receipt/provenance，不要求
+两个 compiler 使用相同输入或相同本地 bundle schema。未来只有当双方各自提交过
+真实生产 release fixture 后，才迁出公共包。
 
 ---
 

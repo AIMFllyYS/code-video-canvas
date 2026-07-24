@@ -68,7 +68,8 @@ retry、并发、取消与 Realtime，不再复制一套调度基础设施。
   → ShotSourcePackageV1
   → 安全/确定性门禁
   → video-compiler
-  → CompositionBundleV1
+  → CvcCompositionBundleV1
+  → RenderableBundleDescriptorV1
 ```
 
 完整 HTML、单个 code fence、四段 legacy fence 都只是 compatibility input。
@@ -77,14 +78,18 @@ Canonical 结构始终是显式字段。前端允许用户看见提取结果并�
 
 ### Q5：未来与 PurpleInk 合并，究竟合并什么？
 
-第一阶段不合并应用、数据库全集或 Agent Runtime，只合并稳定合同：
+第一阶段不合并应用、数据库全集、Agent Runtime 或两个项目各自的 compiler bundle，
+只对齐稳定的跨项目合同：
 
 - `DirectorInputV1` / `LaunchVideoPlanV1` 适配；
-- `ShotSourcePackageV1`；
-- `CompositionBundleV1`；
+- `RenderableBundleDescriptorV1`；
 - `RenderTaskV1` / `RenderReceiptV1`；
 - artifact provenance、hash、attempt fencing；
 - HyperFrames 质量门序列。
+
+`ShotSourcePackageV1` 与 `CvcCompositionBundleV1` 是 CVC 本地合同；
+PurpleInk 的本地 bundle 命名为 `PurpleInkCompositionBundleV1`。二者不得因字段相似而
+复用同一个类型名。
 
 等两个项目都完成真实生产验证后，再决定共享 package 或仓库结构。
 
@@ -183,7 +188,8 @@ Canonical 结构始终是显式字段。前端允许用户看见提取结果并�
 
 - 当前模型 HTML 直接接近 renderer；
 - app-owned fps/duration/seed 仍可能被模型文本影响；
-- 没有稳定的 `CompositionBundleV1`。
+- 没有稳定的 `CvcCompositionBundleV1` 与跨项目
+  `RenderableBundleDescriptorV1`。
 
 ### 3.10 渲染
 

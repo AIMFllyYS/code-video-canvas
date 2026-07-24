@@ -18,7 +18,8 @@ PurpleInk Firenze 的 compiler 输入是受约束 Plan，CVC 的核心是 AI 生
 1. 模型输出先归一为 `ShotSourcePackageV1`；
 2. 原始完整 HTML 只走 legacy extraction，不直接执行；
 3. G1–G5 在 compile 前完成；
-4. `packages/video-compiler` 纯函数式生成 `CompositionBundleV1`；
+4. `packages/video-compiler` 纯函数式生成 `CvcCompositionBundleV1`，并导出
+   `RenderableBundleDescriptorV1`；
 5. compiler 拥有 shell、尺寸、duration、seed、timing、依赖与资产；
 6. HyperFrames CLI 是首版稳定入口；
 7. G6–G10 覆盖 compile、check、seek、pixel hash、media probe；
@@ -30,7 +31,8 @@ PurpleInk Firenze 的 compiler 输入是受约束 Plan，CVC 的核心是 AI 生
 
 正面：
 
-- 不可信模型代码与 renderer 隔离；
+- 不可信模型代码只进入受限 bundle；运行时仍必须通过独立 browser context、断网
+  CSP、资源配额和路径边界进行 sandbox；
 - 同一帧时钟覆盖 preview/render/media；
 - bundle 可寻址、可缓存、可审计；
 - 未来可共享 render worker。
