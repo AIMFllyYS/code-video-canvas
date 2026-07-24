@@ -8,37 +8,25 @@ source_files:
     - src/app/error.tsx
     - src/app/global-error.tsx
     - src/app/not-found.tsx
-    - src/app/api/render/route.ts
-    - src/features/director/stage-runner.ts
-    - src/features/director/stage-result.ts
-    - src/features/render/renderer.ts
-    - src/features/render/queue-handler.ts
-    - src/features/director/queue-handler.ts
+    - src/components/ui/toast.tsx
+    - src/app/api/render/export/route.ts
+    - src/app/api/director/stage/route.ts
 ---
 
-该仓库采用分层、就近捕获的错误处理策略，未定义统一的自定义 Error 子类或全局错误码枚举，而是依赖 JavaScript 原生 `Error`、Zod 校验失败以及 Next.js 内置错误页面机制。
+本仓库采用分层错误处理策略，覆盖客户端渲染、API 路由与业务逻辑三个层面：
 
-**1. 前端全局错误页**
-- `src/app/error.tsx`：路由级错误页，展示 `error.message` 并提供「重试」按钮调用 `reset()`。
-- `src/app/global-error.tsx`：应用级全局错误页，结构相同但包裹 `<html>`/`<body>`，用于渲染阶段抛出的异常。
-- `src/app/not-found.tsx`：404 页面，纯 UI 组件。
+1. **客户端全局错误页**：`src/app/error.tsx` 与 `src/app/global-error.tsx` 分别处理页面级与全局级异常，统一展示「出错了 / 系统错误」+ 错误消息 + 「重试」按钮，通过 Next.js App Router 的 error boundary 机制捕获未处理异常。
 
-**2. API 层错误返回**
-- API Route（如 `src/app/api/render/route.ts`）统一使用 `NextResponse.json({ ok, error }, status)` 格式返回错误，状态码按语义区分：400（请求体无效）、404（资源不存在）、409（冲突/入队失败）。
-- 通过 `safeParse` 进行参数校验，失败时直接返回 400，不抛出异常。
+2. **404 页面**：`src/app/not-found.tsx` 提供统一的 404 页面，包含返回首页链接。
 
-**3. 业务逻辑中的错误传播**
-- 使用 `try/catch` 就近捕获并记录，配合状态机 `transitionNodeStatus(nodeId, 'failed')` 标记节点失败。
-- 关键路径（stage-runner、queue-handler、render queue-handler）在 catch 块中执行补偿清理（回滚状态、记录错误），若补偿本身失败则用 `AggregateError` 聚合所有错误后重新抛出。
-- `stage-result.ts` 中对模型输出进行 Zod 解析，解析失败直接 `throw new Error(...)`，由上层 runner 捕获。
-- `renderer.ts` 的 `assertDeterministic` 对确定性违规抛出结构化错误消息。
+3. **API 层错误约定**：所有 API 路由（如 `src/app/api/render/export/route.ts`、`src/app/api/director/stage/route.ts`）遵循一致的响应格式：成功返回 `{ ok: true, ... }`，失败返回 `{ ok: false, error: string }`。请求体使用 Zod schema 进行严格校验（`z.object(...).strict()`），校验失败直接返回 400 并附带 `parsed.error.issues[0]?.message`。
 
-**4. 队列与异步任务错误**
-- `enqueueDirectorStage` / `enqueueRenderShot` 在入队失败时调用 `compensateEnqueueFailure` 回滚状态并记录错误，再抛出原始错误。
-- 队列处理器内部 `failRender` / stage runner 的 catch 块确保无论成功失败都会将节点状态置为 `running` → `success`/`failed`。
+4. **try/catch 补偿模式**：业务代码广泛使用 try/catch 包裹外部调用（AI 适配器、ffmpeg、队列等），捕获后提取 `error instanceof Error ? error.message : String(error)` 作为用户可读消息，并通过 toast 通知或 JSON 响应返回。例如 `features/ai/gemini-adapter.ts`、`features/render/queue-handler.ts` 等均遵循此模式。
 
-**5. 约定与约束**
-- 不在业务代码中定义自定义 Error 子类，统一使用 `new Error(message)`。
-- API 层禁止 throw，统一返回 `{ ok, error }` JSON。
-- 所有可能失败的 I/O 操作都包裹 try/catch，并在 finally 中保证资源清理（临时目录、序列清理）。
-- 错误信息以中文为主，面向开发者可读。
+5. **前端 Toast 通知**：`src/components/ui/toast.tsx` 提供全局 toast 系统，支持 `info | success | warning | error` 四种变体，作为用户反馈的统一出口。
+
+6. **无自定义 Error 类**：代码中未发现继承 `Error` 的自定义错误类型定义，错误主要通过原生 `new Error('message')` 抛出，由上层统一格式化。
+
+7. **无 panic/recover 机制**：TypeScript/Node.js 环境下未使用类似 panic/recover 的模式，错误均通过 throw/catch 传播。
+
+8. **中间件缺失**：未发现 Express/Koa 风格的错误处理中间件，错误处理内联在各路由文件中。
