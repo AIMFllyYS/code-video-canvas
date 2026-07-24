@@ -250,8 +250,14 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   扫描全部 PASS；旧 attempt、跨 workspace queue 饥饿与 audio 并发补偿均有 PG/并发
   负测；浏览器/视觉 E2E 按用户要求留到 N7；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n13)
-- [ ] **N1.4 SQLite export、Postgres import 与计数/hash 对账** —
-  `task_state=in_progress; status=ready; blocked_by=none; preflight=53b4520`;
+- [x] **N1.4 SQLite export、Postgres import 与计数/hash 对账** —
+  `task_state=done; status=ready; blocked_by=none; commit=cf7b36f; preflight=53b4520`;
+  evidence=`docs/evidence/refactor-v3/n1/import-reconciliation.md`；真实只读 SQLite
+  export 272 行并导入 312 个活动 PG target，重复 import 为
+  `inserted=0/replayed=true`；六表 PK/row hash、missing/extra/unresolved、
+  strict target/content mismatch 均为 0；focused 2 files / 10 tests、PG 3 files /
+  13 tests、完整 PG 16 files / 77 tests、lint/typecheck、函数/文件长度、UTF-8、
+  secret、绝对机器路径与 staged scope 门禁通过；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n14)
 - [ ] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
   `task_state=todo; status=ready; blocked_by=none; preflight=513bb1d`;
