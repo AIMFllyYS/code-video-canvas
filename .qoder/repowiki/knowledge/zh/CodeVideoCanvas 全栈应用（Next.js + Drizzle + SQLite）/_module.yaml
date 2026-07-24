@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: ""
-title: CodeVideoCanvas 全栈应用根（Next.js + Pi Agent + Trigger.dev + Postgres）
+title: CodeVideoCanvas 全栈应用（Next.js + Drizzle + SQLite）
 scope: []
 source_files: []
 depends_on: []
