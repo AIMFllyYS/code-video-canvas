@@ -185,7 +185,7 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   `new Agent(` 仅位于既有 Pi 封装；并发 `.qoder/repowiki/**` WIP 未读取、未修改、未 stage;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n02)
 - [ ] **N0.3 把 source/runtime 合同检查前移到 render enqueue** —
-  `task_state=todo; status=ready; blocked_by=none`;
+  `task_state=in_progress; status=ready; blocked_by=none`;
   [details](../issues/refactor-v3/issue-n0-baseline-and-bleeding-fixes.md#task-n03)
 - [ ] **N0.4 修复 API 结果丢弃与 UI 假进度** —
   `task_state=todo; status=ready; blocked_by=none`;
