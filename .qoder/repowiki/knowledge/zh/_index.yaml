@@ -3,11 +3,11 @@ schema_version: 1
 locale: zh-CN
 branch: main
 nodes_managed: true
-exported_at: "2026-07-24T12:07:56Z"
+exported_at: "2026-07-24T16:39:29Z"
 modules:
     "":
-        dir_name: CodeVideoCanvas 视频创作平台（Next.js 全栈应用）
-        title: CodeVideoCanvas 视频创作平台（Next.js 全栈应用）
+        dir_name: CodeVideoCanvas 全栈应用根（Next.js + Pi Agent + Trigger.dev + Postgres）
+        title: CodeVideoCanvas 全栈应用根（Next.js + Pi Agent + Trigger.dev + Postgres）
         scope: []
         source_files: []
         children: []

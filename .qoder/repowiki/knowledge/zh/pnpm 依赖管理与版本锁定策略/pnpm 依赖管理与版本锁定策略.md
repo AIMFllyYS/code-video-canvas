@@ -10,15 +10,29 @@ source_files:
     - docs/video-director/package.json
 ---
 
-本仓库使用 pnpm（指定版本 9.15.0）作为唯一的包管理器，通过 `packageManager` 字段在 `package.json` 中强制统一开发环境。依赖声明集中在根目录的 `package.json`，分为运行时依赖与开发依赖两类：运行时依赖包括 Next.js、React、GSAP、Zod、OpenAI SDK、Playwright、better-sqlite3、ffmpeg-static 等；开发依赖涵盖 TypeScript、Vitest、ESLint、Tailwind CSS、Drizzle Kit 以及内部 `@earendil-works/pi-agent-core` 和 `@earendil-works/pi-ai` 两个私有/专用包。
+本仓库使用 pnpm 作为包管理器，通过 `package.json` 声明依赖、`pnpm-lock.yaml` 锁定精确版本，并配合 `overrides` 与 `onlyBuiltDependencies` 实现依赖治理。
 
-版本锁定通过 `pnpm-lock.yaml`（lockfileVersion 9.0）实现，所有依赖的具体版本与完整性校验哈希均被记录，确保构建可重现。仓库未使用 vendoring，而是依赖 pnpm 的严格安装语义与 lockfile 保证一致性。
+**系统与工具**
+- 包管理器：pnpm 9.15.0（由 `packageManager: "pnpm@9.15.0"` 强制）
+- 锁文件：`pnpm-lock.yaml`（lockfileVersion 9.0），记录所有依赖的精确版本与完整性校验哈希
+- 构建脚本：Next.js + TypeScript + Vitest + ESLint + Drizzle Kit
 
-关键约束与覆盖策略：
-- `pnpm.overrides` 显式固定了 `typescript-eslint`、`@typescript-eslint/eslint-plugin`、`@typescript-eslint/parser` 为 8.61.1，以规避上游 tarball 缺失 `configs` 目录的问题；同时把 `better-sqlite3` 从声明的 13.0.1 回退到 12.1.0，解决 Node 20 上 native crash 问题。
-- `pnpm.onlyBuiltDependencies` 仅允许 `better-sqlite3`、`esbuild`、`ffmpeg-static` 三个含原生编译的包执行构建脚本，减少安装时的安全风险与构建时间。
-- 部分依赖使用宽松范围（如 `next >=16.2.0`、`react/react-dom >=19.2`），但实际解析后的精确版本由 lockfile 锁定。
+**关键文件与位置**
+- 根 `package.json`：声明生产/开发依赖、pnpm 配置（`overrides`、`onlyBuiltDependencies`）
+- `pnpm-lock.yaml`：全量依赖解析结果，包含 `importers`、`packages`、`overrides` 等段
+- `docs/video-director/package.json`：独立 skill 子项目，无 pnpm 配置，仅用 Node 脚本运行
 
-子模块方面，`docs/video-director/package.json` 是一个独立的 skill 包，不共享根级依赖，拥有自己的脚本体系（prompts/experience/release 等），但未包含依赖声明，推测其依赖通过外部机制同步或继承。
+**架构与约定**
+- 单仓单应用：无 workspace 配置，所有依赖集中在根 `package.json`
+- 依赖分类清晰：`dependencies` 为运行时依赖（Next、React、OpenAI、Jimp、ffmpeg-static 等），`devDependencies` 为构建/测试工具链
+- 严格版本锁定：所有依赖在 lock 文件中都有精确 version 与 integrity 字段，确保可重复安装
+- 原生模块白名单：通过 `onlyBuiltDependencies` 限定 `better-sqlite3`、`esbuild`、`ffmpeg-static` 三个需要编译的原生包，减少不必要的 rebuild
+- 依赖覆盖策略：通过 `pnpm.overrides` 强制统一 `typescript-eslint` 生态版本为 `8.61.1`，并将 `better-sqlite3` 降级到 `12.1.0`（与 `drizzle-orm` 兼容）
+- 语义化版本范围：生产依赖普遍使用 `^` 或 `>=` 前缀（如 `next >=16.2.0`、`react >=19.2`），允许小版本升级但锁定大版本
 
-没有发现 `.npmrc`、`.pnpmrc` 或私有 npm registry 配置，也未见 `pnpm-workspace.yaml`，表明这是一个单包仓库，不涉及多包工作区管理。
+**约束与规则**
+- 必须使用 pnpm 安装依赖（`packageManager` 字段由 pnpm 强制执行）
+- 新增原生依赖需加入 `onlyBuiltDependencies` 列表，避免每次安装都触发编译
+- 依赖冲突通过 `overrides` 集中解决，而非在各子包中单独指定
+- 子项目（如 `docs/video-director`）不共享依赖，各自独立管理
+- 未使用私有 npm 注册表或 vendoring，所有包来自 npm registry

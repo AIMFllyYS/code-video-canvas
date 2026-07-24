@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: ""
-title: CodeVideoCanvas 视频创作平台（Next.js 全栈应用）
+title: CodeVideoCanvas 全栈应用根（Next.js + Pi Agent + Trigger.dev + Postgres）
 scope: []
 source_files: []
 depends_on: []
