@@ -197,3 +197,9 @@ output/
 # Video Director Skill
 # ========================
 docs/video-director/
+
+# ========================
+# Qoder workspace (only track the generated repo wiki)
+# ========================
+/.qoder/*
+!/.qoder/repowiki/

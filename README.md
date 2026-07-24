@@ -80,6 +80,8 @@ scripts/            辅助脚本
 
 ## 文档
 
+> 📚 **[Repo Wiki（自动生成的仓库知识库）](./.qoder/repowiki/zh/content/项目概述/项目概述.md)** — 系统梳理项目概述、架构设计、核心功能模块、UI 组件库、API 参考与开发指南，推荐从这里快速理解与协作。
+
 - [产品需求 PRD](./docs/specs/2026-07-23-prd-code-video-canvas.md)
 - [平台架构设计](./docs/designs/2026-07-23-platform-architecture-design.md)
 - [设计系统清单](./docs/designs/2026-07-23-design-system-inventory.md)（Token / 颜色 / 图标 / 组件 / 布局）

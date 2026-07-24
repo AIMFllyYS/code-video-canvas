@@ -1,0 +1,25 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+branch: main
+nodes_managed: true
+exported_at: "2026-07-24T02:27:44Z"
+modules:
+    "":
+        dir_name: Next.js 全栈应用根配置与构建管线
+        title: Next.js 全栈应用根配置与构建管线
+        scope:
+            - README.md
+            - .gitignore
+            - package.json
+            - pnpm-lock.yaml
+            - next.config.ts
+            - tsconfig.json
+            - drizzle.config.ts
+            - eslint.config.mjs
+            - postcss.config.mjs
+            - vitest.config.ts
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

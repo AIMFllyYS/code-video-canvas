@@ -1,0 +1,17 @@
+schema_version: 1
+module_path: ""
+title: Next.js 全栈应用根配置与构建管线
+scope:
+    - README.md
+    - .gitignore
+    - package.json
+    - pnpm-lock.yaml
+    - next.config.ts
+    - tsconfig.json
+    - drizzle.config.ts
+    - eslint.config.mjs
+    - postcss.config.mjs
+    - vitest.config.ts
+source_files: []
+depends_on: []
+related_to: []
