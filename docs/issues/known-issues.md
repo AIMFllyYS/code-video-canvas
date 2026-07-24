@@ -1,12 +1,14 @@
-# Track H — 系统性前后端打通修复：已知问题清单
+# 系统性前后端打通修复：已知问题清单（Track H + 第二轮全局审查）
 
-> Created: 2026-07-24
+> Created: 2026-07-24 · 第二轮（issue-09~13）追加于 2026-07-24
 > 与 [`docs/specs/2026-07-23-harness-task-breakdown.md`](../specs/2026-07-23-harness-task-breakdown.md) 的 Track H 小节互为索引：本文件是详细清单，task-breakdown 只登记摘要。
 > 背景分析见对应会话记录；核心根因是既往验收标准只测"按钮点击是否触发对应 API"，未测"页面展示的每个字段是否真实"，详见 AGENTS.md「UI 字段真实性门禁」。
 
 ## 后续施工交接
 
 `issue-01/02/03/04/05/06/07/08` 已全部完成（Track H 系统性前后端打通修复全部收口，2026-07-24）；历史并行开工指南与 Goal 启动提示词见 [`next-wave-handoff.md`](./next-wave-handoff.md)。
+
+**第二轮（2026-07-24 全局架构审查）新增 `issue-09~13`**，源自对「AI 流式输出失效 / 工作流无法一键推进 / Key 与 4 类模型配置断裂」三大用户实测症状的全链路根因分析，详见下方「第二轮索引」。
 
 ## 使用说明
 
@@ -64,6 +66,40 @@ Wave 编号只表示"建议的先后顺序"，**不代表必须串行**。逐个
 | [`issue-07-canvas-lane-panel-summary`](./issue-07-canvas-lane-panel-summary.md) | P2 | 2 | 无 | 分镜通道折叠面板补充子节点状态摘要 | **已完成**（2026-07-24，`29bba21`） |
 | [`issue-08-export-service-storage-adapter-boundary`](./issue-08-export-service-storage-adapter-boundary.md) | P2 | 2 | 无 | `export-service.ts` 裸 `fs` 改走 `StorageAdapter` | **已完成**（2026-07-24） |
 
+## 第二轮索引（2026-07-24 全局架构审查，issue-09~13）
+
+```mermaid
+flowchart TB
+    subgraph wave5 [Wave 5 -- P0 可立即并行]
+        I09[issue-09 流式输出 split-brain 修复]
+        I10[issue-10 StepFun 配置统一 resolver]
+    end
+    subgraph wave6 [Wave 6]
+        I11[issue-11 一键启动 + DAG 自动推进]
+    end
+    subgraph wave7 [Wave 7]
+        I12[issue-12 TTS/ASR/Vision 接线]
+        I13[issue-13 FABRICATE 门禁反馈重试]
+    end
+    I10 --> I12
+    I09 -.->|联调验收建议先行| I11
+    I11 -.->|stage-runner.ts 文件冲突 建议串行| I13
+```
+
+| Issue | 优先级 | Wave | 依赖 | 一句话目标 | 状态 |
+|---|---|---|---|---|---|
+| [`issue-09-stream-singleton-split-brain-and-replay`](./issue-09-stream-singleton-split-brain-and-replay.md) | P0 | 5 | 无 | 修复 streamBus/queue/db 模块级单例 split-brain + SSE useLive 判定 + 终态回放兜底，流式面板不再永久"正在连接 AI 流… 0 字" | 待施工 |
+| [`issue-10-stepfun-config-resolver-and-model-settings`](./issue-10-stepfun-config-resolver-and-model-settings.md) | P0 | 5 | 无 | `getStepfunConfig()` 统一 settings>env>默认 三层解析，设置页支持 4 类模型配置并消灭 `step-1-8k` 等假值 | 待施工 |
+| [`issue-11-one-click-pipeline-auto-advance`](./issue-11-one-click-pipeline-auto-advance.md) | P1 | 6 | 软依赖 issue-09（联调验收） | `advancePipeline` 消费 DAG 边链式自动推进 + autopilot 开关 + 顶栏一键启动接线 + Inspector 按钮文案修正 | 待施工 |
+| [`issue-12-tts-asr-vision-model-wiring-gap`](./issue-12-tts-asr-vision-model-wiring-gap.md) | P2 | 7 | issue-10 | TTS/ASR/Vision 三类模型从"定义了零引用"到真实接线（配音/字幕时间轴/多模态验收）；短期先做显式占位声明 | 待施工 |
+| [`issue-13-fabricate-gate-feedback-retry`](./issue-13-fabricate-gate-feedback-retry.md) | P2 | 7 | 建议 issue-11 后串行 | FABRICATE 确定性门禁失败时在同会话内有界反馈重试（违规明细回注模型），减少人工冷启动重试 | 待施工 |
+
+### 第二轮并行执行建议
+
+- **可立即同时开工的 2 个（互相零文件重叠）**：`issue-09`（`src/lib/stream|queue|db` + SSE 路由 + hook）与 `issue-10`(`features/ai/**` + settings API/页面 + `pi-session.ts` 的 runtime 构造段）。`issue-11` 与二者也零文件重叠，如有第三条并行分支可同时开工（联调验收建议等 issue-09 合并后做）。
+- **必须协调的文件级冲突**：`issue-11` 与 `issue-13` 都改 `src/features/director/stage-runner.ts`（前者改成功后 advance 挂接，后者改 run→write 重试循环），建议串行；`issue-12` 的"短期最小动作"与 `issue-10` 同文件（`settings-form.tsx`、`.env.example`），建议直接并入 `issue-10` 分支完成。
+- **根因交叉提示**：issue-09 的 split-brain 修复（globalThis 单例）是 issue-11 autopilot 联调的事实前置——链式执行会显著增加流式面板的使用频率，先修 09 可避免联调期间被已知症状干扰。
+
 ## 关键决策记录（2026-07-24 已与负责人确认）
 
 以下问题原本分散在各 issue 文档的"待确认问题"章节，通过一轮结构化问答已全部拍板，此处汇总留痕；各 issue 文档正文已同步更新为"已拍板"表述：
@@ -94,4 +130,5 @@ Wave 编号只表示"建议的先后顺序"，**不代表必须串行**。逐个
 | 2026-07-24（issue-04 完成） | 新增 `features/render/thumbnail.ts` 共享缩略图基础设施（fraction→frame 换算、sha256 缓存寻址、单 session 批量截帧、失败补偿），`RenderRepository` 新增三个只读/登记方法；13 个 mock 单测 + 3 个真实 Playwright 集成测试；提交 `48cd5c5` |
 | 2026-07-24（issue-08 完成） | `export-service.ts` 裸 `node:fs/promises` 调用改走 `StorageAdapter` 新增的 `tempDir`/`readLocalFile`/`removeTempDir` 三个方法，`exportProject()` 行为与产物字节无回归；提交 `19fe79b` |
 | 2026-07-24（issue-06 完成） | Part A 导出分辨率三档预设（9:16）可配置：`projects.exportSettings` JSON 列（迁移 `0002_solid_prism.sql`）+ 新 `PATCH /api/projects/[id]`；`concat.ts` 按目标≠母版分「`-vf scale` 重编码 / `-c:v copy` 无损」两路，默认预设零回归。Part B Final QA：新增 `features/render/qa-check.ts`（`jimp` 亮度均值黑帧 + 标准差纯色规则）+ 编排写回 `shot-qa` 节点 `data.qaCheck`（contentHash 跳过），`GET /api/render/export` 惰性触发并返回 `shotQa`（未检测为 `null`）。**关键修正**：`export-settings.ts` 因 `director↔render`/`render↔canvas` 循环风险实置于 `features/canvas`。全量 62 files/241 tests 绿，lint/tsc/build 通过 |
+| 2026-07-24（第二轮审查） | 全局架构审查定位三大症状根因：①流式面板永久"正在连接"= streamBus 模块级单例 split-brain + SSE 订阅隐式建空 entry + useLive 判定缺陷三者叠加（issue-09）；②工作流无一键推进 = `canvas_edges` 零消费 + 顶栏死按钮 + Inspector 文案误导（issue-11）；③4 类模型配置断裂 = TTS/ASR/VISION env 零引用 + 设置页 `step-1-8k` 假值 + 模型无 settings 覆盖通道（issue-10/12）；另登记 FABRICATE 门禁失败无反馈重试（issue-13）。新增 issue-09~13 五份任务卡 |
 | 2026-07-24（issue-05 完成） | 分镜渲染器页（`/canvas/shot/[id]`）六处占位打通：`page.tsx` 自动加载 `render-mp4` 历史产物、受控 `<video>`（播放·逐帧·进度·时间戳，预览态隐控件）、缩略图轨道消费新增 `GET /api/render/thumbnails`（内部调 issue-04 `captureThumbnails`）、同步状态诚实化、合同构图模式（同通道 `shot-script` 的 `director-shot-spec`）/分辨率（`renderSpec`）/确定性声明（`render-mp4` 存在）接真实数据、独立"生成分镜代码"入口复用 `/api/render`；新增 `shot-server-data.ts` + `shot-api` 纯函数与 `fetchThumbnails` + 8 个单测；`pnpm lint` 全绿、`pnpm build` 通过（含新路由）、issue-05 文件 `tsc` 干净、集成测试隔离通过；**仅全树 `tsc --noEmit` 被未提交的 issue-06 WIP（`export-service.test.ts` 3 处类型错误）阻塞，未越界修复**；待提交 |
