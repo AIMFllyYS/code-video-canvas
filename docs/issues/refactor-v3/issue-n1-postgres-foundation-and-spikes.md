@@ -764,6 +764,7 @@ Expected: Tier-light checks通过；commit 不含 N1.1 backup、`.env*`、ordina
 - Create: `scripts/migration/export-sqlite.ts`
 - Create: `scripts/migration/import-postgres.ts`
 - Create: `scripts/migration/reconcile-postgres.ts`
+- Create: `scripts/migration/provision-master-key.ts`
 - Create: `docs/evidence/refactor-v3/n1/import-reconciliation.md`
 - Create (generated): `src/lib/db/migrations/pg/0001_*.sql`
 - Create (generated): `src/lib/db/migrations/pg/meta/0001_snapshot.json`
@@ -901,12 +902,32 @@ settings.v1.jsonl
 credential 行在内存中加密后写 envelope，绝不写原文；master key 缺失时 export
 失败，不得生成半份 manifest。真实 export、import 与后续 runtime 必须使用同一个
 持久 server-only master key；禁止仅为单次命令生成随后丢失的临时 key。
+首次真实 export 前运行
+`pnpm.cmd tsx scripts/migration/provision-master-key.ts --env .env.local`：
+`.env.local` 已被 `.gitignore` 覆盖；脚本必须复用并校验已有
+`CVC_CREDENTIAL_MASTER_KEY`，绝不覆盖已有值；缺失时使用
+`randomBytes(32).toString('base64')` 安全生成并以同目录临时文件加原子 rename
+写入，stdout/stderr 只报告 `created|reused`，不得输出 key。raw `tsx` export CLI
+在读取 credential 前显式通过 `process.loadEnvFile('.env.local')` 加载同一文件；
+Next runtime 继续使用其标准 server-only `.env.local` 加载。运行前后必须用
+`git check-ignore -q .env.local` 与 `git status --short -- .env.local` 证明该文件
+不会进入版本控制，任何 `git add` 清单均禁止 `.env*`。
 `provider_credentials.verified_at` 由 N1.4 tracked migration 改为 nullable；实时设置
 API 仍只在 provider 校验成功后以非空时间调用 `ProviderCredentialStore.save()`，
 legacy importer 直接写 null，不把 setting 更新时间或迁移时间伪造成验证证据。
 artifact manifest 只含相对 storage key、存在性、size、SHA-256；禁止绝对路径。
 
 - [ ] **Step 3: 实现按 project transaction 的幂等 importer**
+
+先把 `src/lib/db/schema/ai.ts` 的 `verified_at` 攟为 nullable，再运行
+`pnpm.cmd db:generate` 生成 tracked `0001_*.sql` 与 Drizzle meta；逐行审阅生成 SQL，
+确认它只包含本 Task 授权的
+`ALTER TABLE provider_credentials ALTER COLUMN verified_at DROP NOT NULL` 语义。
+随后运行 credential PG focused test；测试数据库 helper 会先删除并重建 schema，
+从 `0000` 开始应用全部 tracked migration，并必须显式插入一条
+`verified_at IS NULL` 的 legacy credential，断言 `describe()` 返回
+`configured=true, verifiedAt=null`。这同时是 fresh migration 证明，不能只在已迁移
+dev 数据库上检查列属性。
 
 Importer 先核对 snapshot/export SHA，再创建固定 local workspace
 `00000000-0000-4000-8000-000000000001`。每个 project 及其 node/edge/artifact
@@ -947,6 +968,13 @@ disposition，禁止临时伪造 provenance attempt。project aggregate 使用�
 Run:
 
 ```powershell
+$env:PATH='C:\Users\AIMFl\AppData\Roaming\npm;C:\Program Files\nodejs;' + $env:PATH
+pnpm.cmd db:generate
+$env:TEST_DATABASE_URL='postgresql://cvc:cvc_dev_only@127.0.0.1:54327/cvc_test'
+pnpm.cmd vitest run --config vitest.pg.config.ts src/features/credentials/provider-credential-store.pg.test.ts
+pnpm.cmd tsx scripts/migration/provision-master-key.ts --env .env.local
+git check-ignore -q .env.local
+git status --short -- .env.local
 $env:TEST_DATABASE_URL='postgresql://cvc:cvc_dev_only@127.0.0.1:54327/cvc_test'
 pnpm test -- src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-id.test.ts
 pnpm vitest run --config vitest.pg.config.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.pg.test.ts
@@ -986,7 +1014,7 @@ pnpm eslint src/lib/migration scripts/migration
 pnpm typecheck
 git diff --check
 git add -- src/lib/db/schema/ai.ts src/lib/db/migrations/pg src/features/credentials/provider-credential-store.ts src/features/credentials/provider-credential-store.pg.test.ts
-git add -- src/lib/migration/legacy-export.ts src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-import.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.ts src/lib/migration/legacy-reconcile.pg.test.ts src/lib/migration/legacy-id.ts src/lib/migration/legacy-id.test.ts scripts/migration/export-sqlite.ts scripts/migration/import-postgres.ts scripts/migration/reconcile-postgres.ts docs/evidence/refactor-v3/n1/import-reconciliation.md
+git add -- src/lib/migration/legacy-export.ts src/lib/migration/legacy-export.test.ts src/lib/migration/legacy-import.ts src/lib/migration/legacy-import.pg.test.ts src/lib/migration/legacy-reconcile.ts src/lib/migration/legacy-reconcile.pg.test.ts src/lib/migration/legacy-id.ts src/lib/migration/legacy-id.test.ts scripts/migration/export-sqlite.ts scripts/migration/import-postgres.ts scripts/migration/reconcile-postgres.ts scripts/migration/provision-master-key.ts docs/evidence/refactor-v3/n1/import-reconciliation.md
 git diff --cached --check
 git commit -m "feat(migration): reconcile SQLite data into Postgres"
 ```
