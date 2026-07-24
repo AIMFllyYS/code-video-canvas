@@ -52,8 +52,18 @@ function scanSafe(value: unknown, label = 'evidence'): void {
   }
 }
 
-function verifyTrigger(value: unknown): void {
+function verifyTrigger(value: unknown, waived: boolean): void {
   assertRecord(value, 'TRIGGER')
+  if (waived) {
+    assertEqual(value.passed, false, 'TRIGGER_PASSED')
+    assertEqual(value.waived, true, 'TRIGGER_WAIVED')
+    assertEqual(value.implementationReady, true, 'TRIGGER_IMPLEMENTATION')
+    assertEqual(value.staticGatePassed, true, 'TRIGGER_STATIC_GATE')
+    assertEqual(value.liveRunObserved, false, 'TRIGGER_LIVE_RUN')
+    assertEqual(value.version, '4.5.7', 'TRIGGER_VERSION')
+    assertEqual(value.scopedTokenDeferred, true, 'TRIGGER_SCOPED_TOKEN_DEFERRED')
+    return
+  }
   assertEqual(value.passed, true, 'TRIGGER_PASSED')
   assertEqual(value.version, '4.5.7', 'TRIGGER_VERSION')
   assertEqual(value.exitCode, 0, 'TRIGGER_EXIT')
@@ -126,9 +136,20 @@ function verifyEvidence(value: unknown): asserts value is JsonRecord {
   if (typeof value.generatedAt !== 'string' || !value.generatedAt) {
     throw new Error('EVIDENCE_GENERATED_AT_REQUIRED')
   }
-  verifyTrigger(value.trigger)
+  const waived = isRecord(value.userWaivers)
+    && value.userWaivers.triggerLoginAndLiveRun === true
+  if (waived) verifyWaiver(value.userWaivers)
+  verifyTrigger(value.trigger, waived)
   verifyPi(value.pi)
   verifyHyperframes(value.hyperframes)
+}
+
+function verifyWaiver(value: JsonRecord): void {
+  assertEqual(value.triggerLoginAndLiveRun, true, 'WAIVER_TRIGGER')
+  assertEqual(value.source, 'user', 'WAIVER_SOURCE')
+  if (typeof value.authorizedAt !== 'string' || !value.authorizedAt) {
+    throw new Error('WAIVER_AUTHORIZED_AT_REQUIRED')
+  }
 }
 
 async function readJson(file: string): Promise<unknown> {
@@ -144,16 +165,38 @@ async function readFragment(name: string): Promise<unknown> {
   }
 }
 
+async function resolveTriggerEvidence(): Promise<{
+  trigger: unknown
+  userWaivers?: unknown
+}> {
+  try {
+    return { trigger: await readFragment('trigger') }
+  } catch {
+    const saved = await readJson(EVIDENCE_PATH)
+    assertRecord(saved, 'EVIDENCE')
+    if (
+      !isRecord(saved.userWaivers)
+      || saved.userWaivers.triggerLoginAndLiveRun !== true
+    ) {
+      throw new Error('TRIGGER_EVIDENCE_MISSING')
+    }
+    return { trigger: saved.trigger, userWaivers: saved.userWaivers }
+  }
+}
+
 async function aggregate(): Promise<void> {
-  const [trigger, pi, hyperframes] = await Promise.all([
-    readFragment('trigger'),
+  const [triggerResult, pi, hyperframes] = await Promise.all([
+    resolveTriggerEvidence(),
     readFragment('pi'),
     readFragment('hyperframes'),
   ])
   const evidence = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
-    trigger,
+    ...(triggerResult.userWaivers
+      ? { userWaivers: triggerResult.userWaivers }
+      : {}),
+    trigger: triggerResult.trigger,
     pi,
     hyperframes,
   }

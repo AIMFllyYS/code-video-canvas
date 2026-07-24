@@ -1,17 +1,23 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-25T11:38:42.0767711+13:00",
-  "taskStatus": "blocked",
+  "generatedAt": "2026-07-24T22:49:33.336Z",
+  "userWaivers": {
+    "triggerLoginAndLiveRun": true,
+    "source": "user",
+    "authorizedAt": "2026-07-25"
+  },
   "trigger": {
     "schemaVersion": 1,
     "passed": false,
     "version": "4.5.7",
-    "blocker": "EXTERNAL_AUTH_REQUIRED",
+    "waived": true,
+    "implementationReady": true,
+    "staticGatePassed": true,
+    "liveRunObserved": false,
     "cliLoggedIn": false,
     "projectRefConfigured": false,
     "serverKeyConfigured": false,
-    "runObserved": false,
-    "exitCode": 1,
+    "attemptExitCode": 1,
     "scopedTokenDeferred": true
   },
   "pi": {

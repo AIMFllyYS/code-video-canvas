@@ -259,20 +259,17 @@ cvc.shot.media + cvc.shot.qa → cvc.project.compose
   13 tests、完整 PG 16 files / 77 tests、lint/typecheck、函数/文件长度、UTF-8、
   secret、绝对机器路径与 staged scope 门禁通过；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n14)
-- [ ] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
-  `task_state=in_progress; status=blocked; blocked_by=external-trigger-auth; checkpoint=3a94299; preflight=513bb1d`;
+- [x] **N1.5 Trigger Realtime、Pi terminal Tool、HyperFrames CLI 三项 Spike** —
+  `task_state=done; status=ready; blocked_by=none; commit=3a94299; ledger=3ac56c7; preflight=513bb1d; waiver=user-2026-07-25-trigger-login-live-run`;
   evidence=`docs/evidence/refactor-v3/n1-spikes.json` 与
   `docs/evidence/refactor-v3/n1/trigger-realtime.md`；真实 Pi terminal Tool 与
   HyperFrames doctor/check/5 snapshots/render/ffprobe/decode 均通过；Trigger
-  `cvc.pipeline.run`、typed stream 与真实 probe 已实现并通过静态门禁，但本机无
-  Trigger.dev 登录态、project ref 或 server key，浏览器亦无已认证会话，故未生成
-  run ID、未伪造通过，`--verify-evidence` 正确以 `TRIGGER_PASSED_INVALID` 失败；
+  `cvc.pipeline.run`、typed stream 与真实 probe 已实现并通过静态门禁；用户明确
+  豁免 Trigger.dev 登录和真实云端 run，evidence 保持 `passed:false/waived:true`
+  且不宣称 Realtime 实跑，聚合与 `--verify-evidence` 均通过；
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n15)
 - [ ] **N1.6 移除 runtime SQLite，仅保留只读 migration 工具** —
-  `task_state=in_progress; status=blocked; blocked_by=N1.5; execution_override=user-authorized-independent-progress`;
-  N1.5 外部 Trigger 认证阻塞期间，按用户无人值守指令只推进不依赖真实 Trigger
-  run 的 SQLite 清退实现与 focused gate；N1.6 exit、N1 Tier B 与账本完成状态仍须
-  等 N1.5 live Realtime 证据后关闭；
+  `task_state=in_progress; status=ready; blocked_by=none; execution_override=user-authorized-independent-progress`;
   [details](../issues/refactor-v3/issue-n1-postgres-foundation-and-spikes.md#task-n16)
 
 ### Track N2 — Trigger orchestration

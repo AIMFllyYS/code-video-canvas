@@ -4,11 +4,13 @@
 
 - 日期：2026-07-25
 - SDK/CLI 版本：`4.5.7`
-- 当前结果：`external-auth-blocked`
+- 当前结果：`completed-with-user-waiver`
 - 完成边界：最小 `cvc.pipeline.run`、typed safe progress stream、真实 trigger/
   run subscription 探针均已实现并通过静态门禁。
-- 未完成边界：尚未取得真实 run，因此没有生成
-  `.data/spikes/trigger.json`，也不宣称 Realtime spike 通过。
+- 用户于 2026-07-25 明确表示不需要 Trigger.dev 登录验证；因此云端登录、真实 run
+  与 Realtime 观察已豁免，不再阻塞后续施工。
+- 真实性边界：没有生成 `.data/spikes/trigger.json`，也不宣称云端 Realtime
+  spike 真实通过；聚合 evidence 以 `passed:false + waived:true` 表达。
 - Scoped token 正/负测试按计划 deferred 到 N2.5；本 Task 未提前实现 run API 或
   Realtime UI。
 
@@ -73,7 +75,7 @@ git diff --check -- trigger.config.ts trigger/tasks/pipeline-run.ts scripts/spik
 三项 exit code 均为 `0`。源码只含一个 task ID；typed stream 只发送 bounded
 `started/completed` 事件，不含 model delta、reasoning 或业务数据。
 
-## 认证恢复后的重试
+## 如后续手测云端联调
 
 先在本机完成 Trigger.dev CLI 登录并准备已有项目的 server-only 配置；变量值不得
 进入源码、日志、证据或 Git：
