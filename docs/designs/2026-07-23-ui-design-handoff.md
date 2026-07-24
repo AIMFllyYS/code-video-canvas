@@ -1,5 +1,10 @@
 # CodeVideoCanvas 前端 UI 设计交接文档（Pencil Agent 执行稿）
 
+> [!NOTE]
+> **状态：Demo v1 visual reference。** `canvas.pen` 仍是视觉 SSOT，但 v3 新组件和页面
+> 必须按 N6 Track Plan 先更新 Pencil reusable symbol，再登记 `/playbook`，并遵循
+> Product/Architecture Spec 的真实数据合同。本文不覆盖 v3 业务状态与字段来源。
+
 > 创建：2026-07-23 · 更新：2026-07-23 · 状态：approved（执行基线）
 > 目标文件：`docs/designs/canvas.pen`（Pencil 设计稿，schema v2.14）
 > 执行者：Pencil 内置 Agent（通过 batch_design 等 MCP 工具绘制）

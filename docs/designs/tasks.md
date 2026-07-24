@@ -1,5 +1,10 @@
 # Implementation Plan
 
+> [!IMPORTANT]
+> **状态：Archived Demo v1 trace view。** 本文件不再维护 checkbox。v3 状态只在
+> [v3 Task Breakdown](../specs/2026-07-24-refactor-v3-task-breakdown.md) 更新，详细
+> 施工步骤见 [`docs/issues/refactor-v3/`](../issues/refactor-v3/)。
+
 ## Overview
 
 本文件遵循 Kiro Spec 规范的 `tasks.md` 格式：编号任务清单 + checkbox + `_Requirements: <PRD 功能编号>_` 追溯标注。

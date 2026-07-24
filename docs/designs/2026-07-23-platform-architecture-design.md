@@ -1,5 +1,10 @@
 # CodeVideoCanvas 平台架构设计
 
+> [!IMPORTANT]
+> **状态：Superseded / Frozen Demo v1 architecture。** v3 技术合同以
+> [Architecture & Execution Spec v3](../specs/2026-07-24-refactor-v3-architecture-spec.md)
+> 为唯一权威。本文仅解释旧 SQLite/进程队列/legacy render 基线。
+
 > Created: 2026-07-23
 > Updated: 2026-07-24
 > Status: accepted（demo 基线，已批准）

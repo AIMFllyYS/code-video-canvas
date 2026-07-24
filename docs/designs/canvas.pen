@@ -18050,6 +18050,123 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "uQl6G",
+      "x": 1552,
+      "y": 2524,
+      "name": "CollapsibleCard",
+      "reusable": true,
+      "width": 320,
+      "fill": "$surface",
+      "cornerRadius": "$radius-md",
+      "stroke": "$separator",
+      "strokeWidth": 1,
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "$shadow-card",
+        "offset": {
+          "x": 0,
+          "y": 1
+        },
+        "blur": 3
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "W5XT4",
+          "name": "Header",
+          "width": "fill_container",
+          "gap": "$space-2",
+          "padding": [
+            "$space-2",
+            "$space-3"
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "Wcw9Z",
+              "name": "LeadingIcon",
+              "width": 16,
+              "height": 16,
+              "icon": "sparkles",
+              "library": "lucide",
+              "fill": "$accent"
+            },
+            {
+              "type": "text",
+              "id": "NMnzu",
+              "name": "Title",
+              "fill": "$label",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "AI 流式输出",
+              "fontFamily": "$font-sc",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "vEukx",
+              "name": "CharCount",
+              "fill": "$label-tertiary",
+              "content": "128 字",
+              "fontFamily": "$font-mono",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "icon",
+              "id": "lIaxg",
+              "name": "Chevron",
+              "width": 16,
+              "height": 16,
+              "icon": "chevron-down",
+              "library": "lucide",
+              "fill": "$label-tertiary"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "KZAic",
+          "name": "Divider",
+          "fill": "$separator",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "nr7g3",
+          "name": "Body",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": "$space-1",
+          "padding": [
+            "$space-2",
+            "$space-3"
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "P8LAvF",
+              "name": "LogContent",
+              "fill": "$label-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "const tl = gsap.timeline({ paused: true })\ntl.from('.title', { y: 40, opacity: 0 })",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-mono",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
