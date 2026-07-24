@@ -1,7 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Download, FileCode, Play, RefreshCw, ShieldCheck, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  Download,
+  FileCode,
+  Play,
+  RefreshCw,
+  ShieldCheck,
+  SkipBack,
+  SkipForward,
+  Volume2,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
@@ -12,6 +22,7 @@ import { StatusPill } from '@/components/ui/status-pill'
 import { TopBar } from '@/components/ui/top-bar'
 import { Toast } from '@/components/ui/toast'
 import { AppShell } from '@/features/navigation/app-shell'
+import { ShotPanelChrome, useShotPanelState } from './shot-panels'
 import { renderShotAndWait } from './shot-api'
 
 export function ShotDetail({
@@ -34,6 +45,7 @@ export function ShotDetail({
   previewUrl?: string
 }) {
   const runtime = useShotRuntime(projectId, nodeId, previewUrl)
+  const panels = useShotPanelState()
 
   return (
     <AppShell active="renderer" projectId={projectId} rendererNodeId={nodeId}>
@@ -45,23 +57,56 @@ export function ShotDetail({
                 <ArrowLeft className="h-4 w-4" />
               </Link>
               {laneKey} · {projectTitle}
-              <StatusPill variant={runtime.outputUrl ? 'rendered' : runtime.rendering ? 'generating' : 'pending'} />
+              <StatusPill
+                variant={
+                  runtime.outputUrl
+                    ? 'rendered'
+                    : runtime.rendering
+                      ? 'generating'
+                      : 'pending'
+                }
+              />
             </span>
           }
           actions={
             <>
               <ShotLink label="上一镜" nodeId={previousNodeId} projectId={projectId} />
               <ShotLink label="下一镜" nodeId={nextNodeId} projectId={projectId} />
-              <Button variant="tinted" size="sm" icon={RefreshCw} onClick={runtime.render} disabled={runtime.rendering}>重渲此镜</Button>
-              {runtime.outputUrl && <a href={runtime.outputUrl} download><Button size="sm" icon={Download}>导出 MP4</Button></a>}
+              <Button
+                variant="tinted"
+                size="sm"
+                icon={RefreshCw}
+                onClick={runtime.render}
+                disabled={runtime.rendering}
+              >
+                重渲此镜
+              </Button>
+              {runtime.outputUrl && (
+                <a href={runtime.outputUrl} download>
+                  <Button size="sm" icon={Download}>导出 MP4</Button>
+                </a>
+              )}
             </>
           }
         />
-        <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_380px_320px] gap-6 overflow-auto p-6">
-          <ShotPlayer outputUrl={runtime.outputUrl} previewUrl={previewUrl} error={runtime.error} />
-          <ShotCode sourceCode={runtime.sourceCode} onRender={runtime.render} rendering={runtime.rendering} />
-          <ShotContract laneKey={laneKey} sourceText={sourceText} />
-        </section>
+        <ShotPanelChrome
+          panels={panels}
+          player={
+            <ShotPlayer
+              outputUrl={runtime.outputUrl}
+              previewUrl={previewUrl}
+              error={runtime.error}
+            />
+          }
+          codeContent={
+            <ShotCode
+              sourceCode={runtime.sourceCode}
+              onRender={runtime.render}
+              rendering={runtime.rendering}
+            />
+          }
+          contractContent={<ShotContract laneKey={laneKey} sourceText={sourceText} />}
+        />
       </main>
     </AppShell>
   )
@@ -71,7 +116,7 @@ function useShotRuntime(projectId: string, nodeId: string, previewUrl?: string) 
   const [rendering, setRendering] = useState(false)
   const [outputUrl, setOutputUrl] = useState<string>()
   const [sourceCode, setSourceCode] = useState(
-    previewUrl ? '正在读取分镜代码…' : '分镜代码尚未生成'
+    previewUrl ? '正在读取分镜代码…' : '分镜代码尚未生成',
   )
   const [error, setError] = useState<string>()
 
@@ -102,7 +147,15 @@ function useShotRuntime(projectId: string, nodeId: string, previewUrl?: string) 
   return { rendering, outputUrl, sourceCode, error, render }
 }
 
-function ShotLink({ label, nodeId, projectId }: { label: string; nodeId?: string; projectId: string }) {
+function ShotLink({
+  label,
+  nodeId,
+  projectId,
+}: {
+  label: string
+  nodeId?: string
+  projectId: string
+}) {
   if (!nodeId) return <Button variant="gray" size="sm" disabled>{label}</Button>
   return (
     <Link href={`/canvas/shot/${nodeId}?projectId=${projectId}`}>
@@ -111,13 +164,30 @@ function ShotLink({ label, nodeId, projectId }: { label: string; nodeId?: string
   )
 }
 
-function ShotPlayer({ outputUrl, previewUrl, error }: { outputUrl?: string; previewUrl?: string; error?: string }) {
+function ShotPlayer({
+  outputUrl,
+  previewUrl,
+  error,
+}: {
+  outputUrl?: string
+  previewUrl?: string
+  error?: string
+}) {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex h-[480px] items-center justify-center overflow-hidden rounded-lg bg-player-bg">
-        {outputUrl ? <video src={outputUrl} controls className="h-full w-full" /> :
-          previewUrl ? <iframe title="确定性分镜预览" src={previewUrl} sandbox="allow-scripts" className="h-full w-full border-0" /> :
-            <Play className="h-10 w-10 text-text-inverse" />}
+        {outputUrl ? (
+          <video src={outputUrl} controls className="h-full w-full" />
+        ) : previewUrl ? (
+          <iframe
+            title="确定性分镜预览"
+            src={previewUrl}
+            sandbox="allow-scripts"
+            className="h-full w-full border-0"
+          />
+        ) : (
+          <Play className="h-10 w-10 text-text-inverse" />
+        )}
       </div>
       <div className="flex h-12 items-center gap-3">
         <IconButton icon={SkipBack} aria-label="上一帧" />
@@ -129,7 +199,14 @@ function ShotPlayer({ outputUrl, previewUrl, error }: { outputUrl?: string; prev
       </div>
       <div className="grid h-18 grid-cols-8 gap-1">
         {Array.from({ length: 8 }, (_, index) => (
-          <div key={index} className={index === 2 ? 'rounded-sm border border-accent bg-fill' : 'rounded-sm bg-fill'} />
+          <div
+            key={index}
+            className={
+              index === 2
+                ? 'rounded-sm border border-accent bg-fill'
+                : 'rounded-sm bg-fill'
+            }
+          />
         ))}
       </div>
       {error && <Toast variant="error" title="失败" body={error} />}
@@ -137,9 +214,17 @@ function ShotPlayer({ outputUrl, previewUrl, error }: { outputUrl?: string; prev
   )
 }
 
-function ShotCode({ sourceCode, onRender, rendering }: { sourceCode: string; onRender: () => void; rendering: boolean }) {
+function ShotCode({
+  sourceCode,
+  onRender,
+  rendering,
+}: {
+  sourceCode: string
+  onRender: () => void
+  rendering: boolean
+}) {
   return (
-    <div className="flex min-w-0 flex-col gap-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-[13px] font-semibold">
           <FileCode className="h-4 w-4 text-accent" />分镜画布代码
@@ -149,7 +234,9 @@ function ShotCode({ sourceCode, onRender, rendering }: { sourceCode: string; onR
       <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap rounded-md bg-bg-secondary p-3 text-[11px] leading-relaxed text-label-secondary">
         {sourceCode}
       </pre>
-      <Button variant="tinted" icon={RefreshCw} onClick={onRender} disabled={rendering}>重渲此镜</Button>
+      <Button variant="tinted" icon={RefreshCw} onClick={onRender} disabled={rendering}>
+        重渲此镜
+      </Button>
     </div>
   )
 }
